@@ -26,7 +26,7 @@ CRITERION_ARGS = None
 # Functions
 ######################
 
-def init(points: numpy.ndarray, group_centers: numpy.ndarray, **kwargs):
+def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: numpy.ndarray, **kwargs):
     """Initialize variables for Matryoshka transformation."""
     global OPTIMIZER, MATRYOSHKA, VALID_POINTS, CRITERION, CRITERION_ARGS
 
@@ -41,8 +41,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, **kwargs):
 
     mapCreate(points)
     VALID_POINTS = points
-
-    group_centers = trajectoryReduce(trajectorySort(group_centers), _groups)
+    group_centers = trajectoryReduce(trajectorySort(group_centerline), _groups)
 
     # Matryoshka construction
     groups = pointsToGroups(points, group_centers)
@@ -76,6 +75,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray]:
     final_time -- lap time of the trajectory, float
     points -- points in the best solution in real coordinates, nx2 numpy.ndarray
     tcpoints -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
+    trajectory -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
     """
     global OPTIMIZER, MATRYOSHKA
 
@@ -86,7 +86,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray]:
 
     final_time = _opt(numpy.asarray(recommendation.args[0]))
 
-    return final_time, numpy.asarray(points), numpy.asarray(recommendation.args[0])
+    return final_time, numpy.asarray(points), numpy.asarray(recommendation.args[0]), trajectoryInterpolate(numpy.asarray(points), 400)
 
 
 def _opt(points: numpy.ndarray) -> float:

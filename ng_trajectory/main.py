@@ -70,7 +70,8 @@ def execute():
         # Initial solution
         fitness = 10000000
         result = START_POINTS
-        candidate = numpy.asarray([ [0.5, 0.5] for _i in range(START_POINTS.shape[0])])
+        rcandidate = START_POINTS
+        tcandidate = numpy.asarray([ [0.5, 0.5] for _i in range(START_POINTS.shape[0])])
 
         # Run cascade
         for _alg in CONFIGURATION.get("cascade"):
@@ -80,9 +81,9 @@ def execute():
             # Initialize criterion
             cri.init(**{**CONFIGURATION, **_alg, **_alg.get("criterion_init")})
 
-            opt.init(VALID_POINTS, result, **{**CONFIGURATION, **_alg, **{"criterion": cri.compute}})
-            _fitness, _result, _candidate = opt.optimize()
+            opt.init(VALID_POINTS, result, rcandidate, **{**CONFIGURATION, **_alg, **{"criterion": cri.compute}})
+            _fitness, _rcandidate, _tcandidate, _result = opt.optimize()
 
             # Store only better solution for next steps of the cascade
             if (_fitness < fitness):
-                fitness, result, candidate = _fitness, _result, _candidate
+                fitness, rcandidate, tcandidate, rcandidate = _fitness, _rcandidate, _tcandidate, _result
