@@ -77,8 +77,8 @@ def execute():
         if "prefix" in CONFIGURATION:
             fileformat = "%s-%%0%dd-%%0%dd-%%s.log" % (
                 str(CONFIGURATION.get("prefix")),
-                len(str(CONFIGURATION.get("loops")+1)),
-                len(str(len(CONFIGURATION.get("cascade"))+1))
+                len(str(CONFIGURATION.get("loops"))),
+                len(str(len(CONFIGURATION.get("cascade"))))
             )
         else:
             fileformat = None
