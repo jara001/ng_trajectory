@@ -129,6 +129,6 @@ def execute():
                 ) as logfile:
                 print ("timeA:%f" % (time.time() - cascade_time), file=logfile)
         else:
-            print ("timeA:%f" % (time.time() - cascade_time), file=logfile)
+            print ("timeA:%f" % (time.time() - cascade_time), file=sys.stdout)
 
     print ("Optimization finished in %fs." % (time.time() - overall_time))
