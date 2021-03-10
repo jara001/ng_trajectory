@@ -82,7 +82,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray]:
     with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
         recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
 
-    points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p]) for i, p in enumerate(numpy.asarray(recommendation.args[0])) ]
+    points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p])[0] for i, p in enumerate(numpy.asarray(recommendation.args[0])) ]
 
     final_time = _opt(numpy.asarray(recommendation.args[0]))
 
@@ -109,6 +109,7 @@ def _opt(points: numpy.ndarray) -> float:
     """
     global VALID_POINTS, CRITERION, CRITERION_ARGS, MATRYOSHKA
 
+    # Transform points
     points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p])[0] for i, p in enumerate(points) ]
 
     # Interpolate received points
