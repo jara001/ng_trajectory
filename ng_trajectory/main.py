@@ -77,6 +77,9 @@ def execute():
             opt = optimizers.__getattribute__(_alg.get("algorithm"))
             cri = criterions.__getattribute__(_alg.get("criterion"))
 
+            # Initialize criterion
+            cri.init(**{**CONFIGURATION, **_alg, **_alg.get("criterion_init")})
+
             opt.init(VALID_POINTS, result, **{**CONFIGURATION, **_alg, **{"criterion": cri.compute}})
             _fitness, _result, _candidate = opt.optimize()
 

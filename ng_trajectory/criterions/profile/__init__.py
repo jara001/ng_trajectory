@@ -1,2 +1,2 @@
 #!/usr/bin/env python3.6
-from .main import compute
+from .main import init, compute

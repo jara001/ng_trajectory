@@ -15,6 +15,12 @@ from . import profiler
 # Functions
 ######################
 
+def init(**kwargs) -> None:
+    """Initialize criterion."""
+
+    profiler.parametersSet(**kwargs)
+
+
 def compute(points: numpy.ndarray, overlap: int = 0, **overflown) -> float:
     """Compute the speed profile using overlap.
 
