@@ -83,6 +83,12 @@ def execute():
         else:
             fileformat = None
 
+        # Progress notification
+        notification = "[%%d / %d] Running step %%d/%d %%s with %%s criterion" % (
+                CONFIGURATION.get("loops"),
+                len(CONFIGURATION.get("cascade"))
+            )
+
         # Initial solution
         fitness = 10000000
         result = START_POINTS
@@ -103,6 +109,9 @@ def execute():
 
             opt = optimizers.__getattribute__(_alg.get("algorithm"))
             cri = criterions.__getattribute__(_alg.get("criterion"))
+
+            print (notification % (_loop+1, _i+1, _alg.get("algorithm"), _alg.get("criterion")), file=LOGFILE)
+            LOGFILE.flush()
 
             # Initialize criterion
             cri.init(**{**CONFIGURATION, **_alg, **_alg.get("criterion_init"), **{"logfile": LOGFILE}})
