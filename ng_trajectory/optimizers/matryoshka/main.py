@@ -11,8 +11,14 @@ from . import transform
 
 import nevergrad
 
+import sys
+
 # Parallel computing of genetic algorithm
 from concurrent import futures
+
+# Thread lock for log file
+from threading import Lock
+
 
 # Global variables
 OPTIMIZER = None
@@ -20,6 +26,8 @@ MATRYOSHKA = None
 VALID_POINTS = None
 CRITERION = None
 CRITERION_ARGS = None
+LOGFILE = None
+FILELOCK = Lock()
 
 
 ######################
@@ -28,7 +36,7 @@ CRITERION_ARGS = None
 
 def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: numpy.ndarray, **kwargs):
     """Initialize variables for Matryoshka transformation."""
-    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, CRITERION, CRITERION_ARGS
+    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, CRITERION, CRITERION_ARGS, LOGFILE
 
     # Local variables
     _budget = kwargs.get("budget", 100)
@@ -37,6 +45,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     _workers = kwargs.get("workers", 4)
     CRITERION = kwargs.get("criterion")#globals()[kwargs.get("criterion")]
     CRITERION_ARGS = kwargs.get("criterion_args")
+    LOGFILE = kwargs.get("logfile", sys.stdout)
 
 
     mapCreate(points)
@@ -77,7 +86,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray]:
     tcpoints -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
     trajectory -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
     """
-    global OPTIMIZER, MATRYOSHKA
+    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK
 
     with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
         recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
@@ -85,6 +94,10 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray]:
     points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p])[0] for i, p in enumerate(numpy.asarray(recommendation.args[0])) ]
 
     final_time = _opt(numpy.asarray(recommendation.args[0]))
+
+    with FILELOCK:
+        print ("solution:%s" % str(numpy.asarray(points).tolist()), file=LOGFILE)
+        print ("final:%f" % final_time, file=LOGFILE)
 
     return final_time, numpy.asarray(points), numpy.asarray(recommendation.args[0]), trajectoryInterpolate(numpy.asarray(points), 400)
 
@@ -107,7 +120,7 @@ def _opt(points: numpy.ndarray) -> float:
 
     Note: This function is called after all necessary data is received.
     """
-    global VALID_POINTS, CRITERION, CRITERION_ARGS, MATRYOSHKA
+    global VALID_POINTS, CRITERION, CRITERION_ARGS, MATRYOSHKA, LOGFILE, FILELOCK
 
     # Transform points
     points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p])[0] for i, p in enumerate(points) ]
@@ -125,12 +138,18 @@ def _opt(points: numpy.ndarray) -> float:
             invalid += 1
 
     if ( invalid > 0 ):
+        with FILELOCK:
+            print ("pointsA:%s" % str(points), file=LOGFILE)
+            print ("pointsT:%s" % str(_points.tolist()), file=LOGFILE)
+            print ("invalid:%f" % invalid, file=LOGFILE)
+            LOGFILE.flush()
         return 100 * invalid
 
-    #_v, _a, _t = profileCompute(_points, 150)
-    #
-    #FILE.write("correct:%f\n" % float(_t[-1]))
-    #return float(_t[-1])
-
     _c = CRITERION(**{**{'points': _points}, **CRITERION_ARGS})
+    with FILELOCK:
+        print ("pointsA:%s" % str(points), file=LOGFILE)
+        print ("pointsT:%s" % str(_points.tolist()), file=LOGFILE)
+        print ("correct:%f" % _c, file=LOGFILE)
+        LOGFILE.flush()
+
     return _c

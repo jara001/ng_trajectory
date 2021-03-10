@@ -67,6 +67,13 @@ def execute():
 
     # Create loops
     for _loop in range(CONFIGURATION.get("loops")):
+        # Logging file format
+        fileformat = "%s-%%0%dd-%%0%dd-%%s.log" % (
+            str(CONFIGURATION.get("prefix", "ng")),
+            len(str(CONFIGURATION.get("loops")+1)),
+            len(str(len(CONFIGURATION.get("cascade"))+1))
+        )
+
         # Initial solution
         fitness = 10000000
         result = START_POINTS
@@ -74,16 +81,22 @@ def execute():
         tcandidate = numpy.asarray([ [0.5, 0.5] for _i in range(START_POINTS.shape[0])])
 
         # Run cascade
-        for _alg in CONFIGURATION.get("cascade"):
+        for _i, _alg in enumerate(CONFIGURATION.get("cascade")):
+            LOGFILE = open(fileformat % (_loop+1, _i+1, _alg.get("algorithm")), "w")
+            print ({**CONFIGURATION, **_alg}, file=LOGFILE)
+            LOGFILE.flush()
+
             opt = optimizers.__getattribute__(_alg.get("algorithm"))
             cri = criterions.__getattribute__(_alg.get("criterion"))
 
             # Initialize criterion
-            cri.init(**{**CONFIGURATION, **_alg, **_alg.get("criterion_init")})
+            cri.init(**{**CONFIGURATION, **_alg, **_alg.get("criterion_init"), **{"logfile": LOGFILE}})
 
-            opt.init(VALID_POINTS, result, rcandidate, **{**CONFIGURATION, **_alg, **{"criterion": cri.compute}})
+            opt.init(VALID_POINTS, result, rcandidate, **{**CONFIGURATION, **_alg, **{"criterion": cri.compute}, **{"logfile": LOGFILE}})
             _fitness, _rcandidate, _tcandidate, _result = opt.optimize()
 
             # Store only better solution for next steps of the cascade
             if (_fitness < fitness):
                 fitness, rcandidate, tcandidate, rcandidate = _fitness, _rcandidate, _tcandidate, _result
+
+            LOGFILE.close()
