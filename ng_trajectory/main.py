@@ -65,7 +65,7 @@ def execute():
     VALID_POINTS = dataLoad(CONFIGURATION.get("valid_points"))
 
     # Create loops
-    for _loop in CONFIGURATION.get("loops"):
+    for _loop in range(CONFIGURATION.get("loops")):
         # Initial solution
         fitness = 10000000
         candidate = numpy.asarray([ [0.5, 0.5] for _i in range(START_POINTS.shape[0])])
