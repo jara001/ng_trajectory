@@ -68,12 +68,16 @@ def execute():
     for _loop in range(CONFIGURATION.get("loops")):
         # Initial solution
         fitness = 10000000
-        candidate = numpy.asarray([ [0.5, 0.5] for _i in range(START_POINTS.shape[0])])
         result = START_POINTS
+        candidate = numpy.asarray([ [0.5, 0.5] for _i in range(START_POINTS.shape[0])])
 
         # Run cascade
         for _alg in CONFIGURATION.get("cascade"):
             opt = optimizers.__getattribute__(_alg.get("algorithm"))
 
             opt.init(VALID_POINTS, result, **{**CONFIGURATION, **_alg})
-            opt.optimize()
+            _fitness, _result, _candidate = opt.optimize()
+
+            # Store only better solution for next steps of the cascade
+            if (_fitness < fitness):
+                fitness, result, candidate = _fitness, _result, _candidate
