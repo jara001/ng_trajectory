@@ -1,1 +1,11 @@
 __pycache__
+*.pyc
+
+# Output files
+*.log
+
+# Configuration files
+*.json
+
+# Source files
+*.npy
