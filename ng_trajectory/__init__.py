@@ -119,10 +119,11 @@ else:
 ######################
 
 #from . import utils
+from .main import execute, configurationLoad
 
 
 ######################
 # Configuration
 ######################
 
-from .configuration import configurationLoad
+#from .configuration import configurationLoad
