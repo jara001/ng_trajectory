@@ -6,7 +6,7 @@
 # Imports & Globals
 ######################
 
-import sys, numpy, json
+import sys, numpy, json, time
 
 #from ng_trajectory.configuration import configurationLoad
 #from ng_trajectory.configuration import CONFIGURATION
@@ -61,12 +61,18 @@ def execute():
     """Execute GA according to the configuration."""
     global CONFIGURATION
 
+    # Overall time
+    overall_time = time.time()
+
     # Load data about the track
     START_POINTS = dataLoad(CONFIGURATION.get("start_points"))
     VALID_POINTS = dataLoad(CONFIGURATION.get("valid_points"))
 
     # Create loops
     for _loop in range(CONFIGURATION.get("loops")):
+        # Cascade timing
+        cascade_time = time.time()
+
         # Logging file format
         fileformat = "%s-%%0%dd-%%0%dd-%%s.log" % (
             str(CONFIGURATION.get("prefix", "ng")),
@@ -82,6 +88,9 @@ def execute():
 
         # Run cascade
         for _i, _alg in enumerate(CONFIGURATION.get("cascade")):
+            # Cascade step timing
+            step_time = time.time()
+
             LOGFILE = open(fileformat % (_loop+1, _i+1, _alg.get("algorithm")), "w")
             print ({**CONFIGURATION, **_alg}, file=LOGFILE)
             LOGFILE.flush()
@@ -99,4 +108,17 @@ def execute():
             if (_fitness < fitness):
                 fitness, rcandidate, tcandidate, rcandidate = _fitness, _rcandidate, _tcandidate, _result
 
+            print ("time:%f" % (time.time() - step_time), file=LOGFILE)
+            print ("==============", file=LOGFILE)
+
             LOGFILE.close()
+
+        with open(
+                ("%s-%%0%dd.log" % (
+                        str(CONFIGURATION.get("prefix", "ng")),
+                        len(str(CONFIGURATION.get("loops")+1))
+                    )) % (_loop+1), "w"
+            ) as logfile:
+            print ("timeA:%f" % (time.time() - cascade_time), file=logfile)
+
+    print ("Optimization finished in %fs." % (time.time() - overall_time))
