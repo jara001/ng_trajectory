@@ -27,6 +27,7 @@ VALID_POINTS = None
 CRITERION = None
 CRITERION_ARGS = None
 LOGFILE = None
+VERBOSITY = 3
 FILELOCK = Lock()
 
 
@@ -36,7 +37,7 @@ FILELOCK = Lock()
 
 def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: numpy.ndarray, **kwargs):
     """Initialize variables for Matryoshka transformation."""
-    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, CRITERION, CRITERION_ARGS, LOGFILE
+    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, CRITERION, CRITERION_ARGS, LOGFILE, VERBOSITY
 
     # Local variables
     _budget = kwargs.get("budget", 100)
@@ -46,6 +47,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     CRITERION = kwargs.get("criterion")#globals()[kwargs.get("criterion")]
     CRITERION_ARGS = kwargs.get("criterion_args")
     LOGFILE = kwargs.get("logfile", sys.stdout)
+    VERBOSITY = kwargs.get("logging_verbosity", 2)
 
 
     mapCreate(points)
@@ -77,7 +79,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray]:
     tcpoints -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
     trajectory -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
     """
-    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK
+    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY
 
     with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
         recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
@@ -87,8 +89,9 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray]:
     final = _opt(numpy.asarray(recommendation.args[0]))
 
     with FILELOCK:
-        print ("solution:%s" % str(numpy.asarray(points).tolist()), file=LOGFILE)
-        print ("final:%f" % final, file=LOGFILE)
+        if VERBOSITY > 0:
+            print ("solution:%s" % str(numpy.asarray(points).tolist()), file=LOGFILE)
+            print ("final:%f" % final, file=LOGFILE)
 
     return final, numpy.asarray(points), numpy.asarray(recommendation.args[0]), trajectoryInterpolate(numpy.asarray(points), 400)
 
@@ -111,7 +114,7 @@ def _opt(points: numpy.ndarray) -> float:
 
     Note: This function is called after all necessary data is received.
     """
-    global VALID_POINTS, CRITERION, CRITERION_ARGS, MATRYOSHKA, LOGFILE, FILELOCK
+    global VALID_POINTS, CRITERION, CRITERION_ARGS, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY
 
     # Transform points
     points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p])[0] for i, p in enumerate(points) ]
@@ -130,17 +133,21 @@ def _opt(points: numpy.ndarray) -> float:
 
     if ( invalid > 0 ):
         with FILELOCK:
-            print ("pointsA:%s" % str(points), file=LOGFILE)
-            print ("pointsT:%s" % str(_points.tolist()), file=LOGFILE)
-            print ("invalid:%f" % invalid, file=LOGFILE)
+            if VERBOSITY > 2:
+                print ("pointsA:%s" % str(points), file=LOGFILE)
+                print ("pointsT:%s" % str(_points.tolist()), file=LOGFILE)
+            if VERBOSITY > 1:
+                print ("invalid:%f" % invalid, file=LOGFILE)
             LOGFILE.flush()
         return 100 * invalid
 
     _c = CRITERION(**{**{'points': _points}, **CRITERION_ARGS})
     with FILELOCK:
-        print ("pointsA:%s" % str(points), file=LOGFILE)
-        print ("pointsT:%s" % str(_points.tolist()), file=LOGFILE)
-        print ("correct:%f" % _c, file=LOGFILE)
+        if VERBOSITY > 2:
+            print ("pointsA:%s" % str(points), file=LOGFILE)
+            print ("pointsT:%s" % str(_points.tolist()), file=LOGFILE)
+        if VERBOSITY > 1:
+            print ("correct:%f" % _c, file=LOGFILE)
         LOGFILE.flush()
 
     return _c
