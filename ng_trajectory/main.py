@@ -6,12 +6,13 @@
 # Imports & Globals
 ######################
 
-import numpy, json
+import sys, numpy, json
 
 #from ng_trajectory.configuration import configurationLoad
 #from ng_trajectory.configuration import CONFIGURATION
 CONFIGURATION = {}
-from ng_trajectory.optimizers.matryoshka import init, optimize
+
+import ng_trajectory.optimizers as optimizers
 
 
 ######################
@@ -32,7 +33,11 @@ def configurationLoad(filename: str) -> bool:
     try:
         with open(filename, 'r') as configuration_file:
             conf = json.load(configuration_file)
-            CONFIGURATION = {**CONFIGURATION, **conf}
+
+            if conf.get("_version", 1) < 2:
+                print ("Unsupported version of the configuration file.", file=sys.stderr)
+            else:
+                CONFIGURATION = {**CONFIGURATION, **conf}
     except:
         return False
 
@@ -55,7 +60,20 @@ def execute():
     """Execute GA according to the configuration."""
     global CONFIGURATION
 
+    # Load data about the track
     START_POINTS = dataLoad(CONFIGURATION.get("start_points"))
     VALID_POINTS = dataLoad(CONFIGURATION.get("valid_points"))
 
-    init(VALID_POINTS, START_POINTS, **{**CONFIGURATION, **CONFIGURATION["cascade"][0]})
+    # Create loops
+    for _loop in CONFIGURATION.get("loops"):
+        # Initial solution
+        fitness = 10000000
+        candidate = numpy.asarray([ [0.5, 0.5] for _i in range(START_POINTS.shape[0])])
+        result = START_POINTS
+
+        # Run cascade
+        for _alg in CONFIGURATION.get("cascade"):
+            opt = optimizers.__getattribute__(_alg.get("algorithm"))
+
+            opt.init(VALID_POINTS, result, **{**CONFIGURATION, **_alg})
+            opt.optimize()
