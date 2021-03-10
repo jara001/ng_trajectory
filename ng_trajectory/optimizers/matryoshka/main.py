@@ -71,17 +71,8 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray]:
     """Run genetic algorithm via Nevergrad.
 
-    Arguments:
-    groups -- groups of points from which the values are selected, n-list of mx2 numpy.ndarray
-    budget -- number of generations of genetic algorithm, int, default 100
-    marker_ns -- identification of published Markers, str, default "" (do not publish)
-    criterion -- function to evaluate current criterion, callable (px2 numpy.ndarray -> float),
-                 default 'profile_criterion' with 'overlap = 150'
-    criterion_args -- arguments for the criterion function, dict, default {}
-    **overflown -- arguments not caught by previous parts
-
     Returns:
-    final_time -- lap time of the trajectory, float
+    final -- best value of the criterion, float
     points -- points in the best solution in real coordinates, nx2 numpy.ndarray
     tcpoints -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
     trajectory -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
@@ -93,17 +84,17 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray]:
 
     points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p])[0] for i, p in enumerate(numpy.asarray(recommendation.args[0])) ]
 
-    final_time = _opt(numpy.asarray(recommendation.args[0]))
+    final = _opt(numpy.asarray(recommendation.args[0]))
 
     with FILELOCK:
         print ("solution:%s" % str(numpy.asarray(points).tolist()), file=LOGFILE)
-        print ("final:%f" % final_time, file=LOGFILE)
+        print ("final:%f" % final, file=LOGFILE)
 
-    return final_time, numpy.asarray(points), numpy.asarray(recommendation.args[0]), trajectoryInterpolate(numpy.asarray(points), 400)
+    return final, numpy.asarray(points), numpy.asarray(recommendation.args[0]), trajectoryInterpolate(numpy.asarray(points), 400)
 
 
 def _opt(points: numpy.ndarray) -> float:
-    """Interpolate points, compute speed profile and return lap time.
+    """Interpolate points, verify feasibility and calculate criterion.
 
     Function to be optimized.
 
@@ -111,11 +102,11 @@ def _opt(points: numpy.ndarray) -> float:
     points -- selected points to interpolate, nx2 numpy.ndarray
 
     Returns:
-    time -- lap time, float
+    _c -- criterion value, float
 
     Note: It receives selected points from the groups (see callback_centerline).
 
-    Note: The result of this function is 'lap time' when possible, otherwise
+    Note: The result of this function is 'criterion' when possible, otherwise
     number of invalid points (multiplied by some value) is returned.
 
     Note: This function is called after all necessary data is received.
