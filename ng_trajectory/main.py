@@ -68,15 +68,19 @@ def execute():
     START_POINTS = dataLoad(CONFIGURATION.get("start_points"))
     VALID_POINTS = dataLoad(CONFIGURATION.get("valid_points"))
 
-    # Create loops
-    for _loop in range(CONFIGURATION.get("loops")):
-        # Cascade timing
-        cascade_time = time.time()
+    _groups = [ CONFIGURATION.get("groups") ] if isinstance(CONFIGURATION.get("groups"), int) else CONFIGURATION.get("groups")
+
+    # Create groups variation
+    for _gi, _group in enumerate(_groups):
+        groups_time = time.time()
+
+        _configuration = {**CONFIGURATION, **{"groups": _group}}
 
         # Logging file format
         if "prefix" in CONFIGURATION:
-            fileformat = "%s-%%0%dd-%%0%dd-%%s.log" % (
+            fileformat = "%s-%%0%dd-%%0%dd-%%0%dd-%%s.log" % (
                 str(CONFIGURATION.get("prefix")),
+                len(str(max(_groups))),
                 len(str(CONFIGURATION.get("loops"))),
                 len(str(len(CONFIGURATION.get("cascade"))))
             )
@@ -84,60 +88,69 @@ def execute():
             fileformat = None
 
         # Progress notification
-        notification = "[%%d / %d] Running step %%d/%d %%s with %%s criterion" % (
+        notification = "{%%d / %d (%d groups)} [%%d / %d] Running step %%d/%d %%s with %%s criterion" % (
+                len(_groups),
+                _group,
                 CONFIGURATION.get("loops"),
                 len(CONFIGURATION.get("cascade"))
             )
 
-        # Initial solution
-        fitness = 10000000
-        result = START_POINTS
-        rcandidate = START_POINTS
-        tcandidate = numpy.asarray([ [0.5, 0.5] for _i in range(START_POINTS.shape[0])])
+        # Create loops
+        for _loop in range(CONFIGURATION.get("loops")):
+            # Cascade timing
+            cascade_time = time.time()
 
-        # Run cascade
-        for _i, _alg in enumerate(CONFIGURATION.get("cascade")):
-            # Cascade step timing
-            step_time = time.time()
+            # Initial solution
+            fitness = 10000000
+            result = START_POINTS
+            rcandidate = START_POINTS
+            tcandidate = numpy.asarray([ [0.5, 0.5] for _i in range(START_POINTS.shape[0])])
 
-            if fileformat:
-                LOGFILE = open(fileformat % (_loop+1, _i+1, _alg.get("algorithm")), "w")
-                print ({**CONFIGURATION, **_alg}, file=LOGFILE)
+            # Run cascade
+            for _i, _alg in enumerate(CONFIGURATION.get("cascade")):
+                # Cascade step timing
+                step_time = time.time()
+
+                if fileformat:
+                    LOGFILE = open(fileformat % (_group, _loop+1, _i+1, _alg.get("algorithm")), "w")
+                    print ({**_configuration, **_alg}, file=LOGFILE)
+                    LOGFILE.flush()
+                else:
+                    LOGFILE = sys.stdout
+
+                opt = optimizers.__getattribute__(_alg.get("algorithm"))
+                cri = criterions.__getattribute__(_alg.get("criterion"))
+
+                print (notification % (_gi+1, _loop+1, _i+1, _alg.get("algorithm"), _alg.get("criterion")), file=LOGFILE)
                 LOGFILE.flush()
+
+                # Initialize criterion
+                cri.init(**{**_configuration, **_alg, **_alg.get("criterion_init"), **{"logfile": LOGFILE}})
+
+                opt.init(VALID_POINTS, result, rcandidate, **{**_configuration, **_alg, **{"criterion": cri.compute}, **{"logfile": LOGFILE}})
+                _fitness, _rcandidate, _tcandidate, _result = opt.optimize()
+
+                # Store only better solution for next steps of the cascade
+                if (_fitness < fitness):
+                    fitness, rcandidate, tcandidate, rcandidate = _fitness, _rcandidate, _tcandidate, _result
+
+                print ("time:%f" % (time.time() - step_time), file=LOGFILE)
+                print ("==============", file=LOGFILE)
+
+                if fileformat:
+                    LOGFILE.close()
+
+            if "prefix" in CONFIGURATION:
+                with open(
+                        ("%s-%%0%dd.log" % (
+                                str(CONFIGURATION.get("prefix", "ng")),
+                                len(str(CONFIGURATION.get("loops")+1))
+                            )) % (_loop+1), "w"
+                    ) as logfile:
+                    print ("timeA:%f" % (time.time() - cascade_time), file=logfile)
             else:
-                LOGFILE = sys.stdout
+                print ("timeA:%f" % (time.time() - cascade_time), file=sys.stdout)
 
-            opt = optimizers.__getattribute__(_alg.get("algorithm"))
-            cri = criterions.__getattribute__(_alg.get("criterion"))
-
-            print (notification % (_loop+1, _i+1, _alg.get("algorithm"), _alg.get("criterion")), file=LOGFILE)
-            LOGFILE.flush()
-
-            # Initialize criterion
-            cri.init(**{**CONFIGURATION, **_alg, **_alg.get("criterion_init"), **{"logfile": LOGFILE}})
-
-            opt.init(VALID_POINTS, result, rcandidate, **{**CONFIGURATION, **_alg, **{"criterion": cri.compute}, **{"logfile": LOGFILE}})
-            _fitness, _rcandidate, _tcandidate, _result = opt.optimize()
-
-            # Store only better solution for next steps of the cascade
-            if (_fitness < fitness):
-                fitness, rcandidate, tcandidate, rcandidate = _fitness, _rcandidate, _tcandidate, _result
-
-            print ("time:%f" % (time.time() - step_time), file=LOGFILE)
-            print ("==============", file=LOGFILE)
-
-            if fileformat:
-                LOGFILE.close()
-
-        if "prefix" in CONFIGURATION:
-            with open(
-                    ("%s-%%0%dd.log" % (
-                            str(CONFIGURATION.get("prefix", "ng")),
-                            len(str(CONFIGURATION.get("loops")+1))
-                        )) % (_loop+1), "w"
-                ) as logfile:
-                print ("timeA:%f" % (time.time() - cascade_time), file=logfile)
-        else:
-            print ("timeA:%f" % (time.time() - cascade_time), file=sys.stdout)
+        print ("Group %d finished in %fs." % (_group, time.time() - groups_time))
 
     print ("Optimization finished in %fs." % (time.time() - overall_time))
