@@ -35,7 +35,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, **kwargs):
     _layers = kwargs.get("layers", 5)
     _groups = kwargs.get("groups", 8)
     _workers = kwargs.get("workers", 4)
-    CRITERION = globals()[kwargs.get("criterion")]
+    CRITERION = kwargs.get("criterion")#globals()[kwargs.get("criterion")]
     CRITERION_ARGS = kwargs.get("criterion_args")
 
 

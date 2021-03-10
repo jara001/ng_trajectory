@@ -13,6 +13,7 @@ import sys, numpy, json
 CONFIGURATION = {}
 
 import ng_trajectory.optimizers as optimizers
+import ng_trajectory.criterions as criterions
 
 
 ######################
@@ -74,8 +75,9 @@ def execute():
         # Run cascade
         for _alg in CONFIGURATION.get("cascade"):
             opt = optimizers.__getattribute__(_alg.get("algorithm"))
+            cri = criterions.__getattribute__(_alg.get("criterion"))
 
-            opt.init(VALID_POINTS, result, **{**CONFIGURATION, **_alg})
+            opt.init(VALID_POINTS, result, **{**CONFIGURATION, **_alg, **{"criterion": cri.compute}})
             _fitness, _result, _candidate = opt.optimize()
 
             # Store only better solution for next steps of the cascade
