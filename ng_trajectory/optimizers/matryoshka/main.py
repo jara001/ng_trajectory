@@ -29,6 +29,7 @@ CRITERION_ARGS = None
 LOGFILE = None
 VERBOSITY = 3
 FILELOCK = Lock()
+HOLDMAP = None
 
 
 ######################
@@ -37,7 +38,7 @@ FILELOCK = Lock()
 
 def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: numpy.ndarray, **kwargs):
     """Initialize variables for Matryoshka transformation."""
-    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, CRITERION, CRITERION_ARGS, LOGFILE, VERBOSITY
+    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, CRITERION, CRITERION_ARGS, LOGFILE, VERBOSITY, HOLDMAP
 
     # Local variables
     _budget = kwargs.get("budget", 100)
@@ -48,9 +49,14 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     CRITERION_ARGS = kwargs.get("criterion_args")
     LOGFILE = kwargs.get("logfile", sys.stdout)
     VERBOSITY = kwargs.get("logging_verbosity", 2)
+    _HOLDMAP = kwargs.get("hold_map", False)
+
+    if HOLDMAP is None or not _HOLDMAP:
+        mapCreate(points)
+
+    HOLDMAP = _HOLDMAP
 
 
-    mapCreate(points)
     VALID_POINTS = points
     group_centers = trajectoryReduce(trajectorySort(group_centerline), _groups)
 
