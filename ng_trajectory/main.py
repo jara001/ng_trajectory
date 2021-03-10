@@ -74,11 +74,14 @@ def execute():
         cascade_time = time.time()
 
         # Logging file format
-        fileformat = "%s-%%0%dd-%%0%dd-%%s.log" % (
-            str(CONFIGURATION.get("prefix", "ng")),
-            len(str(CONFIGURATION.get("loops")+1)),
-            len(str(len(CONFIGURATION.get("cascade"))+1))
-        )
+        if "prefix" in CONFIGURATION:
+            fileformat = "%s-%%0%dd-%%0%dd-%%s.log" % (
+                str(CONFIGURATION.get("prefix")),
+                len(str(CONFIGURATION.get("loops")+1)),
+                len(str(len(CONFIGURATION.get("cascade"))+1))
+            )
+        else:
+            fileformat = None
 
         # Initial solution
         fitness = 10000000
@@ -91,9 +94,12 @@ def execute():
             # Cascade step timing
             step_time = time.time()
 
-            LOGFILE = open(fileformat % (_loop+1, _i+1, _alg.get("algorithm")), "w")
-            print ({**CONFIGURATION, **_alg}, file=LOGFILE)
-            LOGFILE.flush()
+            if fileformat:
+                LOGFILE = open(fileformat % (_loop+1, _i+1, _alg.get("algorithm")), "w")
+                print ({**CONFIGURATION, **_alg}, file=LOGFILE)
+                LOGFILE.flush()
+            else:
+                LOGFILE = sys.stdout
 
             opt = optimizers.__getattribute__(_alg.get("algorithm"))
             cri = criterions.__getattribute__(_alg.get("criterion"))
@@ -111,14 +117,18 @@ def execute():
             print ("time:%f" % (time.time() - step_time), file=LOGFILE)
             print ("==============", file=LOGFILE)
 
-            LOGFILE.close()
+            if fileformat:
+                LOGFILE.close()
 
-        with open(
-                ("%s-%%0%dd.log" % (
-                        str(CONFIGURATION.get("prefix", "ng")),
-                        len(str(CONFIGURATION.get("loops")+1))
-                    )) % (_loop+1), "w"
-            ) as logfile:
+        if "prefix" in CONFIGURATION:
+            with open(
+                    ("%s-%%0%dd.log" % (
+                            str(CONFIGURATION.get("prefix", "ng")),
+                            len(str(CONFIGURATION.get("loops")+1))
+                        )) % (_loop+1), "w"
+                ) as logfile:
+                print ("timeA:%f" % (time.time() - cascade_time), file=logfile)
+        else:
             print ("timeA:%f" % (time.time() - cascade_time), file=logfile)
 
     print ("Optimization finished in %fs." % (time.time() - overall_time))
