@@ -30,6 +30,7 @@ def loop(iterator):
             for i in iterator(elements):
                 if first:
                     output = function(*args, **{**kwargs, **{"loop_i": i}})
+                    first = False
                 else:
                     output = function(*args, **{**kwargs, **{"loop_i": i, "loop_output": output}})
         return looper
@@ -114,7 +115,7 @@ def cascadeRun(track, fileformat, notification, loop_i, loop_output, **conf):
 
     # Initialize parts
     cri.init(**{**_alg, **_alg.get("criterion_init"), **{"logfile": LOGFILE}})
-    opt.init(track, result, rcandidate, **{**_alg, **{"criterion": cri.compute}, **{"logfile": LOGFILE}})
+    opt.init(track, rcandidate, result, **{**_alg, **{"criterion": cri.compute}, **{"logfile": LOGFILE}})
 
 
     ## Optimization
@@ -164,8 +165,7 @@ def loopCascadeRun(track, initline, fileformat, notification, loop_i, **conf):
     cascadeRun(
         elements=conf.get("cascade"),
         track=track,
-        loop_output=(fitness, rcandidate, tcandidate, result),
-        **{**conf, "fileformat": _fileformat, "notification": notification}
+        **{**conf, "fileformat": _fileformat, "notification": notification, "loop_output": (fitness, rcandidate, tcandidate, result)}
     )
 
 
