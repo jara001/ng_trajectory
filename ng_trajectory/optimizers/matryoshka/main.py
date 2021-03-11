@@ -32,6 +32,8 @@ CRITERION = None
 CRITERION_ARGS = None
 INTERPOLATOR = None
 INTERPOLATOR_ARGS = None
+SEGMENTATOR = None
+SEGMENTATOR_ARGS = None
 LOGFILE = None
 VERBOSITY = 3
 FILELOCK = Lock()
@@ -51,9 +53,10 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         criterion_args: Dict[str, any] = {},
         interpolator: Callable[[numpy.ndarray], numpy.ndarray] = lambda x: x,
         interpolator_args: Dict[str, any] = {},
+        segmentator: Callable[[numpy.ndarray, numpy.ndarray], numpy.ndarray] = lambda x, y: [ x for i in y ],
+        segmentator_args: Dict[str, any] = {},
         logfile: TextIO = sys.stdout,
         logging_verbosity: int = 2,
-        hold_map: bool = False,
         hold_matryoshka: bool = False,
         **kwargs):
     """Initialize variables for Matryoshka transformation.
@@ -72,28 +75,27 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     interpolator -- function to interpolate points, callable (mx2 numpy.ndarray -> qx2 numpy.ndarray),
                  default 'return the same'
     interpolator_args -- arguments for the interpolation function, dict, default {}
+    segmentator -- function to segmentate points, callable (nx2 numpy.ndarray -> m-list of rx2 numpy.ndarray),
+                   default 'each segment span over the whole track'
+    segmentator_args -- arguments for the segmentation function, dict, default {}
     logfile -- file descriptor for logging, TextIO, default sys.stdout
     logging_verbosity -- index for verbosity of logger, int, default 2
-    hold_map -- whether the map should be created only once, bool, default False
     hold_matryoshka -- whether the Matryoshka should be created only once, bool, default False
     **kwargs -- arguments not caught by previous parts
     """
-    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, CRITERION, CRITERION_ARGS, LOGFILE, VERBOSITY, HOLDMAP, INTERPOLATOR, INTERPOLATOR_ARGS
+    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP
+    global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS
 
     # Local to global variables
     CRITERION = criterion
     CRITERION_ARGS = criterion_args
     INTERPOLATOR = interpolator
     INTERPOLATOR_ARGS = interpolator_args
+    SEGMENTATOR = segmentator
+    SEGMENTATOR_ARGS = segmentator_args
     LOGFILE = logfile
     VERBOSITY = logging_verbosity
-    _holdmap = hold_map
     _holdmatryoshka = hold_matryoshka
-
-    if HOLDMAP is None or not _holdmap:
-        mapCreate(points)
-
-    HOLDMAP = _holdmap
 
 
     VALID_POINTS = points
@@ -102,7 +104,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         group_centers = trajectoryReduce(trajectorySort(group_centerline), groups)
 
         # Matryoshka construction
-        _groups = pointsToGroups(points, group_centers)
+        _groups = SEGMENTATOR(points=points, group_centers=group_centers, **{**SEGMENTATOR_ARGS})
         grouplayers = groupsBorderObtain(_groups)
         grouplayers = groupsBorderBeautify(grouplayers, 400)
         layers_center = groupsCenterCompute(_groups)
