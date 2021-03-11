@@ -29,6 +29,8 @@ MATRYOSHKA = None
 VALID_POINTS = None
 CRITERION = None
 CRITERION_ARGS = None
+INTERPOLATOR = None
+INTERPOLATOR_ARGS = None
 LOGFILE = None
 VERBOSITY = 3
 FILELOCK = Lock()
@@ -46,6 +48,8 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         workers: int = 4,
         criterion: Callable[[numpy.ndarray], float] = lambda x: 0,
         criterion_args: Dict[str, any] = {},
+        interpolator: Callable[[numpy.ndarray], numpy.ndarray] = lambda x: x,
+        interpolator_args: Dict[str, any] = {},
         logfile: TextIO = sys.stdout,
         logging_verbosity: int = 2,
         hold_map: bool = False,
@@ -64,17 +68,22 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     criterion -- function to evaluate current criterion, callable (mx2 numpy.ndarray -> float),
                  default 'static 0'
     criterion_args -- arguments for the criterion function, dict, default {}
+    interpolator -- function to interpolate points, callable (mx2 numpy.ndarray -> qx2 numpy.ndarray),
+                 default 'return the same'
+    interpolator_args -- arguments for the interpolation function, dict, default {}
     logfile -- file descriptor for logging, TextIO, default sys.stdout
     logging_verbosity -- index for verbosity of logger, int, default 2
     hold_map -- whether the map should be created only once, bool, default False
     hold_matryoshka -- whether the Matryoshka should be created only once, bool, default False
     **kwargs -- arguments not caught by previous parts
     """
-    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, CRITERION, CRITERION_ARGS, LOGFILE, VERBOSITY, HOLDMAP
+    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, CRITERION, CRITERION_ARGS, LOGFILE, VERBOSITY, HOLDMAP, INTERPOLATOR, INTERPOLATOR_ARGS
 
     # Local to global variables
     CRITERION = criterion
     CRITERION_ARGS = criterion_args
+    INTERPOLATOR = interpolator
+    INTERPOLATOR_ARGS = interpolator_args
     LOGFILE = logfile
     VERBOSITY = logging_verbosity
     _holdmap = hold_map
@@ -118,7 +127,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     tcpoints -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
     trajectory -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
     """
-    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY
+    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS
 
     with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
         recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
@@ -132,7 +141,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
             print ("solution:%s" % str(numpy.asarray(points).tolist()), file=LOGFILE)
             print ("final:%f" % final, file=LOGFILE)
 
-    return final, numpy.asarray(points), numpy.asarray(recommendation.args[0]), trajectoryInterpolate(numpy.asarray(points), 400)
+    return final, numpy.asarray(points), numpy.asarray(recommendation.args[0]), INTERPOLATOR(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
 
 
 def _opt(points: numpy.ndarray) -> float:
@@ -153,14 +162,14 @@ def _opt(points: numpy.ndarray) -> float:
 
     Note: This function is called after all necessary data is received.
     """
-    global VALID_POINTS, CRITERION, CRITERION_ARGS, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY
+    global VALID_POINTS, CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY
 
     # Transform points
     points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p])[0] for i, p in enumerate(points) ]
 
     # Interpolate received points
     # It is expected that they are unique and sorted.
-    _points = trajectoryInterpolate(numpy.asarray(points), 400)
+    _points = INTERPOLATOR(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
 
     # Check if all interpolated points are valid
     # Note: This is required for low number of groups.

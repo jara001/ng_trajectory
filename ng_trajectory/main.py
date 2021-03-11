@@ -14,6 +14,7 @@ CONFIGURATION = {}
 
 import ng_trajectory.optimizers as optimizers
 import ng_trajectory.criterions as criterions
+import ng_trajectory.interpolators as interpolators
 
 # Typing
 from typing import Tuple
@@ -128,14 +129,16 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
     # Get optimizers etc.
     opt = optimizers.__getattribute__(_alg.get("algorithm"))
     cri = criterions.__getattribute__(_alg.get("criterion"))
+    itp = interpolators.__getattribute__(_alg.get("interpolator"))
 
     # Show up current progress
-    print (notification % (loop_i[0]+1) + " %s with %s criterion" % (_alg.get("algorithm"), _alg.get("criterion")), file=LOGFILE)
+    print (notification % (loop_i[0]+1) + " %s with %s criterion, int. by %s" % (_alg.get("algorithm"), _alg.get("criterion"), _alg.get("interpolator")), file=LOGFILE)
     LOGFILE.flush()
 
     # Initialize parts
-    cri.init(**{**_alg, **_alg.get("criterion_init"), **{"logfile": LOGFILE}})
-    opt.init(track, rcandidate, result, **{**_alg, **{"criterion": cri.compute}, **{"logfile": LOGFILE}})
+    itp.init(**{**_alg, **_alg.get("interpolator_init", {}), **{"logfile": LOGFILE}})
+    cri.init(**{**_alg, **_alg.get("criterion_init", {}), **{"logfile": LOGFILE}})
+    opt.init(track, rcandidate, result, **{**_alg, **{"criterion": cri.compute}, **{"interpolator": itp.interpolate}, **{"logfile": LOGFILE}})
 
 
     ## Optimization
