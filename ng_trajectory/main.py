@@ -84,7 +84,22 @@ def dataLoad(filename: str) -> numpy.ndarray:
 
 @loop(lambda x: enumerate(x))
 def cascadeRun(track, fileformat, notification, loop_i, loop_output, **conf):
-    """Run GA Cascade."""
+    """Run steps of the GA cascade.
+
+    Arguments:
+    track -- points of the track valid area, nx2 numpy.ndarray
+    fileformat -- name of the logging file, str
+    notification -- notification about current progress, str
+    loop_i -- loop index, int
+    loop_output -- initial/previous output of the cascade, 4-tuple
+    **conf -- GA configuration, dict
+
+    Returns:
+    fitness -- best value of the criterion, float
+    rcandidate -- points in the best solution in real coordinates, nx2 numpy.ndarray
+    tcandidate -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
+    result -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
+    """
 
     # Cascade step timing
     step_time = time.time()
@@ -140,7 +155,16 @@ def cascadeRun(track, fileformat, notification, loop_i, loop_output, **conf):
 
 @loop(lambda x: range(x))
 def loopCascadeRun(track, initline, fileformat, notification, loop_i, **conf):
-    """Run outer loops of GA cascade."""
+    """Loop the whole GA cascade.
+
+    Arguments:
+    track -- points of the track valid area, nx2 numpy.ndarray
+    initline -- points of the initial line for segmentation, mx2 numpy.ndarray
+    fileformat -- name of the logging file, str
+    notification -- notification about current progress, str
+    loop_i -- loop index, int
+    **conf -- GA configuration, dict
+    """
 
     # Cascade timing
     cascade_time = time.time()
@@ -165,7 +189,9 @@ def loopCascadeRun(track, initline, fileformat, notification, loop_i, **conf):
     cascadeRun(
         elements=conf.get("cascade"),
         track=track,
-        **{**conf, "fileformat": _fileformat, "notification": notification, "loop_output": (fitness, rcandidate, tcandidate, result)}
+        fileformat=_fileformat,
+        notification=notification,
+        **{**conf, "loop_output": (fitness, rcandidate, tcandidate, result)}
     )
 
 
@@ -178,24 +204,33 @@ def loopCascadeRun(track, initline, fileformat, notification, loop_i, **conf):
 
 @loop(lambda x: enumerate(x))
 def groupsRun(fileformat, notification, loop_i, **conf):
+    """Run GA with variated number of groups/segments.
+
+    Arguments:
+    fileformat -- name of the logging file, str
+    notification -- notification about current progress, str
+    loop_i -- loop index and number of groups, 2-int tuple
+    **conf -- GA configuration, dict
+    """
+
     # Group timing
     groups_time = time.time()
 
     # Update logging file
     if fileformat:
-        _fileformat = fileformat % (loop_i[1]) + "-%%0%dd" % len(str(CONFIGURATION.get("loops")))
-    else:
-        _fileformat = None
+        # Fill group count, and add format for number of loops
+        fileformat = fileformat % (loop_i[1]) + "-%%0%dd" % len(str(CONFIGURATION.get("loops")))
 
     # Update notification
-    _notification = notification % (loop_i[0]+1, loop_i[1]) + " [%%d / %d]" % CONFIGURATION.get("loops")
+    # Fill loop index, group count and prepare loops progress
+    notification = notification % (loop_i[0]+1, loop_i[1]) + " [%%d / %d]" % CONFIGURATION.get("loops")
 
 
     ## Loop cascade
     loopCascadeRun(
         elements=CONFIGURATION.get("loops"),
-        fileformat=_fileformat,
-        notification=_notification,
+        fileformat=fileformat,
+        notification=notification,
         **{**conf, **{"groups": loop_i[1]}}
     )
 
@@ -204,7 +239,13 @@ def groupsRun(fileformat, notification, loop_i, **conf):
 
 
 def execute():
-    """Execute GA according to the configuration."""
+    """Execute GA according to the configuration.
+
+    Note: Currently, it is executed as follows:
+        - groupsRun() for each group
+            - loopCascadeRun() loop-times
+                - cascadeRun() step-times
+    """
     global CONFIGURATION
 
     # Overall time
