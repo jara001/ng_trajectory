@@ -15,7 +15,8 @@ from scipy.interpolate import bisplrep, bisplev
 from typing import List, Tuple
 
 # Utils functions
-from ng_trajectory.utils import trajectoryReduce
+from ng_trajectory.interpolators.utils import trajectoryReduce, trajectorySort
+from .interpolate import trajectoryInterpolate
 
 
 # Typing
@@ -25,6 +26,218 @@ Interpolator = List[numpy.ndarray]
 ######################
 # Utils
 ######################
+
+def pointsFilter(points: numpy.ndarray, grid: float = None) -> numpy.ndarray:
+    """Filter out points that are not necessary in trajectory planning.
+
+    Arguments:
+    points -- points to be filtered, nx2 numpy.ndarray
+
+    Returns:
+    fpoints -- filtered points, mx2 numpy.ndarray
+
+    Note: It is expected that points are aligned to a square grid.
+    """
+
+    _points = []
+
+    # Obtain grid size if not set
+    _grid = grid if grid else numpy.min(
+            [
+                numpy.min( numpy.subtract(u[1:], u[:-1]) ) for u in
+                    [
+                        numpy.unique( points[:, d] ) for d in range(points.shape[1])
+                    ]
+            ]
+        )
+
+    # Convert points to cell-oriented list
+    _cells = [
+            [ int( numpy.round(_p[_d] / _grid) ) for _d in range(points.shape[1]) ] for _p in points
+        ]
+
+    for _p in points:
+        # Remove unnecessary points.
+        # _X_  ___  ___  _X_  |  _XX  __X  ___  ___  ___  ___  X__  XX_
+        # _XX  _XX  XX_  XX_  |  _X_  _XX  _XX  _X_  _X_  XX_  XX_  _X_
+        # ___  _X_  _X_  ___  |  ___  ___  __X  _XX  XX_  X__  ___  ___
+        # Convert points to a cell
+        _cell = [ int( numpy.round(_p[_d] / _grid) ) for _d in range(points.shape[1]) ]
+
+        # Ranges
+        _xr = range(-1, 2)
+        _yr = range(-1, 2)
+
+        # Count number of points in the area (x-wise, y-wise)
+        x = sum([ any([ [ _cell[0] + _x, _cell[1] + _y ] in _cells for _x in _xr ]) for _y in _yr ])
+        y = sum([ any([ [ _cell[0] + _x, _cell[1] + _y ] in _cells for _y in _yr ]) for _x in _xr ])
+
+        if ( x < 3 ) and ( y < 3 ):
+            _cells.remove(_cell)
+
+        else:
+            _points.append(_p)
+
+    return numpy.asarray(_points)
+
+
+######################
+# Utilities (Groups)
+######################
+
+def groupsCenterCompute(groups: List[numpy.ndarray]) -> numpy.ndarray:
+    """Compute centers of the groups.
+
+    Arguments:
+    groups -- points split into groups, n-list of mx2 numpy.ndarray
+
+    Returns:
+    centers -- center points of the groups, nx2 numpy.ndarray
+    """
+
+    _centers = []
+
+    for _g in groups:
+        _centers.append( numpy.mean( _g, axis = 0 ) )
+
+    return numpy.asarray(_centers)
+
+
+def groupsBorderObtain(groups: List[numpy.ndarray], grid: float = None) -> List[numpy.ndarray]:
+    """Obtain border points of the groups.
+
+    Arguments:
+    groups -- points split into groups, n-list of mx2 numpy.ndarray
+
+    Returns:
+    borders -- border points of the groups, n-list of px2 numpy.ndarray
+
+    Note: Border points are not ordered.
+    Note: It is expected that points are aligned to a square grid.
+    Note: It is also expected that the group shape is rather convex.
+    TODO: Consider using set instead of numpy.unique / list.
+    TODOd: This version is expecting mostly convex areas. Highly unconvex
+    areas are missing some of the border points.
+    """
+
+    _borders = []
+
+    for _i, _g in enumerate(groups):
+        _border = []
+
+        # Obtain grid size if not set
+        _grid = grid if grid else numpy.min(
+                [
+                    numpy.min( numpy.subtract(u[1:], u[:-1]) ) for u in
+                        [
+                            numpy.unique( _g[:, d] ) for d in range(_g.shape[1])
+                        ]
+                ]
+            )
+
+        # Go through all dimensions
+        for _d in range(_g.shape[1]):
+
+            # Find unique values in that dimension
+            for _u in numpy.unique(_g[:, _d]):
+
+                # Append points with max / min values in another dimension
+                _border.append(
+                    numpy.min(
+                        _g[numpy.where(_g[:, _d] == _u), :],
+                        axis = 1
+                    ).tolist()[0]
+                )
+
+                _border.append(
+                    numpy.max(
+                        _g[numpy.where(_g[:, _d] == _u), :],
+                        axis = 1
+                    ).tolist()[0]
+                )
+
+                # Append inner borders
+                # Obtain values in the dimension
+                _v = _g[numpy.where(_g[:, _d] == _u), :][0]
+                _v = numpy.delete(_v, _d, axis = 1) # Select other dimensions
+
+                # Sort them (just in case)
+                # TODO: Find out whether is is necessary
+                _v = numpy.sort(_v)
+
+                # Find distances between concurrent points
+                _dists = numpy.subtract(
+                    numpy.roll(_v, 1, axis=1)[1:],
+                    _v[:-1]
+                )
+
+                # Find points in the distance larger than 1.5x _grid
+                _bords = numpy.where(
+                    _dists > (_grid * 1.5)
+                )[0]
+                # DO NOT FORGET TO ADD 1 TO INDICES!
+
+                # Add these points to the border
+                #for _b in _bords:
+                #    _border.append(
+                #        _g[
+                #            numpy.intersect1d(
+                #                numpy.where(_g[:, _d] == _u)[0],
+                #                numpy.where(_g[:, ^_d] == _b)[0]
+                #            )
+                #        ].tolist()
+                #    )
+                # ^^ Intersect would restrict dimensions.
+
+                _w = numpy.where(_g[:, _d] == _u)[0]
+                _v = _g[numpy.where(_g[:, _d] == _u), _d][0]
+
+                for _b in _bords:
+                    _border.append(
+                        _g[
+                            _w[_b]
+                        ].tolist()
+                    )
+
+                    _border.append(
+                        _g[
+                            _w[_b+1]
+                        ].tolist()
+                    )
+
+
+        _borders.append(_border)
+
+    return [ numpy.unique( numpy.asarray( b ), axis = 0 ) for b in _borders ]
+
+
+def groupsBorderBeautify(borders: List[numpy.ndarray], border_length: int) -> List[numpy.ndarray]:
+    """Filter, sort and interpolate the borders to get smoother points.
+
+    Arguments:
+    borders -- border points of the groups, n-list of x2 numpy.ndarray
+
+    Returns:
+    bborders -- beautified border points of the groups, n-list of (border_length)x2 numpy.ndarray
+
+    Note: This function is in beta, especially the point filtering.
+    """
+    global GROUP_ID
+
+    bborders = []
+
+    for group_i, border in enumerate(borders):
+        # FIXME: Temporarily hidden as we are working with 0.02 map in Stage.
+        border_filtered = pointsFilter(border)#0.05
+
+        border_sorted = trajectorySort(border_filtered)
+
+        border_interpolated = trajectoryInterpolate(border_sorted, border_length)
+
+        bborders.append(border_interpolated)
+
+    return bborders
+
 
 def groupLayersCompute(layer0: numpy.ndarray, layer0_center: numpy.ndarray, layer_count: int) -> List[numpy.ndarray]:
     """Compute layers of a group in real coordinates.

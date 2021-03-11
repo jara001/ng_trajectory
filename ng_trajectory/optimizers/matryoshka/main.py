@@ -5,7 +5,6 @@
 # Imports & Globals
 ######################
 
-from ng_trajectory.utils import *
 from ng_trajectory.interpolators.utils import *
 
 from . import transform
@@ -21,7 +20,7 @@ from concurrent import futures
 from threading import Lock
 
 # Typing
-from typing import Callable, Dict, TextIO
+from typing import Tuple, Callable, Dict, TextIO
 
 
 # Global variables
@@ -105,9 +104,9 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
         # Matryoshka construction
         _groups = SEGMENTATOR(points=points, group_centers=group_centers, **{**SEGMENTATOR_ARGS})
-        grouplayers = groupsBorderObtain(_groups)
-        grouplayers = groupsBorderBeautify(grouplayers, 400)
-        layers_center = groupsCenterCompute(_groups)
+        grouplayers = transform.groupsBorderObtain(_groups)
+        grouplayers = transform.groupsBorderBeautify(grouplayers, 400)
+        layers_center = transform.groupsCenterCompute(_groups)
         layers_count = [ layers for i in range(len(grouplayers)) ]
 
 
