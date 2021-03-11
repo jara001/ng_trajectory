@@ -6,6 +6,7 @@
 ######################
 
 from ng_trajectory.utils import *
+from ng_trajectory.interpolators.utils import *
 
 from . import transform
 
