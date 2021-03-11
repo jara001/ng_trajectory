@@ -49,6 +49,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         logfile: TextIO = sys.stdout,
         logging_verbosity: int = 2,
         hold_map: bool = False,
+        hold_matryoshka: bool = False,
         **kwargs):
     """Initialize variables for Matryoshka transformation.
 
@@ -66,6 +67,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     logfile -- file descriptor for logging, TextIO, default sys.stdout
     logging_verbosity -- index for verbosity of logger, int, default 2
     hold_map -- whether the map should be created only once, bool, default False
+    hold_matryoshka -- whether the Matryoshka should be created only once, bool, default False
     **kwargs -- arguments not caught by previous parts
     """
     global OPTIMIZER, MATRYOSHKA, VALID_POINTS, CRITERION, CRITERION_ARGS, LOGFILE, VERBOSITY, HOLDMAP
@@ -75,30 +77,35 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     CRITERION_ARGS = criterion_args
     LOGFILE = logfile
     VERBOSITY = logging_verbosity
-    _HOLDMAP = hold_map
+    _holdmap = hold_map
+    _holdmatryoshka = hold_matryoshka
 
-    if HOLDMAP is None or not _HOLDMAP:
+    if HOLDMAP is None or not _holdmap:
         mapCreate(points)
 
-    HOLDMAP = _HOLDMAP
+    HOLDMAP = _holdmap
 
 
     VALID_POINTS = points
-    group_centers = trajectoryReduce(trajectorySort(group_centerline), groups)
 
-    # Matryoshka construction
-    groups = pointsToGroups(points, group_centers)
-    grouplayers = groupsBorderObtain(groups)
-    grouplayers = groupsBorderBeautify(grouplayers, 400)
-    layers_center = groupsCenterCompute(groups)
-    layers_count = [ layers for i in range(len(grouplayers)) ]
+    if MATRYOSHKA is None or not _holdmatryoshka:
+        group_centers = trajectoryReduce(trajectorySort(group_centerline), groups)
 
-    
-    MATRYOSHKA = [ transform.matryoshkaCreate(grouplayers[_i], layers_center[_i], layers_count[_i]) for _i in range(len(groups)) ]
+        # Matryoshka construction
+        _groups = pointsToGroups(points, group_centers)
+        grouplayers = groupsBorderObtain(_groups)
+        grouplayers = groupsBorderBeautify(grouplayers, 400)
+        layers_center = groupsCenterCompute(_groups)
+        layers_count = [ layers for i in range(len(grouplayers)) ]
+
+
+        MATRYOSHKA = [ transform.matryoshkaCreate(grouplayers[_i], layers_center[_i], layers_count[_i]) for _i in range(len(_groups)) ]
+
+        print ("Matryoshka mapping constructed.")
 
 
     # Optimizer definition
-    instrum = nevergrad.Instrumentation(nevergrad.var.Array(len(groups), 2).bounded(0, 1))
+    instrum = nevergrad.Instrumentation(nevergrad.var.Array(groups, 2).bounded(0, 1))
     OPTIMIZER = nevergrad.optimizers.DoubleFastGADiscreteOnePlusOne(instrumentation = instrum, budget = budget, num_workers = workers)
 
 
