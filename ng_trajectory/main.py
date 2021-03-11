@@ -138,7 +138,7 @@ def cascadeRun(track, fileformat, notification, loop_i, loop_output, **conf):
 
 
 @loop(lambda x: range(x))
-def loopCascadeRun(track, initpoints, fileformat, notification, loop_i, **conf):
+def loopCascadeRun(track, initline, fileformat, notification, loop_i, **conf):
     """Run outer loops of GA cascade."""
 
     # Cascade timing
@@ -146,9 +146,9 @@ def loopCascadeRun(track, initpoints, fileformat, notification, loop_i, **conf):
 
     # Initial solution
     fitness = 10000000
-    result = initpoints
-    rcandidate = initpoints
-    tcandidate = numpy.asarray([ [0.5, 0.5] for _i in range(initpoints.shape[0])])
+    result = initline
+    rcandidate = initline
+    tcandidate = numpy.asarray([ [0.5, 0.5] for _i in range(initline.shape[0])])
 
     # Update logging file
     if fileformat:
@@ -231,7 +231,7 @@ def execute():
     groupsRun(
         elements=_groups,
         track=VALID_POINTS,
-        initpoints=START_POINTS,
+        initline=START_POINTS,
         fileformat=fileformat,
         notification=notification,
         **CONFIGURATION
