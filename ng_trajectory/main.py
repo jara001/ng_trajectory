@@ -268,27 +268,67 @@ def execute():
     START_POINTS = dataLoad(CONFIGURATION.get("start_points"))
     VALID_POINTS = dataLoad(CONFIGURATION.get("valid_points"))
 
-    _groups = [ ("groups", CONFIGURATION.get("groups")) ] if isinstance(CONFIGURATION.get("groups"), int) else [ ("groups", _g) for _g in CONFIGURATION.get("groups") ]
-
 
     # Logging file format
     if "prefix" in CONFIGURATION:
-        fileformat = "%s-%%0%dd" % (str(CONFIGURATION.get("prefix")), len(str(max(_groups))))
+        fileformat = "%s" % str(CONFIGURATION.get("prefix"))
     else:
         fileformat = None
 
 
     # Notification about progress
-    notification = "{%%d / %d (%%d %%s)}" % len(_groups)
+    notification = ""
 
 
-    variateRun(
-        elements=_groups,
-        track=VALID_POINTS,
-        initline=START_POINTS,
-        fileformat=fileformat,
-        notification=notification,
-        **CONFIGURATION
-    )
+    # Identify and prepare variating variable
+    if "variate" in CONFIGURATION and CONFIGURATION.get("variate") in CONFIGURATION:
+        param = CONFIGURATION.get("variate")
+        values = CONFIGURATION.get(param)
+
+        # Force list
+        if not isinstance(values, list):
+            values = [ values ]
+
+        # Convert to tuples
+        tvalues = [ (param, value) for value in values ]
+
+        # Add variate to the file format
+        if fileformat:
+            fileformat = fileformat + "-%%0%dd" % len(str(max(values)))
+        else:
+            fileformat = None
+
+        # ... and also to the notification
+        notification = notification + "{%%d / %d (%%d %%s)}" % len(values)
+
+
+        ## And variate the parameter
+        variateRun(
+            elements=tvalues,
+            track=VALID_POINTS,
+            initline=START_POINTS,
+            fileformat=fileformat,
+            notification=notification,
+            **CONFIGURATION
+        )
+
+    else:
+        # Skip to the loop
+        # Update logging file
+        if fileformat:
+            fileformat = fileformat + "-%%0%dd" % len(str(CONFIGURATION.get("loops")))
+
+        # Update notification
+        notification = notification + "[%%d / %d]" % CONFIGURATION.get("loops")
+
+        ## Loop cascade
+        loopCascadeRun(
+            elements=CONFIGURATION.get("loops"),
+            track=VALID_POINTS,
+            initline=START_POINTS,
+            fileformat=fileformat,
+            notification=notification,
+            **CONFIGURATION
+        )
 
     print ("Optimization finished in %fs." % (time.time() - overall_time))
