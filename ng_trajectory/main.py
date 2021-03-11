@@ -137,6 +137,45 @@ def cascadeRun(track, fileformat, notification, loop_i, loop_output, **conf):
         return loop_output
 
 
+@loop(lambda x: range(x))
+def loopCascadeRun(track, initpoints, fileformat, notification, loop_i, **conf):
+    """Run outer loops of GA cascade."""
+
+    # Cascade timing
+    cascade_time = time.time()
+
+    # Initial solution
+    fitness = 10000000
+    result = initpoints
+    rcandidate = initpoints
+    tcandidate = numpy.asarray([ [0.5, 0.5] for _i in range(initpoints.shape[0])])
+
+    # Update logging file
+    if fileformat:
+        _fileformat = fileformat % (loop_i+1) + "-%%0%dd" % len(str(len(conf.get("cascade"))))
+    else:
+        _fileformat = None
+
+    # Update notification
+    notification = notification % (loop_i+1) + " Running step %%d/%d" % len(conf.get("cascade"))
+
+
+    ## Run cascade
+    cascadeRun(
+        elements=conf.get("cascade"),
+        track=track,
+        loop_output=(fitness, rcandidate, tcandidate, result),
+        **{**conf, "fileformat": _fileformat, "notification": notification}
+    )
+
+
+    if fileformat:
+        with open(fileformat % (loop_i+1) + ".log", "w") as logfile:
+            print ("timeA:%f" % (time.time() - cascade_time), file=logfile)
+    else:
+        print ("timeA:%f" % (time.time() - cascade_time), file=sys.stdout)
+
+
 def execute():
     """Execute GA according to the configuration."""
     global CONFIGURATION
@@ -171,48 +210,21 @@ def execute():
         # Update logging file
         if fileformat:
             _fileformat = fileformat % (_group) + "-%%0%dd" % len(str(CONFIGURATION.get("loops")))
+        else:
+            _fileformat = None
 
         # Update notification
         _notification = notification % (_gi+1, _group) + " [%%d / %d]" % CONFIGURATION.get("loops")
 
 
-        # Create loops
-        for _loop in range(CONFIGURATION.get("loops")):
-            # Cascade timing
-            cascade_time = time.time()
-
-            # Initial solution
-            fitness = 10000000
-            result = START_POINTS
-            rcandidate = START_POINTS
-            tcandidate = numpy.asarray([ [0.5, 0.5] for _i in range(START_POINTS.shape[0])])
-
-            # Update logging file
-            if fileformat:
-                __fileformat = _fileformat % (_loop+1) + "-%%0%dd" % len(str(len(CONFIGURATION.get("cascade"))))
-            else:
-                __fileformat = None
-
-            # Update notification
-            __notification = _notification % (_loop+1) + " Running step %%d/%d" % len(CONFIGURATION.get("cascade"))
-
-            cascadeRun(
-                elements=CONFIGURATION.get("cascade"),
-                track=VALID_POINTS,
-                loop_output=(fitness, rcandidate, tcandidate, result),
-                **{**CONFIGURATION, "fileformat": __fileformat, "notification": __notification}
-            )
-
-            if "prefix" in CONFIGURATION:
-                with open(
-                        ("%s-%%0%dd.log" % (
-                                str(CONFIGURATION.get("prefix", "ng")),
-                                len(str(CONFIGURATION.get("loops")+1))
-                            )) % (_loop+1), "w"
-                    ) as logfile:
-                    print ("timeA:%f" % (time.time() - cascade_time), file=logfile)
-            else:
-                print ("timeA:%f" % (time.time() - cascade_time), file=sys.stdout)
+        loopCascadeRun(
+            elements=CONFIGURATION.get("loops"),
+            track=VALID_POINTS,
+            initpoints=START_POINTS,
+            fileformat=_fileformat,
+            notification=_notification,
+            **_configuration
+        )
 
         print ("Group %d finished in %fs." % (_group, time.time() - groups_time))
 
