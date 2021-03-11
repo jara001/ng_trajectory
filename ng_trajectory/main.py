@@ -15,6 +15,9 @@ CONFIGURATION = {}
 import ng_trajectory.optimizers as optimizers
 import ng_trajectory.criterions as criterions
 
+# Typing
+from typing import Tuple
+
 
 ######################
 # Decorators
@@ -83,7 +86,9 @@ def dataLoad(filename: str) -> numpy.ndarray:
 ######################
 
 @loop(lambda x: enumerate(x))
-def cascadeRun(track, fileformat, notification, loop_i, loop_output, **conf):
+def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i: int, \
+    loop_output: Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray], **conf) \
+    -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     """Run steps of the GA cascade.
 
     Arguments:
@@ -154,7 +159,7 @@ def cascadeRun(track, fileformat, notification, loop_i, loop_output, **conf):
 
 
 @loop(lambda x: range(x))
-def loopCascadeRun(track, initline, fileformat, notification, loop_i, **conf):
+def loopCascadeRun(track: numpy.ndarray, initline: numpy.ndarray, fileformat: str, notification: str, loop_i: int, **conf) -> None:
     """Loop the whole GA cascade.
 
     Arguments:
@@ -203,7 +208,7 @@ def loopCascadeRun(track, initline, fileformat, notification, loop_i, **conf):
 
 
 @loop(lambda x: enumerate(x))
-def groupsRun(fileformat, notification, loop_i, **conf):
+def groupsRun(fileformat: str, notification: str, loop_i: Tuple[int, int], **conf) -> None:
     """Run GA with variated number of groups/segments.
 
     Arguments:
