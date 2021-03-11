@@ -77,6 +77,66 @@ def dataLoad(filename: str) -> numpy.ndarray:
     return numpy.load(filename)
 
 
+######################
+# Execute functions
+######################
+
+@loop(lambda x: enumerate(x))
+def cascadeRun(track, fileformat, notification, loop_i, loop_output, **conf):
+    """Run GA Cascade."""
+
+    # Cascade step timing
+    step_time = time.time()
+
+    # Get configuration for current step
+    _alg = {**conf, **loop_i[1]}
+
+    # Rename output from previous stages
+    fitness, rcandidate, tcandidate, result = loop_output
+
+    # Open up logging file
+    if fileformat:
+        LOGFILE = open(fileformat % (loop_i[0]+1) + "-%s.log" % _alg.get("algorithm"), "w")
+        print (_alg, file=LOGFILE)
+        LOGFILE.flush()
+    else:
+        LOGFILE = sys.stdout
+
+
+    ## Initialization
+    # Get optimizers etc.
+    opt = optimizers.__getattribute__(_alg.get("algorithm"))
+    cri = criterions.__getattribute__(_alg.get("criterion"))
+
+    # Show up current progress
+    print (notification % (loop_i[0]+1) + " %s with %s criterion" % (_alg.get("algorithm"), _alg.get("criterion")), file=LOGFILE)
+    LOGFILE.flush()
+
+    # Initialize parts
+    cri.init(**{**_alg, **_alg.get("criterion_init"), **{"logfile": LOGFILE}})
+    opt.init(track, result, rcandidate, **{**_alg, **{"criterion": cri.compute}, **{"logfile": LOGFILE}})
+
+
+    ## Optimization
+    _fitness, _rcandidate, _tcandidate, _result = opt.optimize()
+
+
+    ## End parts
+    # Show up time elapsed
+    print ("time:%f" % (time.time() - step_time), file=LOGFILE)
+    print ("==============", file=LOGFILE)
+
+    # Close file if opened
+    if fileformat:
+        LOGFILE.close()
+
+    # Store only better solution for next steps of the cascade
+    if _fitness < fitness:
+        return _fitness, _rcandidate, _tcandidate, _result
+    else:
+        return loop_output
+
+
 def execute():
     """Execute GA according to the configuration."""
     global CONFIGURATION
@@ -130,43 +190,18 @@ def execute():
             # Update logging file
             if fileformat:
                 __fileformat = _fileformat % (_loop+1) + "-%%0%dd" % len(str(len(CONFIGURATION.get("cascade"))))
+            else:
+                __fileformat = None
 
             # Update notification
             __notification = _notification % (_loop+1) + " Running step %%d/%d" % len(CONFIGURATION.get("cascade"))
 
-            # Run cascade
-            for _i, _alg in enumerate(CONFIGURATION.get("cascade")):
-                # Cascade step timing
-                step_time = time.time()
-
-                if fileformat:
-                    LOGFILE = open(__fileformat % (_i+1) + "-%s.log" % _alg.get("algorithm"), "w")
-                    print ({**_configuration, **_alg}, file=LOGFILE)
-                    LOGFILE.flush()
-                else:
-                    LOGFILE = sys.stdout
-
-                opt = optimizers.__getattribute__(_alg.get("algorithm"))
-                cri = criterions.__getattribute__(_alg.get("criterion"))
-
-                print (__notification % (_i+1) + " %s with %s criterion" % (_alg.get("algorithm"), _alg.get("criterion")), file=LOGFILE)
-                LOGFILE.flush()
-
-                # Initialize criterion
-                cri.init(**{**_configuration, **_alg, **_alg.get("criterion_init"), **{"logfile": LOGFILE}})
-
-                opt.init(VALID_POINTS, result, rcandidate, **{**_configuration, **_alg, **{"criterion": cri.compute}, **{"logfile": LOGFILE}})
-                _fitness, _rcandidate, _tcandidate, _result = opt.optimize()
-
-                # Store only better solution for next steps of the cascade
-                if (_fitness < fitness):
-                    fitness, rcandidate, tcandidate, rcandidate = _fitness, _rcandidate, _tcandidate, _result
-
-                print ("time:%f" % (time.time() - step_time), file=LOGFILE)
-                print ("==============", file=LOGFILE)
-
-                if fileformat:
-                    LOGFILE.close()
+            cascadeRun(
+                elements=CONFIGURATION.get("cascade"),
+                track=VALID_POINTS,
+                loop_output=(fitness, rcandidate, tcandidate, result),
+                **{**CONFIGURATION, "fileformat": __fileformat, "notification": __notification}
+            )
 
             if "prefix" in CONFIGURATION:
                 with open(
