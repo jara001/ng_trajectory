@@ -1,6 +1,6 @@
 #!/usr/bin/env python3.6
-# matryoshka.py
-"""Entrypoint for ng_trajectory."""
+# main.py
+"""Interface for Matryoshka mapping."""
 ######################
 # Imports & Globals
 ######################
@@ -19,6 +19,9 @@ from concurrent import futures
 # Thread lock for log file
 from threading import Lock
 
+# Typing
+from typing import Callable, Dict, TextIO
+
 
 # Global variables
 OPTIMIZER = None
@@ -36,20 +39,43 @@ HOLDMAP = None
 # Functions
 ######################
 
-def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: numpy.ndarray, **kwargs):
-    """Initialize variables for Matryoshka transformation."""
+def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: numpy.ndarray, \
+        budget: int = 100,
+        layers: int = 5,
+        groups: int = 8,
+        workers: int = 4,
+        criterion: Callable[[numpy.ndarray], float] = lambda x: 0,
+        criterion_args: Dict[str, any] = {},
+        logfile: TextIO = sys.stdout,
+        logging_verbosity: int = 2,
+        hold_map: bool = False,
+        **kwargs):
+    """Initialize variables for Matryoshka transformation.
+
+    Arguments:
+    points -- valid area of the track, nx2 numpy.ndarray
+    group_centers -- points for centers of individual groups, mx2 numpy.ndarray
+    group_centerline -- line where the group centers lie, px2 numpy.ndarray
+    budget -- number of generations of genetic algorithm, int, default 100
+    layers -- number of layers for each Matryoshka, int, default 5
+    groups -- number of groups to segmentate the track into, int, default 8
+    workers -- number of threads for GA, int, default 4
+    criterion -- function to evaluate current criterion, callable (mx2 numpy.ndarray -> float),
+                 default 'static 0'
+    criterion_args -- arguments for the criterion function, dict, default {}
+    logfile -- file descriptor for logging, TextIO, default sys.stdout
+    logging_verbosity -- index for verbosity of logger, int, default 2
+    hold_map -- whether the map should be created only once, bool, default False
+    **kwargs -- arguments not caught by previous parts
+    """
     global OPTIMIZER, MATRYOSHKA, VALID_POINTS, CRITERION, CRITERION_ARGS, LOGFILE, VERBOSITY, HOLDMAP
 
-    # Local variables
-    _budget = kwargs.get("budget", 100)
-    _layers = kwargs.get("layers", 5)
-    _groups = kwargs.get("groups", 8)
-    _workers = kwargs.get("workers", 4)
-    CRITERION = kwargs.get("criterion")#globals()[kwargs.get("criterion")]
-    CRITERION_ARGS = kwargs.get("criterion_args")
-    LOGFILE = kwargs.get("logfile", sys.stdout)
-    VERBOSITY = kwargs.get("logging_verbosity", 2)
-    _HOLDMAP = kwargs.get("hold_map", False)
+    # Local to global variables
+    CRITERION = criterion
+    CRITERION_ARGS = criterion_args
+    LOGFILE = logfile
+    VERBOSITY = logging_verbosity
+    _HOLDMAP = hold_map
 
     if HOLDMAP is None or not _HOLDMAP:
         mapCreate(points)
@@ -58,25 +84,25 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
 
     VALID_POINTS = points
-    group_centers = trajectoryReduce(trajectorySort(group_centerline), _groups)
+    group_centers = trajectoryReduce(trajectorySort(group_centerline), groups)
 
     # Matryoshka construction
     groups = pointsToGroups(points, group_centers)
-    layers = groupsBorderObtain(groups)
-    layers = groupsBorderBeautify(layers, 400)
+    grouplayers = groupsBorderObtain(groups)
+    grouplayers = groupsBorderBeautify(grouplayers, 400)
     layers_center = groupsCenterCompute(groups)
-    layers_count = [ 5 for i in range(len(layers)) ]
+    layers_count = [ layers for i in range(len(grouplayers)) ]
 
     
-    MATRYOSHKA = [ transform.matryoshkaCreate(layers[_i], layers_center[_i], layers_count[_i]) for _i in range(len(groups)) ]
+    MATRYOSHKA = [ transform.matryoshkaCreate(grouplayers[_i], layers_center[_i], layers_count[_i]) for _i in range(len(groups)) ]
 
 
     # Optimizer definition
     instrum = nevergrad.Instrumentation(nevergrad.var.Array(len(groups), 2).bounded(0, 1))
-    OPTIMIZER = nevergrad.optimizers.DoubleFastGADiscreteOnePlusOne(instrumentation = instrum, budget = _budget, num_workers = _workers)
+    OPTIMIZER = nevergrad.optimizers.DoubleFastGADiscreteOnePlusOne(instrumentation = instrum, budget = budget, num_workers = workers)
 
 
-def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray]:
+def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     """Run genetic algorithm via Nevergrad.
 
     Returns:
