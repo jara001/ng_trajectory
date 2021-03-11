@@ -70,30 +70,31 @@ def execute():
 
     _groups = [ CONFIGURATION.get("groups") ] if isinstance(CONFIGURATION.get("groups"), int) else CONFIGURATION.get("groups")
 
+
+    # Logging file format
+    if "prefix" in CONFIGURATION:
+        fileformat = "%s-%%0%dd" % (str(CONFIGURATION.get("prefix")), len(str(max(_groups))))
+    else:
+        fileformat = None
+
+
+    # Notification about progress
+    notification = "{%%d / %d (%%d groups)}" % len(_groups)
+
+
     # Create groups variation
     for _gi, _group in enumerate(_groups):
         groups_time = time.time()
 
         _configuration = {**CONFIGURATION, **{"groups": _group}}
 
-        # Logging file format
-        if "prefix" in CONFIGURATION:
-            fileformat = "%s-%%0%dd-%%0%dd-%%0%dd-%%s.log" % (
-                str(CONFIGURATION.get("prefix")),
-                len(str(max(_groups))),
-                len(str(CONFIGURATION.get("loops"))),
-                len(str(len(CONFIGURATION.get("cascade"))))
-            )
-        else:
-            fileformat = None
+        # Update logging file
+        if fileformat:
+            _fileformat = fileformat % (_group) + "-%%0%dd" % len(str(CONFIGURATION.get("loops")))
 
-        # Progress notification
-        notification = "{%%d / %d (%d groups)} [%%d / %d] Running step %%d/%d %%s with %%s criterion" % (
-                len(_groups),
-                _group,
-                CONFIGURATION.get("loops"),
-                len(CONFIGURATION.get("cascade"))
-            )
+        # Update notification
+        _notification = notification % (_gi+1, _group) + " [%%d / %d]" % CONFIGURATION.get("loops")
+
 
         # Create loops
         for _loop in range(CONFIGURATION.get("loops")):
@@ -106,13 +107,20 @@ def execute():
             rcandidate = START_POINTS
             tcandidate = numpy.asarray([ [0.5, 0.5] for _i in range(START_POINTS.shape[0])])
 
+            # Update logging file
+            if fileformat:
+                __fileformat = _fileformat % (_loop+1) + "-%%0%dd" % len(str(len(CONFIGURATION.get("cascade"))))
+
+            # Update notification
+            __notification = _notification % (_loop+1) + " Running step %%d/%d" % len(CONFIGURATION.get("cascade"))
+
             # Run cascade
             for _i, _alg in enumerate(CONFIGURATION.get("cascade")):
                 # Cascade step timing
                 step_time = time.time()
 
                 if fileformat:
-                    LOGFILE = open(fileformat % (_group, _loop+1, _i+1, _alg.get("algorithm")), "w")
+                    LOGFILE = open(__fileformat % (_i+1) + "-%s.log" % _alg.get("algorithm"), "w")
                     print ({**_configuration, **_alg}, file=LOGFILE)
                     LOGFILE.flush()
                 else:
@@ -121,7 +129,7 @@ def execute():
                 opt = optimizers.__getattribute__(_alg.get("algorithm"))
                 cri = criterions.__getattribute__(_alg.get("criterion"))
 
-                print (notification % (_gi+1, _loop+1, _i+1, _alg.get("algorithm"), _alg.get("criterion")), file=LOGFILE)
+                print (__notification % (_i+1) + " %s with %s criterion" % (_alg.get("algorithm"), _alg.get("criterion")), file=LOGFILE)
                 LOGFILE.flush()
 
                 # Initialize criterion
