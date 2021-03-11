@@ -176,6 +176,33 @@ def loopCascadeRun(track, initpoints, fileformat, notification, loop_i, **conf):
         print ("timeA:%f" % (time.time() - cascade_time), file=sys.stdout)
 
 
+@loop(lambda x: enumerate(x))
+def groupsRun(fileformat, notification, loop_i, **conf):
+    # Group timing
+    groups_time = time.time()
+
+    # Update logging file
+    if fileformat:
+        _fileformat = fileformat % (loop_i[1]) + "-%%0%dd" % len(str(CONFIGURATION.get("loops")))
+    else:
+        _fileformat = None
+
+    # Update notification
+    _notification = notification % (loop_i[0]+1, loop_i[1]) + " [%%d / %d]" % CONFIGURATION.get("loops")
+
+
+    ## Loop cascade
+    loopCascadeRun(
+        elements=CONFIGURATION.get("loops"),
+        fileformat=_fileformat,
+        notification=_notification,
+        **{**conf, **{"groups": loop_i[1]}}
+    )
+
+
+    print ("Group %d finished in %fs." % (loop_i[1], time.time() - groups_time))
+
+
 def execute():
     """Execute GA according to the configuration."""
     global CONFIGURATION
@@ -201,31 +228,13 @@ def execute():
     notification = "{%%d / %d (%%d groups)}" % len(_groups)
 
 
-    # Create groups variation
-    for _gi, _group in enumerate(_groups):
-        groups_time = time.time()
-
-        _configuration = {**CONFIGURATION, **{"groups": _group}}
-
-        # Update logging file
-        if fileformat:
-            _fileformat = fileformat % (_group) + "-%%0%dd" % len(str(CONFIGURATION.get("loops")))
-        else:
-            _fileformat = None
-
-        # Update notification
-        _notification = notification % (_gi+1, _group) + " [%%d / %d]" % CONFIGURATION.get("loops")
-
-
-        loopCascadeRun(
-            elements=CONFIGURATION.get("loops"),
-            track=VALID_POINTS,
-            initpoints=START_POINTS,
-            fileformat=_fileformat,
-            notification=_notification,
-            **_configuration
-        )
-
-        print ("Group %d finished in %fs." % (_group, time.time() - groups_time))
+    groupsRun(
+        elements=_groups,
+        track=VALID_POINTS,
+        initpoints=START_POINTS,
+        fileformat=fileformat,
+        notification=notification,
+        **CONFIGURATION
+    )
 
     print ("Optimization finished in %fs." % (time.time() - overall_time))
