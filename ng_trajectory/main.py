@@ -17,6 +17,26 @@ import ng_trajectory.criterions as criterions
 
 
 ######################
+# Decorators
+######################
+
+def loop(iterator):
+    """Decorator for looping functions."""
+
+    def wrapper(function, *args, **kwags):
+        def looper(elements, *args, **kwargs):
+            first = True
+            output = []
+            for i in iterator(elements):
+                if first:
+                    output = function(*args, **{**kwargs, **{"loop_i": i}})
+                else:
+                    output = function(*args, **{**kwargs, **{"loop_i": i, "loop_output": output}})
+        return looper
+    return wrapper
+
+
+######################
 # Functions
 ######################
 
