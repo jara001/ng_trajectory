@@ -211,27 +211,32 @@ def loopCascadeRun(track: numpy.ndarray, initline: numpy.ndarray, fileformat: st
 
 
 @loop(lambda x: enumerate(x))
-def groupsRun(fileformat: str, notification: str, loop_i: Tuple[int, int], **conf) -> None:
-    """Run GA with variated number of groups/segments.
+def variateRun(fileformat: str, notification: str, loop_i: Tuple[int, Tuple[str, int]], **conf) -> None:
+    """Run GA with variated number of an element.
 
     Arguments:
     fileformat -- name of the logging file, str
     notification -- notification about current progress, str
-    loop_i -- loop index and number of groups, 2-int tuple
+    loop_i -- loop index and (name of the variable, value), 2-tuple [int, Tuple[str, int]]
     **conf -- GA configuration, dict
     """
 
     # Group timing
-    groups_time = time.time()
+    variate_time = time.time()
+
+    # Local variables
+    _i = loop_i[0]
+    _param = loop_i[1][0]
+    _value = loop_i[1][1]
 
     # Update logging file
     if fileformat:
         # Fill group count, and add format for number of loops
-        fileformat = fileformat % (loop_i[1]) + "-%%0%dd" % len(str(CONFIGURATION.get("loops")))
+        fileformat = fileformat % (_value) + "-%%0%dd" % len(str(CONFIGURATION.get("loops")))
 
     # Update notification
     # Fill loop index, group count and prepare loops progress
-    notification = notification % (loop_i[0]+1, loop_i[1]) + " [%%d / %d]" % CONFIGURATION.get("loops")
+    notification = notification % (_i+1, _value, _param) + " [%%d / %d]" % CONFIGURATION.get("loops")
 
 
     ## Loop cascade
@@ -239,11 +244,11 @@ def groupsRun(fileformat: str, notification: str, loop_i: Tuple[int, int], **con
         elements=CONFIGURATION.get("loops"),
         fileformat=fileformat,
         notification=notification,
-        **{**conf, **{"groups": loop_i[1]}}
+        **{**conf, **{_param: _value}}
     )
 
 
-    print ("Group %d finished in %fs." % (loop_i[1], time.time() - groups_time))
+    print ("Variating %s %d finished in %fs." % (_param, _value, time.time() - variate_time))
 
 
 def execute():
@@ -263,7 +268,7 @@ def execute():
     START_POINTS = dataLoad(CONFIGURATION.get("start_points"))
     VALID_POINTS = dataLoad(CONFIGURATION.get("valid_points"))
 
-    _groups = [ CONFIGURATION.get("groups") ] if isinstance(CONFIGURATION.get("groups"), int) else CONFIGURATION.get("groups")
+    _groups = [ ("groups", CONFIGURATION.get("groups")) ] if isinstance(CONFIGURATION.get("groups"), int) else [ ("groups", _g) for _g in CONFIGURATION.get("groups") ]
 
 
     # Logging file format
@@ -274,10 +279,10 @@ def execute():
 
 
     # Notification about progress
-    notification = "{%%d / %d (%%d groups)}" % len(_groups)
+    notification = "{%%d / %d (%%d %%s)}" % len(_groups)
 
 
-    groupsRun(
+    variateRun(
         elements=_groups,
         track=VALID_POINTS,
         initline=START_POINTS,
