@@ -17,6 +17,8 @@ import ng_trajectory.criterions as criterions
 import ng_trajectory.interpolators as interpolators
 import ng_trajectory.segmentators as segmentators
 
+import ng_trajectory.plot as plot
+
 # Typing
 from typing import Tuple
 
@@ -146,6 +148,18 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
 
     ## Optimization
     _fitness, _rcandidate, _tcandidate, _result = opt.optimize()
+
+
+    ## Plot the solution
+    fig = plot.figureCreate()
+    plot.axisEqual()
+    plot.trackPlot(track)
+    plot.pointsPlot(_result)
+    plot.pointsScatter(_rcandidate)
+    if fileformat:
+        plot.figureSave(fileformat % (loop_i[0]+1) + "-%s.png" % _alg.get("algorithm"))
+    else:
+        plot.figureShow()
 
 
     ## End parts

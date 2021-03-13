@@ -53,6 +53,7 @@ except:
 
 
 try:
+    import matplotlib
     from matplotlib import pyplot
 
     PLOT_AVAILABLE = True
