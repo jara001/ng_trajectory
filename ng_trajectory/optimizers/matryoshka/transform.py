@@ -55,8 +55,14 @@ def pointsFilter(points: numpy.ndarray, grid: float = None) -> numpy.ndarray:
     _cells = [
             [ int( numpy.round(_p[_d] / _grid) ) for _d in range(points.shape[1]) ] for _p in points
         ]
+    _cells_copy = [
+            [ int( numpy.round(_p[_d] / _grid) ) for _d in range(points.shape[1]) ] for _p in points
+        ]
 
-    for _p in points:
+    # Treat points as list
+    pointsL = points.tolist()
+
+    for _p in pointsL:
         # Remove unnecessary points.
         # _X_  ___  ___  _X_  |  _XX  __X  ___  ___  ___  ___  X__  XX_
         # _XX  _XX  XX_  XX_  |  _X_  _XX  _XX  _X_  _X_  XX_  XX_  _X_
@@ -73,6 +79,21 @@ def pointsFilter(points: numpy.ndarray, grid: float = None) -> numpy.ndarray:
         y = sum([ any([ [ _cell[0] + _x, _cell[1] + _y ] in _cells for _y in _yr ]) for _x in _xr ])
 
         if ( x < 3 ) and ( y < 3 ):
+            # Return nearby points back to the loop
+            for _xr in range(-1, 2):
+                for _yr in range(-1, 2):
+                    if _xr == _yr == 0:
+                        continue
+
+                    # Get index of the cell
+                    _nearbyc = [ _cell[0] + _xr, _cell[1] + _yr ]
+
+                    # Find whether it is a valid border cell and try to find it
+                    if _nearbyc in _cells_copy and pointsL[_cells_copy.index(_nearbyc)] in _points:
+                        _nearbyp = pointsL[_cells_copy.index(_nearbyc)]
+                        _points.remove(_nearbyp)
+                        pointsL.append(_nearbyp)
+
             _cells.remove(_cell)
 
         else:
