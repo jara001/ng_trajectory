@@ -102,6 +102,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
     if MATRYOSHKA is None or not _holdmatryoshka:
         group_centers = trajectoryReduce(trajectorySort(group_centerline), groups)
+        plot.indicesPlot(group_centers)
 
         # Matryoshka construction
         _groups = SEGMENTATOR(points=points, group_centers=group_centers, **{**SEGMENTATOR_ARGS})

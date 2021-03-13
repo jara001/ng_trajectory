@@ -94,12 +94,29 @@ def bordersPlot(borders: List[numpy.ndarray], colored: bool = True, figure: matp
     colored -- when True, plot is done colored, otherwise single color, bool, default True
     figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
     """
+
     if colored:
         #groupsScatter(borders, figure, s=1)
         groupsPlot(borders, figure, linewidth=0.6, linestyle="dotted")
     else:
         #groupsScatter(borders, figure, s=1, color="gray")
         groupsPlot(borders, figure, linewidth=0.6, linestyle="dotted", color="gray")
+
+
+def indicesPlot(points: numpy.ndarray, figure: matplotlib.figure.Figure = None) -> None:
+    """Show an index of each element on its location.
+
+    Arguments:
+    points -- locations where to show the indices, nx2 numpy.ndarray
+    figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+    """
+
+    for i, point in enumerate(points):
+        labelText(point, i,
+            verticalalignment = "center",
+            horizontalalignment = "center",
+            fontsize = 18
+        )
 
 
 ######################
@@ -184,3 +201,19 @@ def grouplayersPlot(grouplayers: numpy.ndarray, figure: matplotlib.figure.Figure
 
     for _g in grouplayers:
         groupsPlot(_g, figure, **kwargs)
+
+
+@plot_only
+def labelText(point: numpy.ndarray, s: str, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+    """Show a label on a point.
+
+    Arguments:
+    point -- location to show the text, 1x2 numpy.ndarray
+    s -- text to show, str
+    **kwargs -- keyword arguments to be passed to text
+    """
+
+    if figure is None:
+        figure = pyplot.gcf()
+
+    figure.axes[0].text(point[0], point[1], s = s, **kwargs)
