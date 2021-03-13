@@ -16,6 +16,8 @@ except:
 
 from ng_trajectory import PLOT_AVAILABLE
 
+from typing import List
+
 
 ######################
 # Decorators
@@ -82,6 +84,20 @@ def trackPlot(track: numpy.ndarray, figure: matplotlib.figure.Figure = None) -> 
     figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
     """
     pointsScatter(track, figure, s=1, color="gray")
+
+
+def bordersPlot(borders: List[numpy.ndarray], colored: bool = True, figure: matplotlib.figure.Figure = None) -> None:
+    """Plot borders of the segments to a selected figure.
+
+    Arguments:
+    borders -- border points of the groups, n-list of x2 numpy.ndarray
+    colored -- when True, plot is done colored, otherwise single color, bool, default True
+    figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+    """
+    if colored:
+        groupsScatter(borders, figure, s=1)
+    else:
+        groupsScatter(borders, figure, s=1, color="gray")
 
 
 ######################

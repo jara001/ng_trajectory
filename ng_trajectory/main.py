@@ -139,6 +139,11 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
     print (notification % (loop_i[0]+1) + " %s with %s criterion, int. by %s" % (_alg.get("algorithm"), _alg.get("criterion"), _alg.get("interpolator")), file=LOGFILE)
     LOGFILE.flush()
 
+    # Prepare plot
+    fig = plot.figureCreate()
+    plot.axisEqual()
+    plot.trackPlot(track)
+
     # Initialize parts
     itp.init(**{**_alg, **_alg.get("interpolator_init", {}), **{"logfile": LOGFILE}})
     seg.init(track, **{**_alg, **_alg.get("segmentator_init", {}), **{"logfile": LOGFILE}})
@@ -151,9 +156,6 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
 
 
     ## Plot the solution
-    fig = plot.figureCreate()
-    plot.axisEqual()
-    plot.trackPlot(track)
     plot.pointsPlot(_result)
     plot.pointsScatter(_rcandidate)
     if fileformat:
