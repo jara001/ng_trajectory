@@ -106,8 +106,8 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         # Matryoshka construction
         _groups = SEGMENTATOR(points=points, group_centers=group_centers, **{**SEGMENTATOR_ARGS})
         grouplayers = transform.groupsBorderObtain(_groups)
-        plot.bordersPlot(grouplayers)
         grouplayers = transform.groupsBorderBeautify(grouplayers, 400)
+        plot.bordersPlot(grouplayers)
         layers_center = transform.groupsCenterCompute(_groups)
         layers_count = [ layers for i in range(len(grouplayers)) ]
 

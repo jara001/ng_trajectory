@@ -95,9 +95,11 @@ def bordersPlot(borders: List[numpy.ndarray], colored: bool = True, figure: matp
     figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
     """
     if colored:
-        groupsScatter(borders, figure, s=1)
+        #groupsScatter(borders, figure, s=1)
+        groupsPlot(borders, figure, linewidth=0.6, linestyle="dotted")
     else:
-        groupsScatter(borders, figure, s=1, color="gray")
+        #groupsScatter(borders, figure, s=1, color="gray")
+        groupsPlot(borders, figure, linewidth=0.6, linestyle="dotted", color="gray")
 
 
 ######################
