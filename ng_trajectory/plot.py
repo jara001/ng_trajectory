@@ -237,6 +237,9 @@ def plotDyn(args: List[Dict[str, Dict[str, any]]], figure: matplotlib.figure.Fig
 
     for arg in args:
         for function, fargs in arg.items():
+            if "-" in function:
+                function = function[:function.index("-")]
+
             if function in globals():
                 pargs = []
 
