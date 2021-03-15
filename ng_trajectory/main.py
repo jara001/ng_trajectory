@@ -21,6 +21,7 @@ import ng_trajectory.plot as plot
 
 # Typing
 from typing import Tuple
+Solution = Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]
 
 
 ######################
@@ -40,6 +41,7 @@ def loop(iterator):
                     first = False
                 else:
                     output = function(*args, **{**kwargs, **{"loop_i": i, "loop_output": output}})
+            return output
         return looper
     return wrapper
 
@@ -91,8 +93,8 @@ def dataLoad(filename: str) -> numpy.ndarray:
 
 @loop(lambda x: enumerate(x))
 def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i: int, \
-    loop_output: Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray], **conf) \
-    -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
+    loop_output: Solution, **conf) \
+    -> Solution:
     """Run steps of the GA cascade.
 
     Arguments:
@@ -181,7 +183,7 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
 
 
 @loop(lambda x: range(x))
-def loopCascadeRun(track: numpy.ndarray, initline: numpy.ndarray, fileformat: str, notification: str, loop_i: int, **conf) -> None:
+def loopCascadeRun(track: numpy.ndarray, initline: numpy.ndarray, fileformat: str, notification: str, loop_i: int, loop_output: Solution = None, **conf) -> Solution:
     """Loop the whole GA cascade.
 
     Arguments:
@@ -213,7 +215,7 @@ def loopCascadeRun(track: numpy.ndarray, initline: numpy.ndarray, fileformat: st
 
 
     ## Run cascade
-    cascadeRun(
+    cascade_output = cascadeRun(
         elements=conf.get("cascade"),
         track=track,
         fileformat=_fileformat,
@@ -228,9 +230,14 @@ def loopCascadeRun(track: numpy.ndarray, initline: numpy.ndarray, fileformat: st
     else:
         print ("timeA:%f" % (time.time() - cascade_time), file=sys.stdout)
 
+    if loop_output is None or cascade_output[0] < loop_output[0]:
+        return cascade_output
+    else:
+        return loop_output
+
 
 @loop(lambda x: enumerate(x))
-def variateRun(fileformat: str, notification: str, loop_i: Tuple[int, Tuple[str, int]], **conf) -> None:
+def variateRun(fileformat: str, notification: str, loop_i: Tuple[int, Tuple[str, int]], loop_output: Solution = None, **conf) -> Solution:
     """Run GA with variated number of an element.
 
     Arguments:
@@ -259,7 +266,7 @@ def variateRun(fileformat: str, notification: str, loop_i: Tuple[int, Tuple[str,
 
 
     ## Loop cascade
-    loopCascadeRun(
+    cascade_output = loopCascadeRun(
         elements=CONFIGURATION.get("loops"),
         fileformat=fileformat,
         notification=notification,
@@ -269,8 +276,13 @@ def variateRun(fileformat: str, notification: str, loop_i: Tuple[int, Tuple[str,
 
     print ("Variating %s %d finished in %fs." % (_param, _value, time.time() - variate_time))
 
+    if loop_output is None or cascade_output[0] < loop_output[0]:
+        return cascade_output
+    else:
+        return loop_output
 
-def execute():
+
+def execute() -> Solution:
     """Execute GA according to the configuration.
 
     Note: Currently, it is executed as follows:
@@ -322,7 +334,7 @@ def execute():
 
 
         ## And variate the parameter
-        variateRun(
+        solution = variateRun(
             elements=tvalues,
             track=VALID_POINTS,
             initline=START_POINTS,
@@ -341,7 +353,7 @@ def execute():
         notification = notification + "[%%d / %d]" % CONFIGURATION.get("loops")
 
         ## Loop cascade
-        loopCascadeRun(
+        solution = loopCascadeRun(
             elements=CONFIGURATION.get("loops"),
             track=VALID_POINTS,
             initline=START_POINTS,
@@ -351,3 +363,5 @@ def execute():
         )
 
     print ("Optimization finished in %fs." % (time.time() - overall_time))
+
+    return solution
