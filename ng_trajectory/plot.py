@@ -223,7 +223,7 @@ def labelText(point: numpy.ndarray, s: str, figure: matplotlib.figure.Figure = N
 # pyplot gateway
 ######################
 
-def _pyplot(*args, function: str, **kwargs) -> None:
+def _pyplot(*args, function: str, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
     """Call directly a function of matplotlib pyplot.
 
     Arguments:
