@@ -284,15 +284,27 @@ def plotDyn(args: Dict[str, Dict[str, any]], figure: matplotlib.figure.Figure = 
             print (function)
             pargs = []
 
+            # Obtain args for the function
+            # 1: As a key-value in dict
             if "_args" in fargs:
-                for a in fargs.get("_args"):
-                    if a[0] == "@":
-                        a = a[1:]
-                        if a not in kwargs:
-                            print ("Key '%s' is not available." % a, file=sys.stderr)
-                        else:
-                            pargs.append(kwargs.get(a))
-                    else:
-                        pargs.append(a)
+                _fargs = fargs.get("_args")
+            # 2: Or as a list when there is nothing else
+            elif isinstance(fargs, list):
+                _fargs = fargs
+            else:
+                _fargs = []
 
-            globals()[function](*pargs, **{**dict([ (f, i) for f, i in fargs.items() if f[0] != "_" ]), **{"figure": figure}})
+            for a in _fargs:
+                if a[0] == "@":
+                    a = a[1:]
+                    if a not in kwargs:
+                        print ("Key '%s' is not available." % a, file=sys.stderr)
+                    else:
+                        pargs.append(kwargs.get(a))
+                else:
+                    pargs.append(a)
+
+            if isinstance(fargs, dict):
+                globals()[function](*pargs, **{**dict([ (f, i) for f, i in fargs.items() if f[0] != "_" ]), **{"figure": figure}})
+            else:
+                globals()[function](*pargs, **{"figure": figure})
