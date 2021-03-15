@@ -57,6 +57,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         logfile: TextIO = sys.stdout,
         logging_verbosity: int = 2,
         hold_transform: bool = False,
+        plot: bool = False,
         **kwargs):
     """Initialize variables for Matryoshka transformation.
 
@@ -79,6 +80,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     logfile -- file descriptor for logging, TextIO, default sys.stdout
     logging_verbosity -- index for verbosity of logger, int, default 2
     hold_transform -- whether the transformation should be created only once, bool, default False
+    plot -- whether a graphical representation should be created, bool, default False
     **kwargs -- arguments not caught by previous parts
     """
     global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY
@@ -103,13 +105,14 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         # Transform construction
         CUTS = transform.create(points, group_centerline, groups)
 
-        for cut in CUTS:
-            plot.pointsPlot(cut, color="indigo")
+        if plot:
+            for cut in CUTS:
+                plot.pointsPlot(cut, color="indigo")
 
-            # New center point
-            plot.pointsScatter(
-                (numpy.divide(cut[1, :] - cut[0, :], 2) + cut[0, :])[:, numpy.newaxis].T
-            )
+                # New center point
+                plot.pointsScatter(
+                    (numpy.divide(cut[1, :] - cut[0, :], 2) + cut[0, :])[:, numpy.newaxis].T
+                )
 
         print ("Braghin's transformation constructed.")
 

@@ -58,6 +58,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         logfile: TextIO = sys.stdout,
         logging_verbosity: int = 2,
         hold_matryoshka: bool = False,
+        plot: bool = False,
         **kwargs):
     """Initialize variables for Matryoshka transformation.
 
@@ -81,6 +82,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     logfile -- file descriptor for logging, TextIO, default sys.stdout
     logging_verbosity -- index for verbosity of logger, int, default 2
     hold_matryoshka -- whether the Matryoshka should be created only once, bool, default False
+    plot -- whether a graphical representation should be created, bool, default False
     **kwargs -- arguments not caught by previous parts
     """
     global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP
@@ -102,13 +104,18 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
     if MATRYOSHKA is None or not _holdmatryoshka:
         group_centers = trajectoryReduce(trajectorySort(group_centerline), groups)
-        plot.indicesPlot(group_centers)
+
+        if plot:
+            plot.indicesPlot(group_centers)
 
         # Matryoshka construction
         _groups = SEGMENTATOR(points=points, group_centers=group_centers, **{**SEGMENTATOR_ARGS})
         grouplayers = transform.groupsBorderObtain(_groups)
         grouplayers = transform.groupsBorderBeautify(grouplayers, 400)
-        plot.bordersPlot(grouplayers)
+
+        if plot:
+            plot.bordersPlot(grouplayers)
+
         layers_center = transform.groupsCenterCompute(_groups)
         layers_count = [ layers for i in range(len(grouplayers)) ]
 
