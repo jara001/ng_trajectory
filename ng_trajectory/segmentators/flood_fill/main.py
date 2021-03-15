@@ -31,12 +31,14 @@ def init(track: numpy.ndarray, hold_map: bool = False, **kwargs) -> None:
         MAP, MAP_ORIGIN, MAP_GRID = mapCreate(track)
 
 
-def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown) -> List[numpy.ndarray]:
+def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, range_limit: float = 0, **overflown) -> List[numpy.ndarray]:
     """Divide 'points' into groups using flood fill algorithm.
 
     Arguments:
     points -- points to be divided into groups, nx2 numpy.ndarray
     group_centers -- center points of to-be-created groups, mx2 numpy.ndarray
+    range_limit -- maximum distance to the center, float, default 0 (disabled)
+    **overflown -- arguments not caught by previous parts
 
     Returns:
     groups -- list of grouped points, m-list of x2 numpy.ndarrays
@@ -80,4 +82,14 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
         if _i != 255:
             _groups[ _i ].append( p )
 
-    return [ numpy.asarray( g ) for g in _groups ]
+
+    groups = [ numpy.asarray( g ) for g in _groups ]
+
+    if range_limit <= 0:
+        return groups
+
+    else:
+        return [
+            x[numpy.sqrt( numpy.sum( numpy.power( numpy.subtract(x[:, :2], group_centers[ix][:2]), 2), axis = 1 ) ) < range_limit]
+            for ix, x in enumerate(groups)
+        ]
