@@ -263,7 +263,7 @@ def _figure(*args, function: str, figure: matplotlib.figure.Figure = None, **kwa
 # Dynamic plotting
 ######################
 
-def plotDyn(args: List[Dict[str, Dict[str, any]]], figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+def plotDyn(args: Dict[str, Dict[str, any]], figure: matplotlib.figure.Figure = None, **kwargs) -> None:
     """Dynamically create figure according to the configuration.
 
     Arguments:
@@ -275,19 +275,20 @@ def plotDyn(args: List[Dict[str, Dict[str, any]]], figure: matplotlib.figure.Fig
     if figure is None:
         figure = pyplot.gcf()
 
-    for arg in args:
-        for function, fargs in arg.items():
-            if "-" in function:
-                function = function[:function.index("-")]
+    for function, fargs in args.items():
+        print (function, fargs)
+        if "-" in function:
+            function = function[:function.index("-")]
 
-            if function in globals():
-                pargs = []
+        if function in globals():
+            print (function)
+            pargs = []
 
-                if "_args" in fargs:
-                    for a in fargs.get("_args"):
-                        if a not in kwargs:
-                            print ("Key '%s' is not available." % a, file=sys.stderr)
-                        else:
-                            pargs.append(kwargs.get(a))
+            if "_args" in fargs:
+                for a in fargs.get("_args"):
+                    if a not in kwargs:
+                        print ("Key '%s' is not available." % a, file=sys.stderr)
+                    else:
+                        pargs.append(kwargs.get(a))
 
-                globals()[function](*pargs, **{**dict([ (f, i) for f, i in fargs.items() if f[0] != "_" ]), **{"figure": figure}})
+            globals()[function](*pargs, **{**dict([ (f, i) for f, i in fargs.items() if f[0] != "_" ]), **{"figure": figure}})
