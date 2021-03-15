@@ -6,7 +6,7 @@
 ######################
 
 from ng_trajectory.interpolators.utils import *
-import ng_trajectory.plot as plot
+import ng_trajectory.plot as ngplot
 
 from . import transform
 
@@ -107,10 +107,10 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
         if plot:
             for cut in CUTS:
-                plot.pointsPlot(cut, color="indigo")
+                ngplot.pointsPlot(cut, color="indigo")
 
                 # New center point
-                plot.pointsScatter(
+                ngplot.pointsScatter(
                     (numpy.divide(cut[1, :] - cut[0, :], 2) + cut[0, :])[:, numpy.newaxis].T
                 )
 

@@ -6,7 +6,7 @@
 ######################
 
 from ng_trajectory.interpolators.utils import *
-import ng_trajectory.plot as plot
+import ng_trajectory.plot as ngplot
 
 from . import transform
 
@@ -106,7 +106,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         group_centers = trajectoryReduce(trajectorySort(group_centerline), groups)
 
         if plot:
-            plot.indicesPlot(group_centers)
+            ngplot.indicesPlot(group_centers)
 
         # Matryoshka construction
         _groups = SEGMENTATOR(points=points, group_centers=group_centers, **{**SEGMENTATOR_ARGS})
@@ -114,7 +114,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         grouplayers = transform.groupsBorderBeautify(grouplayers, 400)
 
         if plot:
-            plot.bordersPlot(grouplayers)
+            ngplot.bordersPlot(grouplayers)
 
         layers_center = transform.groupsCenterCompute(_groups)
         layers_count = [ layers for i in range(len(grouplayers)) ]
