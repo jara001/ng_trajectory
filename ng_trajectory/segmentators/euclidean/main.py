@@ -59,6 +59,6 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, range_limit:
 
     else:
         return [
-            x[numpy.sqrt( numpy.sum( numpy.power( numpy.subtract(x, group_centers[ix]), 2), axis = 1 ) ) < range_limit]
+            x[numpy.sqrt( numpy.sum( numpy.power( numpy.subtract(x[:, :2], group_centers[ix][:2]), 2), axis = 1 ) ) < range_limit]
             for ix, x in enumerate(groups)
         ]
