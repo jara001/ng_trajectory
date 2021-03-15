@@ -220,6 +220,46 @@ def labelText(point: numpy.ndarray, s: str, figure: matplotlib.figure.Figure = N
 
 
 ######################
+# pyplot gateway
+######################
+
+def _pyplot(*args, function: str, **kwargs) -> None:
+    """Call directly a function of matplotlib pyplot.
+
+    Arguments:
+    function -- name of the function, str
+    *args -- positional arguments to be passed to the function
+    **kwargs -- keyword arguments to be passed to the function
+    """
+
+    if function not in dir(pyplot):
+        print ("Unknown function '%s' of pyplot." % function, file = sys.stderr)
+        return
+
+    pyplot.__getattribute__(function)(*args, **kwargs)
+
+
+def _figure(*args, function: str, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+    """Call directly a function of matplotlib pyplot's figure.
+
+    Arguments:
+    function -- name of the function, str
+    figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+    *args -- positional arguments to be passed to the function
+    **kwargs -- keyword arguments to be passed to the function
+    """
+
+    if function not in dir(pyplot):
+        print ("Unknown function '%s' of pyplot figure." % function, file = sys.stderr)
+        return
+
+    if figure is None:
+        figure = pyplot.gcf()
+
+    figure.axes[0].__getattribute__(function)(*args, **kwargs)
+
+
+######################
 # Dynamic plotting
 ######################
 
