@@ -250,4 +250,4 @@ def plotDyn(args: List[Dict[str, Dict[str, any]]], figure: matplotlib.figure.Fig
                         else:
                             pargs.append(kwargs.get(a))
 
-                globals()[function](*pargs, **{**dict([ f for f in fargs if f[0] != "_" ]), **{"figure": figure}})
+                globals()[function](*pargs, **{**dict([ (f, i) for f, i in fargs.items() if f[0] != "_" ]), **{"figure": figure}})
