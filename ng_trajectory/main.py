@@ -282,8 +282,12 @@ def variateRun(fileformat: str, notification: str, loop_i: Tuple[int, Tuple[str,
         return loop_output
 
 
-def execute() -> Solution:
+def execute(START_POINTS: numpy.ndarray = None, VALID_POINTS: numpy.ndarray = None) -> Solution:
     """Execute GA according to the configuration.
+
+    Arguments:
+    START_POINTS -- points of the track valid area, nx2 numpy.ndarray
+    VALID_POINTS -- points of the initial line for segmentation, mx2 numpy.ndarray
 
     Note: Currently, it is executed as follows:
         - groupsRun() for each group
@@ -296,8 +300,10 @@ def execute() -> Solution:
     overall_time = time.time()
 
     # Load data about the track
-    START_POINTS = dataLoad(CONFIGURATION.get("start_points"))
-    VALID_POINTS = dataLoad(CONFIGURATION.get("valid_points"))
+    if START_POINTS is None:
+        START_POINTS = dataLoad(CONFIGURATION.get("start_points"))
+    if VALID_POINTS is None:
+        VALID_POINTS = dataLoad(CONFIGURATION.get("valid_points"))
 
 
     # Logging file format
