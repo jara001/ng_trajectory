@@ -6,8 +6,8 @@
 # Imports & Globals
 ######################
 
-import numpy
-    
+import numpy, sys
+
 
 try:
     from ng_trajectory import matplotlib, pyplot
@@ -16,7 +16,7 @@ except:
 
 from ng_trajectory import PLOT_AVAILABLE
 
-from typing import List
+from typing import List, Dict
 
 
 ######################
@@ -217,3 +217,34 @@ def labelText(point: numpy.ndarray, s: str, figure: matplotlib.figure.Figure = N
         figure = pyplot.gcf()
 
     figure.axes[0].text(point[0], point[1], s = s, **kwargs)
+
+
+######################
+# Dynamic plotting
+######################
+
+def plotDyn(args: List[Dict[str, Dict[str, any]]], figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+    """Dynamically create figure according to the configuration.
+
+    Arguments:
+    args -- dynamic plot arguments
+    figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+    **kwargs -- arguments not caught by previous parts
+    """
+
+    if figure is None:
+        figure = pyplot.gcf()
+
+    for arg in args:
+        for function, fargs in arg.items():
+            if function in globals():
+                pargs = []
+
+                if "_args" in fargs:
+                    for a in fargs.get("_args"):
+                        if a not in kwargs:
+                            print ("Key '%s' is not available." % a, file=sys.stderr)
+                        else:
+                            pargs.append(kwargs.get(a))
+
+                globals()[function](*pargs, **{**dict([ f for f in fargs if f[0] != "_" ]), **{"figure": figure}})

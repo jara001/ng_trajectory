@@ -144,8 +144,9 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
     # Prepare plot
     if _alg.get("plot", False):
         fig = plot.figureCreate()
-        plot.axisEqual()
-        plot.trackPlot(track)
+        plot.plotDyn(_alg.get("plot_args", []), fig, **{**_alg, **{"track": track, "fitness": fitness, "rcandidate": rcandidate, "tcandidate": tcandidate, "result": result}})
+        #plot.axisEqual()
+        #plot.trackPlot(track)
 
     # Initialize parts
     itp.init(**{**_alg, **_alg.get("interpolator_init", {}), **{"logfile": LOGFILE}})
