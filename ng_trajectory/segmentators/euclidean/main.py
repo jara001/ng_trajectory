@@ -22,13 +22,13 @@ def init(track: numpy.ndarray, **kwargs) -> None:
     pass
 
 
-def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, range_limit: int = 0, **overflown) -> List[numpy.ndarray]:
+def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, range_limit: float = 0, **overflown) -> List[numpy.ndarray]:
     """Divide 'points' into groups by their distance to 'group_centers'.
 
     Arguments:
     points -- points to be divided into groups, nx2 numpy.ndarray
     group_centers -- center points of to-be-created groups, mx2 numpy.ndarray
-    range_limit -- maximum distance to the center, int, default 0 (disabled)
+    range_limit -- maximum distance to the center, float, default 0 (disabled)
     **overflown -- arguments not caught by previous parts
 
     Returns:
