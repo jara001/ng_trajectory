@@ -76,6 +76,25 @@ def configurationLoad(filename: str) -> bool:
         print (CONFIGURATION)
 
 
+def configurationAppend(conf: Dict[str, any]) -> bool:
+    """Appends configuration to the global settings.
+
+    Arguments:
+    conf -- new configuration, dict
+
+    Returns:
+    success -- True when loaded, otherwise False
+    """
+    global CONFIGURATION
+
+    CONFIGURATION = {**CONFIGURATION, **conf}
+
+    if conf.get("logging_verbosity", 1) > 1:
+        print (CONFIGURATION)
+
+    return True
+
+
 def dataLoad(filename: str) -> numpy.ndarray:
     """Loads data from stored file.
 
