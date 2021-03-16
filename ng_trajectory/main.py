@@ -72,7 +72,8 @@ def configurationLoad(filename: str) -> bool:
     except:
         return False
 
-    print (CONFIGURATION)
+    if conf.get("logging_verbosity", 1) > 1:
+        print (CONFIGURATION)
 
 
 def dataLoad(filename: str) -> numpy.ndarray:

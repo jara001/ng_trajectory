@@ -275,13 +275,19 @@ def plotDyn(args: Dict[str, Dict[str, any]], figure: matplotlib.figure.Figure = 
     if figure is None:
         figure = pyplot.gcf()
 
+    VERBOSITY = kwargs.get("logging_verbosity", 1)
+
     for function, fargs in args.items():
-        print (function, fargs)
+        if VERBOSITY > 1:
+            print (function, fargs)
+
         if "-" in function:
             function = function[:function.index("-")]
 
         if function in globals():
-            print (function)
+            if VERBOSITY > 1:
+                print (function)
+
             pargs = []
 
             # Obtain args for the function
@@ -298,7 +304,8 @@ def plotDyn(args: Dict[str, Dict[str, any]], figure: matplotlib.figure.Figure = 
                 if a[0] == "@":
                     a = a[1:]
                     if a not in kwargs:
-                        print ("Key '%s' is not available." % a, file=sys.stderr)
+                        if VERBOSITY > 0:
+                            print ("Key '%s' is not available." % a, file=sys.stderr)
                     else:
                         pargs.append(kwargs.get(a))
                 else:
