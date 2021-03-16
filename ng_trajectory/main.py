@@ -75,6 +75,8 @@ def configurationLoad(filename: str) -> bool:
     if conf.get("logging_verbosity", 1) > 1:
         print (CONFIGURATION)
 
+    return True
+
 
 def configurationAppend(conf: Dict[str, any]) -> bool:
     """Appends configuration to the global settings.
