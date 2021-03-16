@@ -20,7 +20,7 @@ import ng_trajectory.segmentators as segmentators
 import ng_trajectory.plot as plot
 
 # Typing
-from typing import Tuple
+from typing import Tuple, Dict
 Solution = Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]
 
 
