@@ -4,6 +4,7 @@
 
 import os
 from setuptools import setup, find_packages
+from _version import Version
 
 # Utility function to read the README file.
 # Used for the long_description.  It's nice, because now 1) we have a top level
@@ -12,9 +13,34 @@ from setuptools import setup, find_packages
 #def read(fname):
 #    return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
+VERSION = str(Version(os.popen("git describe --tags --dirty --always").read()[1:-1]))
+
+if os.path.exists("VERSION"):
+    STORED = open("VERSION", "r").read()
+
+    if ".dev" in VERSION:
+        _len = len(VERSION[:VERSION.index(".dev")+4])
+    else:
+        _len = len(VERSION)
+
+    if STORED[:_len] == VERSION[:_len] and ".dev" in VERSION:
+        # Obtain dev number
+        VERSION = VERSION + str(int(STORED[_len:]) + 1)
+    else:
+        if ".dev" in VERSION:
+            VERSION = VERSION + "0"
+else:
+    if ".dev" in VERSION:
+        VERSION = VERSION + "0"
+
+
+with open("VERSION", "w") as file:
+    file.write(VERSION)
+
+
 setup(
     name = "ng_trajectory",
-    version = "1.0.0",
+    version = VERSION,
     author = "Jaroslav Klapálek",
     author_email = "klapajar@fel.cvut.cz",
     description = ("A trajectory generation script using Nevergrad."),
