@@ -59,5 +59,6 @@ setup(
     python_requires='>=3.6',
     extras_require={
         "plot_support": "matplotlib"
-    }
+    },
+    scripts=['bin/ng_run'],
 )
