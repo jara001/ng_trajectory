@@ -19,12 +19,15 @@ class Version():
         self.PATCH = version[2] if len(version) > 1 else None
 
         # Dirty
-        git_version = git_version[git_version.index("-")+1:]
+        if "-" in git_version:
+            git_version = git_version[git_version.index("-")+1:]
 
-        self.DEV = git_version[-5:] == "dirty"
+            self.DEV = git_version[-5:] == "dirty"
 
-        if self.DEV:
-            git_version = git_version[:-6]
+            if self.DEV:
+                git_version = git_version[:-6]
+        else:
+            self.DEV = False
 
         # Commit
         self.POSTPATCH = None
