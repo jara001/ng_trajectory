@@ -70,7 +70,8 @@ def configurationLoad(filename: str) -> bool:
                 print ("Unsupported version of the configuration file.", file=sys.stderr)
             else:
                 CONFIGURATION = {**CONFIGURATION, **conf}
-    except:
+    except Exception as e:
+        print (e)
         return False
 
     if conf.get("logging_verbosity", 1) > 1:
