@@ -62,6 +62,8 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         logging_verbosity: int = 2,
         hold_transform: bool = False,
         plot: bool = False,
+        plot_cuts: bool = True,
+        plot_reduced_line: bool = False,
         endpoint_distance: float = 0.2,
         endpoint_accuracy: float = 0.02,
         line_reduction: float = 3,
@@ -92,6 +94,8 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     logging_verbosity -- index for verbosity of logger, int, default 2
     hold_transform -- whether the transformation should be created only once, bool, default False
     plot -- whether a graphical representation should be created, bool, default False
+    plot_cuts -- whether cuts should be plotted if plot is enabled, bool, default True
+    plot_reduced_line -- whether reduced line should be plotted if plot is enabled, bool, default False
     endpoint_distance -- starting distance from the center for transformation, float, default 0.2
     endpoint_accuracy -- accuracy of the center-endpoint distance for transformation, float, default 0.02
     line_reduction -- factor by which the number of line points is lowered before internal interpolation, float, default 3
@@ -123,13 +127,18 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         CUTS = transform.create(points, group_centerline, group_centers_, endpoint_distance, endpoint_accuracy, line_reduction)
 
         if plot:
-            for cut in CUTS:
-                ngplot.pointsPlot(cut, color="indigo")
+            if plot_cuts:
+                for cut in CUTS:
+                    ngplot.pointsPlot(cut, color="indigo")
 
-                # New center point
-                ngplot.pointsScatter(
-                    (numpy.divide(cut[1, :] - cut[0, :], 2) + cut[0, :])[:, numpy.newaxis].T
-                )
+                    # New center point
+                    ngplot.pointsScatter(
+                        (numpy.divide(cut[1, :] - cut[0, :], 2) + cut[0, :])[:, numpy.newaxis].T
+                    )
+
+            if plot_reduced_line:
+                i, i1, i2 = transform.pointsInterpolate(transform.trajectoryReduce(group_centerline, int(len(group_centerline)/line_reduction)), len(group_centerline))
+                ngplot.pointsPlot(numpy.asarray(i))
 
         print ("Braghin's transformation constructed.")
 
