@@ -157,7 +157,7 @@ def create(track: numpy.ndarray, group_centerline: numpy.ndarray, group_centers:
     TODO: Interpolate only once and use the reduction as a direct index.
     """
 
-    i, i1, i2 = pointsInterpolate(trajectoryReduce(group_centerline, int(len(group_centerline)/3)), 440)
+    i, i1, i2 = pointsInterpolate(trajectoryReduce(group_centerline, int(len(group_centerline)/3)), len(group_centerline))
 
     cuts = []
 
