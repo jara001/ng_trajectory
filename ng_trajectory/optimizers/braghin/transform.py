@@ -141,7 +141,7 @@ def lineEndpointBorderObtain(line: Callable[[float], float], center: numpy.ndarr
 # Braghin's cuts
 ######################
 
-def create(track: numpy.ndarray, group_centerline: numpy.ndarray, group_centers: numpy.ndarray, endpoint_distance: float, endpoint_accuracy: float) -> List[numpy.ndarray]:
+def create(track: numpy.ndarray, group_centerline: numpy.ndarray, group_centers: numpy.ndarray, endpoint_distance: float, endpoint_accuracy: float, line_reduction: float) -> List[numpy.ndarray]:
     """Create Braghin's transformation.
 
     Arguments:
@@ -150,6 +150,7 @@ def create(track: numpy.ndarray, group_centerline: numpy.ndarray, group_centers:
     group_centers -- points selected from the line, mx2 numpy.ndarray
     endpoint_distance -- starting distance from the center, float
     endpoint_accuracy -- accuracy of the center-endpoint distance, float
+    line_reduction -- factor by which the number of line points is lowered before internal interpolation, float
 
     Returns:
     cuts -- endpoints of cuts on the track, m-list of 2x2 numpy.ndarray
@@ -157,7 +158,7 @@ def create(track: numpy.ndarray, group_centerline: numpy.ndarray, group_centers:
     TODO: Interpolate only once and use the reduction as a direct index.
     """
 
-    i, i1, i2 = pointsInterpolate(trajectoryReduce(group_centerline, int(len(group_centerline)/3)), len(group_centerline))
+    i, i1, i2 = pointsInterpolate(trajectoryReduce(group_centerline, int(len(group_centerline)/line_reduction)), len(group_centerline))
 
     cuts = []
 

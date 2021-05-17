@@ -64,6 +64,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         plot: bool = False,
         endpoint_distance: float = 0.2,
         endpoint_accuracy: float = 0.02,
+        line_reduction: float = 3,
         **kwargs):
     """Initialize variables for Braghin's transformation.
 
@@ -93,6 +94,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     plot -- whether a graphical representation should be created, bool, default False
     endpoint_distance -- starting distance from the center for transformation, float, default 0.2
     endpoint_accuracy -- accuracy of the center-endpoint distance for transformation, float, default 0.02
+    line_reduction -- factor by which the number of line points is lowered before internal interpolation, float, default 3
     **kwargs -- arguments not caught by previous parts
     """
     global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY
@@ -118,7 +120,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
         # Transform construction
         group_centers_ = SELECTOR(**{**{"points": group_centerline, "remain": groups}, **SELECTOR_ARGS})
-        CUTS = transform.create(points, group_centerline, group_centers_, endpoint_distance, endpoint_accuracy)
+        CUTS = transform.create(points, group_centerline, group_centers_, endpoint_distance, endpoint_accuracy, line_reduction)
 
         if plot:
             for cut in CUTS:
