@@ -16,6 +16,7 @@ import ng_trajectory.optimizers as optimizers
 import ng_trajectory.criterions as criterions
 import ng_trajectory.interpolators as interpolators
 import ng_trajectory.segmentators as segmentators
+import ng_trajectory.selectors as selectors
 
 import ng_trajectory.plot as plot
 
@@ -158,6 +159,7 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
     cri = criterions.__getattribute__(_alg.get("criterion"))
     itp = interpolators.__getattribute__(_alg.get("interpolator"))
     seg = segmentators.__getattribute__(_alg.get("segmentator"))
+    sel = selectors.__getattribute__(_alg.get("selector"))
 
     # Show up current progress
     print (notification % (loop_i[0]+1) + " %s with %s criterion, int. by %s" % (_alg.get("algorithm"), _alg.get("criterion"), _alg.get("interpolator")), file=LOGFILE)
@@ -171,10 +173,11 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
         #plot.trackPlot(track)
 
     # Initialize parts
+    sel.init(**{**_alg, **_alg.get("selector_init", {}), **{"logfile": LOGFILE}})
     itp.init(**{**_alg, **_alg.get("interpolator_init", {}), **{"logfile": LOGFILE}})
     seg.init(track, **{**_alg, **_alg.get("segmentator_init", {}), **{"logfile": LOGFILE}})
     cri.init(**{**_alg, **_alg.get("criterion_init", {}), **{"logfile": LOGFILE}})
-    opt.init(track, rcandidate, result, **{**_alg, **{"criterion": cri.compute}, **{"interpolator": itp.interpolate}, **{"segmentator": seg.segmentate}, **{"logfile": LOGFILE}})
+    opt.init(track, rcandidate, result, **{**_alg, **{"criterion": cri.compute}, **{"interpolator": itp.interpolate}, **{"segmentator": seg.segmentate}, **{"selector": sel.select}, **{"logfile": LOGFILE}})
 
 
     ## Optimization

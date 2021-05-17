@@ -34,6 +34,8 @@ INTERPOLATOR = None
 INTERPOLATOR_ARGS = None
 SEGMENTATOR = None
 SEGMENTATOR_ARGS = None
+SELECTOR = None
+SELECTOR_ARGS = None
 LOGFILE = None
 VERBOSITY = 3
 FILELOCK = Lock()
@@ -54,6 +56,8 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         interpolator_args: Dict[str, any] = {},
         segmentator: Callable[[numpy.ndarray, numpy.ndarray], numpy.ndarray] = lambda x, y: [ x for i in y ],
         segmentator_args: Dict[str, any] = {},
+        selector: Callable[[numpy.ndarray, int], numpy.ndarray] = lambda x, y: [ x for i in range(y) ],
+        selector_args: Dict[str, any] = {},
         logfile: TextIO = sys.stdout,
         logging_verbosity: int = 2,
         hold_transform: bool = False,
@@ -77,6 +81,10 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     segmentator -- function to segmentate points, callable (nx2 numpy.ndarray -> m-list of rx2 numpy.ndarray),
                    default 'each segment span over the whole track'
     segmentator_args -- arguments for the segmentation function, dict, default {}
+    selector -- function to select points as group centers,
+                callable (nx2 numpy.ndarray + m -> m-list of rx2 numpy.ndarray),
+                default 'first m points are selected'
+    selector_args -- arguments for the selector function, dict, default {}
     logfile -- file descriptor for logging, TextIO, default sys.stdout
     logging_verbosity -- index for verbosity of logger, int, default 2
     hold_transform -- whether the transformation should be created only once, bool, default False
@@ -84,7 +92,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     **kwargs -- arguments not caught by previous parts
     """
     global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY
-    global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS
+    global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS
 
     # Local to global variables
     CRITERION = criterion
@@ -93,6 +101,8 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     INTERPOLATOR_ARGS = interpolator_args
     SEGMENTATOR = segmentator
     SEGMENTATOR_ARGS = segmentator_args
+    SELECTOR = selector
+    SELECTOR_ARGS = selector_args
     LOGFILE = logfile
     VERBOSITY = logging_verbosity
     _holdtransform = hold_transform
@@ -103,7 +113,8 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     if CUTS is None or not _holdtransform:
 
         # Transform construction
-        CUTS = transform.create(points, group_centerline, trajectoryReduce(group_centerline, groups))
+        group_centers_ = SELECTOR(**{**{"points": group_centerline, "remain": groups}, **SELECTOR_ARGS})
+        CUTS = transform.create(points, group_centerline, group_centers_)
 
         if plot:
             for cut in CUTS:
