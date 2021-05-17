@@ -59,7 +59,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         hold_transform: bool = False,
         plot: bool = False,
         **kwargs):
-    """Initialize variables for Matryoshka transformation.
+    """Initialize variables for Braghin's transformation.
 
     Arguments:
     points -- valid area of the track, nx2 numpy.ndarray
@@ -103,7 +103,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     if CUTS is None or not _holdtransform:
 
         # Transform construction
-        CUTS = transform.create(points, group_centerline, groups)
+        CUTS = transform.create(points, group_centerline, trajectoryReduce(group_centerline, groups))
 
         if plot:
             for cut in CUTS:
