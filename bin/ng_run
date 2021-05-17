@@ -8,6 +8,8 @@
 
 import sys, os
 
+from ng_trajectory import configurationLoad, execute
+
 
 ######################
 # Main
@@ -17,9 +19,6 @@ if __name__ == "__main__":
     # Expect one argument
     if len(sys.argv) > 1:
         if os.path.exists(sys.argv[1]):
-
-            from ng_trajectory import configurationLoad, execute
-
             if configurationLoad(sys.argv[1]):
                 print (execute())
             else:
