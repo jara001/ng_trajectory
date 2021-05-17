@@ -141,13 +141,15 @@ def lineEndpointBorderObtain(line: Callable[[float], float], center: numpy.ndarr
 # Braghin's cuts
 ######################
 
-def create(track: numpy.ndarray, group_centerline: numpy.ndarray, group_centers: numpy.ndarray) -> List[numpy.ndarray]:
+def create(track: numpy.ndarray, group_centerline: numpy.ndarray, group_centers: numpy.ndarray, endpoint_distance: float, endpoint_accuracy: float) -> List[numpy.ndarray]:
     """Create Braghin's transformation.
 
     Arguments:
     track -- valid area of the track, nx2 numpy.ndarray
     group_centerline -- line where the group centers lie, px2 numpy.ndarray
     group_centers -- points selected from the line, mx2 numpy.ndarray
+    endpoint_distance -- starting distance from the center, float
+    endpoint_accuracy -- accuracy of the center-endpoint distance, float
 
     Returns:
     cuts -- endpoints of cuts on the track, m-list of 2x2 numpy.ndarray
@@ -165,8 +167,8 @@ def create(track: numpy.ndarray, group_centerline: numpy.ndarray, group_centers:
 
         p = trajectoryPerpendicular(point, i, i1)
 
-        point1 = lineEndpointBorderObtain(p, point, 0.2, 0.02, True, track)
-        point2 = lineEndpointBorderObtain(p, point, 0.2, 0.02, False, track)
+        point1 = lineEndpointBorderObtain(p, point, endpoint_distance, endpoint_accuracy, True, track)
+        point2 = lineEndpointBorderObtain(p, point, endpoint_distance, endpoint_accuracy, False, track)
 
         perpendicular = numpy.vstack((point1, point2))
 

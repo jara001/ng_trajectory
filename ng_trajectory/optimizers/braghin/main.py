@@ -62,6 +62,8 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         logging_verbosity: int = 2,
         hold_transform: bool = False,
         plot: bool = False,
+        endpoint_distance: float = 0.2,
+        endpoint_accuracy: float = 0.02,
         **kwargs):
     """Initialize variables for Braghin's transformation.
 
@@ -89,6 +91,8 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     logging_verbosity -- index for verbosity of logger, int, default 2
     hold_transform -- whether the transformation should be created only once, bool, default False
     plot -- whether a graphical representation should be created, bool, default False
+    endpoint_distance -- starting distance from the center for transformation, float, default 0.2
+    endpoint_accuracy -- accuracy of the center-endpoint distance for transformation, float, default 0.02
     **kwargs -- arguments not caught by previous parts
     """
     global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY
@@ -114,7 +118,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
         # Transform construction
         group_centers_ = SELECTOR(**{**{"points": group_centerline, "remain": groups}, **SELECTOR_ARGS})
-        CUTS = transform.create(points, group_centerline, group_centers_)
+        CUTS = transform.create(points, group_centerline, group_centers_, endpoint_distance, endpoint_accuracy)
 
         if plot:
             for cut in CUTS:
