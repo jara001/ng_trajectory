@@ -305,7 +305,7 @@ def variateRun(fileformat: str, notification: str, loop_i: Tuple[int, Tuple[str,
     )
 
 
-    print ("Variating %s %d finished in %fs." % (_param, _value, time.time() - variate_time))
+    print ("Variating %s %s finished in %fs." % (_param, _value, time.time() - variate_time))
 
     if loop_output is None or cascade_output[0] < loop_output[0]:
         return cascade_output
@@ -367,7 +367,7 @@ def execute(START_POINTS: numpy.ndarray = None, VALID_POINTS: numpy.ndarray = No
             fileformat = None
 
         # ... and also to the notification
-        notification = notification + "{%%d / %d (%%d %%s)}" % len(values)
+        notification = notification + "{%%d / %d (%%s %%s)}" % len(values)
 
 
         ## And variate the parameter
