@@ -362,7 +362,10 @@ def execute(START_POINTS: numpy.ndarray = None, VALID_POINTS: numpy.ndarray = No
 
         # Add variate to the file format
         if fileformat:
-            fileformat = fileformat + "-%%0%dd" % len(str(max(values)))
+            if all([ isinstance(_value, int) for _value in values ]):
+                fileformat = fileformat + "-%%0%dd" % len(str(max(values)))
+            else:
+                fileformat = fileformat + "-%s"
         else:
             fileformat = None
 
