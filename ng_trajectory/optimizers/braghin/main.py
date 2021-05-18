@@ -34,6 +34,8 @@ INTERPOLATOR = None
 INTERPOLATOR_ARGS = None
 SEGMENTATOR = None
 SEGMENTATOR_ARGS = None
+SELECTOR = None
+SELECTOR_ARGS = None
 LOGFILE = None
 VERBOSITY = 3
 FILELOCK = Lock()
@@ -54,12 +56,19 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         interpolator_args: Dict[str, any] = {},
         segmentator: Callable[[numpy.ndarray, numpy.ndarray], numpy.ndarray] = lambda x, y: [ x for i in y ],
         segmentator_args: Dict[str, any] = {},
+        selector: Callable[[numpy.ndarray, int], numpy.ndarray] = lambda x, y: [ x for i in range(y) ],
+        selector_args: Dict[str, any] = {},
         logfile: TextIO = sys.stdout,
         logging_verbosity: int = 2,
         hold_transform: bool = False,
         plot: bool = False,
+        plot_cuts: bool = True,
+        plot_reduced_line: bool = False,
+        endpoint_distance: float = 0.2,
+        endpoint_accuracy: float = 0.02,
+        line_reduction: float = 3,
         **kwargs):
-    """Initialize variables for Matryoshka transformation.
+    """Initialize variables for Braghin's transformation.
 
     Arguments:
     points -- valid area of the track, nx2 numpy.ndarray
@@ -77,14 +86,23 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     segmentator -- function to segmentate points, callable (nx2 numpy.ndarray -> m-list of rx2 numpy.ndarray),
                    default 'each segment span over the whole track'
     segmentator_args -- arguments for the segmentation function, dict, default {}
+    selector -- function to select points as group centers,
+                callable (nx2 numpy.ndarray + m -> m-list of rx2 numpy.ndarray),
+                default 'first m points are selected'
+    selector_args -- arguments for the selector function, dict, default {}
     logfile -- file descriptor for logging, TextIO, default sys.stdout
     logging_verbosity -- index for verbosity of logger, int, default 2
     hold_transform -- whether the transformation should be created only once, bool, default False
     plot -- whether a graphical representation should be created, bool, default False
+    plot_cuts -- whether cuts should be plotted if plot is enabled, bool, default True
+    plot_reduced_line -- whether reduced line should be plotted if plot is enabled, bool, default False
+    endpoint_distance -- starting distance from the center for transformation, float, default 0.2
+    endpoint_accuracy -- accuracy of the center-endpoint distance for transformation, float, default 0.02
+    line_reduction -- factor by which the number of line points is lowered before internal interpolation, float, default 3
     **kwargs -- arguments not caught by previous parts
     """
     global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY
-    global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS
+    global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS
 
     # Local to global variables
     CRITERION = criterion
@@ -93,6 +111,8 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     INTERPOLATOR_ARGS = interpolator_args
     SEGMENTATOR = segmentator
     SEGMENTATOR_ARGS = segmentator_args
+    SELECTOR = selector
+    SELECTOR_ARGS = selector_args
     LOGFILE = logfile
     VERBOSITY = logging_verbosity
     _holdtransform = hold_transform
@@ -103,16 +123,22 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     if CUTS is None or not _holdtransform:
 
         # Transform construction
-        CUTS = transform.create(points, group_centerline, groups)
+        group_centers_ = SELECTOR(**{**{"points": group_centerline, "remain": groups}, **SELECTOR_ARGS})
+        CUTS = transform.create(points, group_centerline, group_centers_, endpoint_distance, endpoint_accuracy, line_reduction)
 
         if plot:
-            for cut in CUTS:
-                ngplot.pointsPlot(cut, color="indigo")
+            if plot_cuts:
+                for cut in CUTS:
+                    ngplot.pointsPlot(cut, color="indigo")
 
-                # New center point
-                ngplot.pointsScatter(
-                    (numpy.divide(cut[1, :] - cut[0, :], 2) + cut[0, :])[:, numpy.newaxis].T
-                )
+                    # New center point
+                    ngplot.pointsScatter(
+                        (numpy.divide(cut[1, :] - cut[0, :], 2) + cut[0, :])[:, numpy.newaxis].T
+                    )
+
+            if plot_reduced_line:
+                i, i1, i2 = transform.pointsInterpolate(transform.trajectoryReduce(group_centerline, int(len(group_centerline)/line_reduction)), len(group_centerline))
+                ngplot.pointsPlot(numpy.asarray(i))
 
         print ("Braghin's transformation constructed.")
 

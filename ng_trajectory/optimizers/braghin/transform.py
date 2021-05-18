@@ -138,16 +138,19 @@ def lineEndpointBorderObtain(line: Callable[[float], float], center: numpy.ndarr
 
 
 ######################
-# Matryoshka
+# Braghin's cuts
 ######################
 
-def create(track: numpy.ndarray, group_centerline: numpy.ndarray, groups: int) -> List[numpy.ndarray]:
+def create(track: numpy.ndarray, group_centerline: numpy.ndarray, group_centers: numpy.ndarray, endpoint_distance: float, endpoint_accuracy: float, line_reduction: float) -> List[numpy.ndarray]:
     """Create Braghin's transformation.
 
     Arguments:
     track -- valid area of the track, nx2 numpy.ndarray
     group_centerline -- line where the group centers lie, px2 numpy.ndarray
-    groups -- number of groups/cuts to be created, int
+    group_centers -- points selected from the line, mx2 numpy.ndarray
+    endpoint_distance -- starting distance from the center, float
+    endpoint_accuracy -- accuracy of the center-endpoint distance, float
+    line_reduction -- factor by which the number of line points is lowered before internal interpolation, float
 
     Returns:
     cuts -- endpoints of cuts on the track, m-list of 2x2 numpy.ndarray
@@ -155,8 +158,7 @@ def create(track: numpy.ndarray, group_centerline: numpy.ndarray, groups: int) -
     TODO: Interpolate only once and use the reduction as a direct index.
     """
 
-    i, i1, i2 = pointsInterpolate(trajectoryReduce(group_centerline, int(len(group_centerline)/3)), 440)
-    group_centers = trajectoryReduce(group_centerline, groups)
+    i, i1, i2 = pointsInterpolate(trajectoryReduce(group_centerline, int(len(group_centerline)/line_reduction)), len(group_centerline))
 
     cuts = []
 
@@ -166,8 +168,8 @@ def create(track: numpy.ndarray, group_centerline: numpy.ndarray, groups: int) -
 
         p = trajectoryPerpendicular(point, i, i1)
 
-        point1 = lineEndpointBorderObtain(p, point, 0.2, 0.02, True, track)
-        point2 = lineEndpointBorderObtain(p, point, 0.2, 0.02, False, track)
+        point1 = lineEndpointBorderObtain(p, point, endpoint_distance, endpoint_accuracy, True, track)
+        point2 = lineEndpointBorderObtain(p, point, endpoint_distance, endpoint_accuracy, False, track)
 
         perpendicular = numpy.vstack((point1, point2))
 
