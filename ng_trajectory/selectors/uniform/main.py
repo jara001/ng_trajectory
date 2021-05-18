@@ -8,16 +8,30 @@ Note: It is just selector from `trajectoryReduce`.
 # Imports & Globals
 ######################
 
-import numpy
+import numpy, sys
+
+
+# Global variables
+ROTATE = 0
 
 
 ######################
 # Functions
 ######################
 
-def init(**kwargs) -> None:
-    """Initialize selector."""
-    pass
+def init(rotate: float = 0,
+        **kwargs) -> None:
+    """Initialize selector.
+
+    Arguments:
+    rotate -- parameter for rotating the subset selection, <0, 1) float, default 0
+    """
+    global ROTATE
+
+    if 0 <= rotate < 1:
+        ROTATE = rotate
+    else:
+        print ("Expected 'rotate' to be 0<=rotate<1, but it is %f. Omitting." % rotate, file=sys.stderr)
 
 
 def trajectoryReduce(points: numpy.ndarray, remain: int) -> numpy.ndarray:
@@ -30,7 +44,24 @@ def trajectoryReduce(points: numpy.ndarray, remain: int) -> numpy.ndarray:
     Returns:
     rpoints -- list of points, remainx2 numpy.ndarray
     """
-    return points[numpy.linspace(0, len(points)-1, remain, dtype=numpy.int, endpoint=False), :]
+    global ROTATE
+
+    if ROTATE == 0:
+        return points[numpy.linspace(0, len(points)-1, remain, dtype=numpy.int, endpoint=False), :]
+
+    # Create linspace
+    ls = numpy.linspace(
+            (len(points)-1) * ROTATE,
+            (len(points)-1) * (1+ROTATE),
+            remain,
+            dtype = numpy.int,
+            endpoint = False
+        )
+
+    # Wrap up the array
+    ls[ls>=(len(points)-1)] -= (len(points) - 1)
+
+    return points[ls, :]
 
 
 def select(points: numpy.ndarray, remain: int, **overflown) -> numpy.ndarray:
