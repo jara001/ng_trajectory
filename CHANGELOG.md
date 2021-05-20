@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ## Unreleased
 ### Added
 - Selectors: When using negative selection, leave the number of points on the selector.
+- Selectors: Curvature selector by Ondra Benedikt.
 
 ## 1.1.1 - 2021-05-20
 ### Added
