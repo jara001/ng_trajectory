@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Segmentators/Utils: `gridCompute()` to obtain square grid size of the points.
+
 ### Changed
 - Selectors: Uniform selector now treats rotate as factor between two consecutive points, instead of rotating the whole path.
 
