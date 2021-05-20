@@ -10,6 +10,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Changed
 - Selectors: Uniform selector now treats rotate as factor between two consecutive points, instead of rotating the whole path.
 
+### Fixed
+- Optimizers: Invalidity of points is compared to the specified or computed square grid size instead of a fixed value.
+
 ## 1.1.0 - 2021-05-18
 ### Added
 - Automatic versioning of the package.

@@ -8,6 +8,8 @@
 from ng_trajectory.interpolators.utils import *
 import ng_trajectory.plot as ngplot
 
+from ng_trajectory.segmentators.utils import gridCompute
+
 from . import transform
 
 import nevergrad
@@ -21,7 +23,7 @@ from concurrent import futures
 from threading import Lock
 
 # Typing
-from typing import Tuple, Callable, Dict, TextIO
+from typing import Tuple, Callable, Dict, TextIO, List
 
 
 # Global variables
@@ -40,6 +42,7 @@ LOGFILE = None
 VERBOSITY = 3
 FILELOCK = Lock()
 HOLDMAP = None
+GRID = None
 
 
 ######################
@@ -67,6 +70,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         endpoint_distance: float = 0.2,
         endpoint_accuracy: float = 0.02,
         line_reduction: float = 3,
+        grid: List[float] = [],
         **kwargs):
     """Initialize variables for Braghin's transformation.
 
@@ -99,9 +103,10 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     endpoint_distance -- starting distance from the center for transformation, float, default 0.2
     endpoint_accuracy -- accuracy of the center-endpoint distance for transformation, float, default 0.02
     line_reduction -- factor by which the number of line points is lowered before internal interpolation, float, default 3
+    grid -- size of the grid used for the points discretization, 2-float List, computed by default
     **kwargs -- arguments not caught by previous parts
     """
-    global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY
+    global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY, GRID
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS
 
     # Local to global variables
@@ -141,6 +146,13 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
                 ngplot.pointsPlot(numpy.asarray(i))
 
         print ("Braghin's transformation constructed.")
+
+        if GRID is None:
+            if len(grid) == 2:
+                GRID = grid
+            else:
+                _GRID = gridCompute(points)
+                GRID = [ _GRID, _GRID ]
 
 
     # Optimizer definition
@@ -192,7 +204,7 @@ def _opt(points: numpy.ndarray) -> float:
 
     Note: This function is called after all necessary data is received.
     """
-    global VALID_POINTS, CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, CUTS, LOGFILE, FILELOCK, VERBOSITY
+    global VALID_POINTS, CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, CUTS, LOGFILE, FILELOCK, VERBOSITY, GRID
 
     # Transform points
     points = transform.transform(points, CUTS)
@@ -206,7 +218,7 @@ def _opt(points: numpy.ndarray) -> float:
     invalid = 0
 
     for _p in _points:
-        if not numpy.any(numpy.all(numpy.abs( numpy.subtract(VALID_POINTS, _p[:2]) ) < [ 0.05, 0.05 ], axis = 1)):
+        if not numpy.any(numpy.all(numpy.abs( numpy.subtract(VALID_POINTS, _p[:2]) ) < GRID, axis = 1)):
             invalid += 1
 
     if ( invalid > 0 ):
