@@ -26,6 +26,22 @@ Solution = Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]
 
 
 ######################
+# Stub
+######################
+
+class Stub:
+    """Object used when optimizer/etc. is not given."""
+
+    def __init__(self, name, silent_stub):
+        self.name = name
+        self.silent_stub = silent_stub
+
+    def __getattr__(self, attr):
+        """Return dummy lambda function."""
+        return lambda *x, **y: print("Called '%s' on '%s' object, but it was not specified in the configuration." % (attr, self.name), file=sys.stderr) if not self.silent_stub else None
+
+
+######################
 # Decorators
 ######################
 
@@ -156,14 +172,15 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
 
     ## Initialization
     # Get optimizers etc.
-    opt = optimizers.__getattribute__(_alg.get("algorithm"))
-    cri = criterions.__getattribute__(_alg.get("criterion"))
-    itp = interpolators.__getattribute__(_alg.get("interpolator"))
-    seg = segmentators.__getattribute__(_alg.get("segmentator"))
-    sel = selectors.__getattribute__(_alg.get("selector"))
+    obtain = lambda group, name: group.__getattribute__(_alg.get(name)) if hasattr(group, _alg.get(name, "")) else Stub(name, _alg.get("silent_stub", False))
+    opt = obtain(optimizers, "algorithm")
+    cri = obtain(criterions, "criterion")
+    itp = obtain(interpolators, "interpolator")
+    seg = obtain(segmentators, "segmentator")
+    sel = obtain(selectors, "selector")
 
     # Show up current progress
-    print (notification % (loop_i[0]+1) + " %s with %s criterion, int. by %s" % (_alg.get("algorithm"), _alg.get("criterion"), _alg.get("interpolator")), file=LOGFILE)
+    print (notification % (loop_i[0]+1) + " %s with %s criterion, int. by %s" % (_alg.get("algorithm", ""), _alg.get("criterion", ""), _alg.get("interpolator", "")), file=LOGFILE)
     LOGFILE.flush()
 
     # Prepare plot
