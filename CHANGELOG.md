@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+
+## 1.1.1 - 2021-05-20
 ### Added
 - Segmentators/Utils: `gridCompute()` to obtain square grid size of the points.
 - Substitute not selected algorithms with a stub.
