@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Fixed
 - Optimizers: Invalidity of points is compared to the specified or computed square grid size instead of a fixed value.
+- Optimizers: Constant for penalty is no longer fixed and can be set via parameter `penalty`.
 
 ## 1.1.0 - 2021-05-18
 ### Added

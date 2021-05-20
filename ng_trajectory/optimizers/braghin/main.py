@@ -43,6 +43,7 @@ VERBOSITY = 3
 FILELOCK = Lock()
 HOLDMAP = None
 GRID = None
+PENALTY = None
 
 
 ######################
@@ -53,6 +54,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         budget: int = 100,
         groups: int = 8,
         workers: int = 4,
+        penalty: float = 100,
         criterion: Callable[[numpy.ndarray], float] = lambda x: 0,
         criterion_args: Dict[str, any] = {},
         interpolator: Callable[[numpy.ndarray], numpy.ndarray] = lambda x: x,
@@ -81,6 +83,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     budget -- number of generations of genetic algorithm, int, default 100
     groups -- number of groups to segmentate the track into, int, default 8
     workers -- number of threads for GA, int, default 4
+    penalty -- constant used for increasing the penalty criterion, float, default 100
     criterion -- function to evaluate current criterion, callable (mx2 numpy.ndarray -> float),
                  default 'static 0'
     criterion_args -- arguments for the criterion function, dict, default {}
@@ -106,7 +109,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     grid -- size of the grid used for the points discretization, 2-float List, computed by default
     **kwargs -- arguments not caught by previous parts
     """
-    global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY, GRID
+    global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY, GRID, PENALTY
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS
 
     # Local to global variables
@@ -121,6 +124,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     LOGFILE = logfile
     VERBOSITY = logging_verbosity
     _holdtransform = hold_transform
+    PENALTY = penalty
 
 
     VALID_POINTS = points
@@ -204,7 +208,7 @@ def _opt(points: numpy.ndarray) -> float:
 
     Note: This function is called after all necessary data is received.
     """
-    global VALID_POINTS, CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, CUTS, LOGFILE, FILELOCK, VERBOSITY, GRID
+    global VALID_POINTS, CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, CUTS, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
 
     # Transform points
     points = transform.transform(points, CUTS)
@@ -229,7 +233,7 @@ def _opt(points: numpy.ndarray) -> float:
             if VERBOSITY > 1:
                 print ("invalid:%f" % invalid, file=LOGFILE)
             LOGFILE.flush()
-        return 100 * invalid
+        return PENALTY * invalid
 
     _c = CRITERION(**{**{'points': _points}, **CRITERION_ARGS})
     with FILELOCK:
