@@ -160,7 +160,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
 
     # Optimizer definition
-    instrum = nevergrad.Instrumentation(nevergrad.var.Array(groups, 1).bounded(0, 1))
+    instrum = nevergrad.Instrumentation(nevergrad.var.Array(len(CUTS), 1).bounded(0, 1))
     OPTIMIZER = nevergrad.optimizers.DoubleFastGADiscreteOnePlusOne(instrumentation = instrum, budget = budget, num_workers = workers)
 
 

@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Selectors: When using negative selection, leave the number of points on the selector.
 
 ## 1.1.1 - 2021-05-20
 ### Added
