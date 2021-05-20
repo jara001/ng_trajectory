@@ -5,6 +5,19 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 
+## 1.1.1 - 2021-05-20
+### Added
+- Segmentators/Utils: `gridCompute()` to obtain square grid size of the points.
+- Substitute not selected algorithms with a stub.
+- Parameter `silent_stub` that suppresses errors when calling stub.
+
+### Changed
+- Selectors: Uniform selector now treats rotate as factor between two consecutive points, instead of rotating the whole path.
+
+### Fixed
+- Optimizers: Invalidity of points is compared to the specified or computed square grid size instead of a fixed value.
+- Optimizers: Constant for penalty is no longer fixed and can be set via parameter `penalty`.
+
 ## 1.1.0 - 2021-05-18
 ### Added
 - Automatic versioning of the package.

@@ -32,14 +32,7 @@ def mapCreate(points: numpy.ndarray, origin: numpy.ndarray = None, size: numpy.n
     print ("Creating map...")
 
     # Obtain grid size if not set
-    _grid = grid if grid else numpy.min(
-            [
-                numpy.min( numpy.subtract(u[1:], u[:-1]) ) for u in
-                    [
-                        numpy.unique( points[:, d] ) for d in range(2)
-                    ]
-            ]
-        )
+    _grid = grid if grid else gridCompute(points)
 
     print ("\tGrid:", _grid)
 
@@ -106,3 +99,22 @@ def pointsToMap(points: numpy.ndarray) -> numpy.ndarray:
     global MAP_ORIGIN, MAP_GRID
 
     return numpy.round( numpy.subtract(points[:, :2], MAP_ORIGIN) / MAP_GRID).astype(numpy.uint64)
+
+
+def gridCompute(points: numpy.ndarray) -> float:
+    """Computes square grid size from given points.
+
+    Arguments:
+    points -- points from a grid of unknown size, nx(>=2) numpy.ndarray
+
+    Returns:
+    grid_size -- size of the square grid in same units as source, float
+    """
+    return numpy.min(
+            [
+                numpy.min( numpy.subtract(u[1:], u[:-1]) ) for u in
+                    [
+                        numpy.unique( points[:, d] ) for d in range(2)
+                    ]
+            ]
+        )
