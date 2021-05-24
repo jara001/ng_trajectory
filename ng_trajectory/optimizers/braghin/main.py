@@ -73,6 +73,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         endpoint_accuracy: float = 0.02,
         line_reduction: float = 3,
         grid: List[float] = [],
+        figure: ngplot.matplotlib.figure.Figure = None,
         **kwargs):
     """Initialize variables for Braghin's transformation.
 
@@ -107,6 +108,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     endpoint_accuracy -- accuracy of the center-endpoint distance for transformation, float, default 0.02
     line_reduction -- factor by which the number of line points is lowered before internal interpolation, float, default 3
     grid -- size of the grid used for the points discretization, 2-float List, computed by default
+    figure -- target figure for plotting, matplotlib.figure.Figure, default None (get current)
     **kwargs -- arguments not caught by previous parts
     """
     global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY, GRID, PENALTY
@@ -138,16 +140,17 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         if plot:
             if plot_cuts:
                 for cut in CUTS:
-                    ngplot.pointsPlot(cut, color="indigo")
+                    ngplot.pointsPlot(cut, figure=figure, color="indigo")
 
                     # New center point
                     ngplot.pointsScatter(
-                        (numpy.divide(cut[1, :] - cut[0, :], 2) + cut[0, :])[:, numpy.newaxis].T
+                        (numpy.divide(cut[1, :] - cut[0, :], 2) + cut[0, :])[:, numpy.newaxis].T,
+                        figure=figure
                     )
 
             if plot_reduced_line:
                 i, i1, i2 = transform.pointsInterpolate(transform.trajectoryReduce(group_centerline, int(len(group_centerline)/line_reduction)), len(group_centerline))
-                ngplot.pointsPlot(numpy.asarray(i))
+                ngplot.pointsPlot(numpy.asarray(i), figure=figure)
 
         print ("Braghin's transformation constructed.")
 
