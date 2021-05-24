@@ -134,7 +134,7 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
     # Select method for final points
     method = abs(remain)
 
-    if 0 < method < len(peaks_on_track):
-        return peaks_on_track[method]
+    if 0 < method <= len(peaks_on_track):
+        return peaks_on_track[method-1]
     else:
         raise ValueError("Unknown method number selected by number of groups.")
