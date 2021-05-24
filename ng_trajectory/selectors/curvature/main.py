@@ -74,6 +74,10 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
     # Visualize peaks
     all_peaks = []
 
+    if plot:
+        figP, axs = plt.subplots(3, 1, figsize=(15,15))
+
+    i = 0
     for arr, lbl in zip([dx2, dy2, K], ["dx2", "dy2", "K"]):
         arr_s = cf.smoothen(np.abs(arr), 3)
         arr_s = arr_s / max(arr_s)  # normalize
@@ -86,13 +90,15 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
         all_peaks.append(peaks)
 
         if plot:
-            figP = plt.figure(figsize=(15,5))
-            ax = figP.add_subplot(1,1,1)
-            ax.plot(arr_s, color="red")
+            axs[i].title.set_text(lbl)
+            axs[i].plot(arr_s, color="red")
+            axs[i].plot(peaks, arr_s[peaks], "x", color="black")
 
-            ax.plot(peaks, arr_s[peaks], "x", color="black")
-            figP.savefig("peaks_" + lbl + "_" + track_name + ".pdf")
-            figP.show()
+        i += 1
+
+    if plot:
+        figP.savefig("peaks_" + track_name + ".pdf")
+        figP.show()
 
 
     # Visualize turns on the track
