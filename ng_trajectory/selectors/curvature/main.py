@@ -87,12 +87,55 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
         peaks, _ = find_peaks(arr_s, height = 0.2)#, distance = 5)
         peaks2, _ = find_peaks(-arr_s, height = 0.2)#, distance = 5)
         peaks = np.unique(np.sort(np.concatenate((peaks, peaks2), axis=0)))
+
+        # Detect parts without points
+        threshold = 12
+        filling = []
+        for j in range(len(peaks)-1):
+            if peaks[j+1] - peaks[j] > 12:
+                filling += list(
+                    np.linspace(
+                        peaks[j],
+                        peaks[j+1],
+                        int((peaks[j+1] - peaks[j]) / 12) + 1,
+                        endpoint = False,
+                        dtype = np.int
+                    )
+                )[1:]
+
+        # Detect over 0 switch and add a point there
+        threshold = int(threshold / 2) # How far the points has to be from filling to be added
+        switching = []
+        for j in range(len(peaks)-1):
+            if np.sign(arr_s[peaks[j+1]]) != np.sign(arr_s[peaks[j]]):
+                ## y-wise in-fill
+
+                # Target value
+                target = arr_s[peaks[j]] + ((arr_s[peaks[j+1]] - arr_s[peaks[j]]) / 2)
+
+                # Find closest point on the line (y-wise) between the points
+                _error = 10000
+                _index = 0
+                for _p in range(peaks[j]+1, peaks[j+1]):
+                    if (target - arr_s[_p])**2 < _error:
+                        _error = (target - arr_s[_p])**2
+                        _index = _p
+
+                # Add the point only if too far from filling
+                for _p in filling:
+                    if abs(_p - _index) <= threshold:
+                        break
+                else:
+                    switching += [_index]
+
+        _peaks = np.unique(np.sort(np.concatenate((peaks, filling, switching), axis=0)).astype(np.int))
+
         all_peaks.append(_peaks)
 
         if plot:
             axs[i].title.set_text(lbl)
             axs[i].plot(arr_s, color="red")
-            axs[i].plot(peaks, arr_s[peaks], "x", color="black")
+            axs[i].plot(_peaks, arr_s[_peaks], "x", color="black")
 
         i += 1
 
