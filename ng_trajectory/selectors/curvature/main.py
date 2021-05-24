@@ -81,22 +81,23 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
         peaks, _ = find_peaks(arr_s, height=0.2)
 
         bases = cf.find_peaks_bases(arr_s, peaks)
-        peaks = np.sort(np.concatenate((peaks, bases), axis=0))
+        peaks = np.unique(np.sort(np.concatenate((peaks, bases), axis=0)))
 
         all_peaks.append(peaks)
 
         if plot:
-            plt.figure(figsize=(15,5))
-            plt.plot(arr_s, color="red")
+            figP = plt.figure(figsize=(15,5))
+            ax = figP.add_subplot(1,1,1)
+            ax.plot(arr_s, color="red")
 
-            plt.plot(peaks, arr_s[peaks], "x", color="black")
-            plt.savefig("peaks_" + lbl + "_" + track_name + ".pdf")
-            plt.show()
+            ax.plot(peaks, arr_s[peaks], "x", color="black")
+            figP.savefig("peaks_" + lbl + "_" + track_name + ".pdf")
+            figP.show()
 
 
     # Visualize turns on the track
     if plot:
-        fig, axs = plt.subplots(3,2, figsize=(15,20))
+        figP, axs = plt.subplots(3,2, figsize=(15,20))
 
         for i in range(3):
             axs[i,0].title.set_text('Track')
@@ -127,8 +128,8 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
             i += 1
 
     if plot:
-        plt.savefig("turns_identification_" + track_name + ".pdf")
-        plt.show()
+        figP.savefig("turns_identification_" + track_name + ".pdf")
+        figP.show()
 
 
     # Select method for final points
