@@ -80,6 +80,9 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
 
         peaks, _ = find_peaks(arr_s, height=0.2)
 
+        bases = cf.find_peaks_bases(arr_s, peaks)
+        peaks = np.sort(np.concatenate((peaks, bases), axis=0))
+
         all_peaks.append(peaks)
 
         if plot:

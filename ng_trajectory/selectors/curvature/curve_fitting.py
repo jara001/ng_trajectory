@@ -129,3 +129,39 @@ def get_curvature(ipoints: np.ndarray, interp_size: int = 400):
                     3)
                 )
             )
+
+
+def find_peaks_bases(arr: np.ndarray, peaks: np.ndarray) -> np.ndarray:
+    """Finds bases of the detected peaks.
+
+    Arguments:
+    arr -- component of the path (derivative, curvature, etc.), nx1 numpy.ndarray
+    peaks -- indices of the detected peaks in arr, mx1 numpy.ndarray
+
+    Returns:
+    bases -- indices of bases in arr, px1 numpy.ndarray
+    """
+    bases = []
+
+    for p in peaks:
+        # Find left base
+        cur_base = p
+        cur_val = arr[cur_base]
+        while True:
+            cur_base = (cur_base - 1) % len(arr)
+            if arr[cur_base] >= cur_val:
+                break
+            cur_val = arr[cur_base]
+        bases.append((cur_base+1) % len(arr))
+
+        # Find right base
+        cur_base = p
+        cur_val = arr[cur_base]
+        while True:
+            cur_base = (cur_base + 1) % len(arr)
+            if arr[cur_base] >= cur_val:
+                break
+            cur_val = arr[cur_base]
+        bases.append((cur_base-1) % len(arr))
+
+    return np.asarray(list(set(bases)))
