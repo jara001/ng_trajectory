@@ -79,15 +79,15 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
 
     i = 0
     for arr, lbl in zip([dx2, dy2, K], ["dx2", "dy2", "K"]):
-        arr_s = cf.smoothen(np.abs(arr), 3)
-        arr_s = arr_s / max(arr_s)  # normalize
+        #arr_s = np.abs(arr) #cf.smoothen(np.abs(arr), 3)
+        #arr_s = arr_s / max(arr_s)  # normalize
+        arr_s = arr / max(np.abs(arr))
 
-        peaks, _ = find_peaks(arr_s, height=0.2)
-
-        bases = cf.find_peaks_bases(arr_s, peaks)
-        peaks = np.unique(np.sort(np.concatenate((peaks, bases), axis=0)))
-
-        all_peaks.append(peaks)
+        # Detect peaks separately on both sides
+        peaks, _ = find_peaks(arr_s, height = 0.2)#, distance = 5)
+        peaks2, _ = find_peaks(-arr_s, height = 0.2)#, distance = 5)
+        peaks = np.unique(np.sort(np.concatenate((peaks, peaks2), axis=0)))
+        all_peaks.append(_peaks)
 
         if plot:
             axs[i].title.set_text(lbl)
@@ -118,7 +118,8 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
     i = 0
     for arr, p, lbl in zip([dx2,dy2,K], all_peaks, ["|dx2|", "|dy2|", "|K|"]):
         lsp = np.linspace(0,1, len(arr))
-        arr_s = cf.smoothen(np.abs(arr), 3)
+        #arr_s = np.abs(arr) #cf.smoothen(np.abs(arr), 3)
+        arr_s = arr
 
         peaks_on_track.append(interpolator([alpha[p_] for p_ in p]))
 
