@@ -16,6 +16,15 @@ from . import curve_fitting as cf
 
 
 ######################
+# Utility lambdas
+######################
+
+# Taken from the profiler
+addOverlap = lambda points, overlap: np.vstack((points[-overlap:, :], points[:, :], points[:overlap]))
+removeOverlap = lambda points, overlap: points[overlap:-overlap]
+
+
+######################
 # Functions
 ######################
 
@@ -47,9 +56,15 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
     if remain > 0:
         raise ValueError("Exact number of points cannot be handled by 'curvature' selector.")
 
+    # Repair points array
+    # Sometimes the last point is the same as the first, and we do not want that.
+    if (points[0] == points[-1]).all():
+        points = points[0:-1]
+
 
     # Interpolate points
-    n_interpolation_points = 100
+    n_interpolation_points = int(len(points)/8)
+    overlap_size = int(len(points)/24)
     alpha = cf.get_linspace(n_interpolation_points)
     delta = alpha[1] - alpha[0]
 
@@ -58,15 +73,17 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
     distance = np.cumsum( np.sqrt(np.sum( np.diff(ipoints, axis=0)**2, axis=1 )) )
     distance = np.insert(distance, 0, 0)/distance[-1]
 
+    ipoints = addOverlap(ipoints, overlap_size)
+
 
     # Compute curvature and derivatives
-    K = cf.get_curvature(ipoints, n_interpolation_points)
+    K = cf.get_curvature(ipoints, n_interpolation_points+2*overlap_size)
 
-    ipoints_derivatives = cf.get_derivatives(ipoints, n_interpolation_points)
+    ipoints_derivatives = cf.get_derivatives(ipoints, n_interpolation_points+2*overlap_size)
     dx = ipoints_derivatives[:,0]
     dy = ipoints_derivatives[:,1]
 
-    ipoints_derivatives2 = cf.get_derivatives(ipoints_derivatives, n_interpolation_points)
+    ipoints_derivatives2 = cf.get_derivatives(ipoints_derivatives, n_interpolation_points+2*overlap_size)
     dx2 = ipoints_derivatives2[:,0]
     dy2 = ipoints_derivatives2[:,1]
 
@@ -128,20 +145,62 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
                 else:
                     switching += [_index]
 
+
+        # Convert peaks to non-overlapped version
+        peaks = peaks[overlap_size <= peaks]
+        peaks = peaks[peaks < (len(ipoints) - overlap_size)]
+        peaks = peaks - overlap_size
+
+        filling = np.asarray(filling)
+        filling = filling[overlap_size <= filling]
+        filling = filling[filling < (len(ipoints) - overlap_size)]
+        filling = filling - overlap_size
+
+        switching = np.asarray(switching)
+        switching = switching[overlap_size <= switching]
+        switching = switching[switching < (len(ipoints) - overlap_size)]
+        switching = switching - overlap_size
+
         _peaks = np.unique(np.sort(np.concatenate((peaks, filling, switching), axis=0)).astype(np.int))
 
         all_peaks.append(_peaks)
 
         if plot:
+            arr_s = arr_s[overlap_size:-overlap_size]
             axs[i].title.set_text(lbl)
             axs[i].plot(arr_s, color="red")
-            axs[i].plot(_peaks, arr_s[_peaks], "x", color="black")
+            #axs[i].plot(_peaks, arr_s[_peaks], "x", color="black")
+
+            original_peaks = _peaks[np.isin(_peaks, peaks)]
+            print ("1", original_peaks, peaks)
+            axs[i].plot(original_peaks, arr_s[original_peaks], "x", color="black")
+
+            new_peaks = _peaks[np.isin(_peaks, filling)]
+            print ("2", new_peaks, filling)
+            axs[i].plot(new_peaks, arr_s[new_peaks], "x", color="green")
+
+            new_peaks2 = _peaks[np.isin(_peaks, switching)]
+            print ("3", new_peaks2, switching)
+            axs[i].plot(new_peaks2, arr_s[new_peaks2], "x", color="blue")
 
         i += 1
 
     if plot:
         figP.savefig("peaks_" + track_name + ".pdf")
         figP.show()
+
+
+    # Remove overlaps
+    ipoints = removeOverlap(ipoints, overlap_size)
+
+    K = removeOverlap(K, overlap_size)
+    dx = removeOverlap(dx, overlap_size)
+    dy = removeOverlap(dy, overlap_size)
+    dx2 = removeOverlap(dx2, overlap_size)
+    dy2 = removeOverlap(dy2, overlap_size)
+
+    distance = np.cumsum( np.sqrt(np.sum( np.diff(ipoints, axis=0)**2, axis=1 )) )
+    distance = np.insert(distance, 0, 0)/distance[-1]
 
 
     # Visualize turns on the track
