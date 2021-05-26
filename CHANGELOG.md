@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 - Selectors: When using negative selection, leave the number of points on the selector.
 - Selectors: Curvature selector by Ondra Benedikt.
+- Script 'ng_generate_data' for generating numpy files for the algorithm from an image of the map.
 
 ## 1.1.1 - 2021-05-20
 ### Added
