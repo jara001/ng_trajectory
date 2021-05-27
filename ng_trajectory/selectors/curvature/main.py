@@ -67,7 +67,7 @@ def mergePeaks(peaks_indices: np.ndarray, other: Dict[str, np.ndarray], threshol
         for _p in nearby:
             _indices.remove(_p)
 
-    return np.asarray(merged_peaks)
+    return np.asarray(merged_peaks, dtype = np.int)
 
 
 ######################
