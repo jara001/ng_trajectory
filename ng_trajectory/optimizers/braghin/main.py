@@ -44,6 +44,7 @@ FILELOCK = Lock()
 HOLDMAP = None
 GRID = None
 PENALTY = None
+FIGURE = None
 
 
 ######################
@@ -111,7 +112,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     figure -- target figure for plotting, matplotlib.figure.Figure, default None (get current)
     **kwargs -- arguments not caught by previous parts
     """
-    global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY, GRID, PENALTY
+    global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY, GRID, PENALTY, FIGURE
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS
 
     # Local to global variables
@@ -127,6 +128,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     VERBOSITY = logging_verbosity
     _holdtransform = hold_transform
     PENALTY = penalty
+    FIGURE = figure
 
 
     VALID_POINTS = points
@@ -176,7 +178,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     tcpoints -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
     trajectory -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
     """
-    global OPTIMIZER, CUTS, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS
+    global OPTIMIZER, CUTS, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE
 
     with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
         recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
@@ -184,6 +186,30 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     points = transform.transform(recommendation.args[0], CUTS)
 
     final = _opt(numpy.asarray(recommendation.args[0]))
+
+
+    ## Plot invalid points if available
+
+    # Transform points
+    points = transform.transform(recommendation.args[0], CUTS)
+
+    # Interpolate received points
+    # It is expected that they are unique and sorted.
+    _points = INTERPOLATOR(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
+
+    # Check if all interpolated points are valid
+    # Note: This is required for low number of groups.
+    invalid = []
+
+    for _p in _points:
+        if not numpy.any(numpy.all(numpy.abs( numpy.subtract(VALID_POINTS, _p[:2]) ) < GRID, axis = 1)):
+            invalid.append(_p)
+
+    if len(invalid) > 0:
+        ngplot.pointsScatter(numpy.asarray(invalid), FIGURE, color="red", marker="x")
+
+
+    ##
 
     with FILELOCK:
         if VERBOSITY > 0:

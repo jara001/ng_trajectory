@@ -44,6 +44,7 @@ FILELOCK = Lock()
 HOLDMAP = None
 GRID = None
 PENALTY = None
+FIGURE = None
 
 
 ######################
@@ -69,6 +70,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         hold_matryoshka: bool = False,
         plot: bool = False,
         grid: List[float] = [],
+        figure: ngplot.matplotlib.figure.Figure = None,
         **kwargs):
     """Initialize variables for Matryoshka transformation.
 
@@ -99,9 +101,10 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     hold_matryoshka -- whether the Matryoshka should be created only once, bool, default False
     plot -- whether a graphical representation should be created, bool, default False
     grid -- size of the grid used for the points discretization, 2-float List, computed by default
+    figure -- target figure for plotting, matplotlib.figure.Figure, default None (get current)
     **kwargs -- arguments not caught by previous parts
     """
-    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY
+    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS
 
     # Local to global variables
@@ -117,6 +120,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     VERBOSITY = logging_verbosity
     _holdmatryoshka = hold_matryoshka
     PENALTY = penalty
+    FIGURE = figure
 
 
     VALID_POINTS = points
@@ -133,7 +137,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         grouplayers = transform.groupsBorderBeautify(grouplayers, 400)
 
         if plot:
-            ngplot.bordersPlot(grouplayers)
+            ngplot.bordersPlot(grouplayers, figure)
 
         layers_center = transform.groupsCenterCompute(_groups)
         layers_count = [ layers for i in range(len(grouplayers)) ]
@@ -165,7 +169,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     tcpoints -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
     trajectory -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
     """
-    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS
+    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE
 
     with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
         recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
@@ -173,6 +177,27 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p])[0] for i, p in enumerate(numpy.asarray(recommendation.args[0])) ]
 
     final = _opt(numpy.asarray(recommendation.args[0]))
+
+
+    ## Plot invalid points if available
+
+    # Interpolate received points
+    # It is expected that they are unique and sorted.
+    _points = INTERPOLATOR(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
+
+    # Check if all interpolated points are valid
+    # Note: This is required for low number of groups.
+    invalid = []
+
+    for _p in _points:
+        if not numpy.any(numpy.all(numpy.abs( numpy.subtract(VALID_POINTS, _p[:2]) ) < GRID, axis = 1)):
+            invalid.append(_p)
+
+    if len(invalid) > 0:
+        ngplot.pointsScatter(numpy.asarray(invalid), FIGURE, color="red", marker="x")
+
+
+    ##
 
     with FILELOCK:
         if VERBOSITY > 0:
