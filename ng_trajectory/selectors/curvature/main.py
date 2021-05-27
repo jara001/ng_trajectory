@@ -191,11 +191,12 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
 
                 # Add the point only if too far from filling
                 for _p in filling:
-                    if abs(_p - _index) <= threshold:
+                    #if abs(_p - _index) <= threshold:
+                    # Instead, check that between the peaks there is not filling
+                    if _p in range(peaks[j] + 1, peaks[j + 1]):
                         break
                 else:
                     switching += [_index]
-
 
         # Convert peaks to non-overlapped version
         peaks = peaks[overlap_size <= peaks]
