@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.2.0 - 2021-05-27
 ### Added
 - Optimizers: Final graph now contains invalid points as well (if present).
 - Selectors: When using negative selection, leave the number of points on the selector.
