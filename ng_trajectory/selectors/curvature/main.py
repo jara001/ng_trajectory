@@ -83,7 +83,16 @@ def init(**kwargs) -> None:
     pass
 
 
-def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: bool = False, **overflown) -> np.ndarray:
+def select(
+        points: np.ndarray,
+        remain: int,
+        track_name: str = "unknown",
+        plot: bool = False,
+        interpolation_factor: float = 24.0,
+        peaks_height: float = 0.0,
+        peaks_merge: int = 0,
+        peaks_filling: int = 1000000,
+    **overflown) -> np.ndarray:
     """Select points from the path uniformly.
 
     Arguments:
@@ -91,12 +100,17 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
     remain -- number of points in the result, int
     track_name -- name of the track, str, default "unknown"
     plot -- when True, images are generated, default False
+    interpolation_factor -- factor to reduce number of points prior to the interpolation, float, default 24.0
+    peaks_height -- minimum height of peaks, float, default 0.0
+    peaks_merge -- width of area used for merging the peaks, int, default 0
+    peaks_filling -- width of area used for filling the points, int, default 1000000
     **overflown -- arguments not caught by previous parts
 
     Returns:
     rpoints -- list of points, remainx2 numpy.ndarray
 
     Note: Since in this version we are not able to set the number of points, raise an exception for positive numbers.
+    FIXME: It fails horribly when the number of peaks is low (like 1 or 2).
     """
 
     if remain > 0:
@@ -109,7 +123,7 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
 
 
     # Interpolate points
-    n_interpolation_points = int(len(points)/8)
+    n_interpolation_points = int(len(points)/interpolation_factor)
     overlap_size = int(n_interpolation_points/2)
     alpha = cf.get_linspace(n_interpolation_points)
     delta = alpha[1] - alpha[0]
@@ -147,32 +161,30 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
         arr_s = arr / max(np.abs(arr))
 
         # Detect peaks separately on both sides
-        peaks, adds = find_peaks(arr_s, height = 0.2)#, distance = 5)
-        peaks2, adds2 = find_peaks(-arr_s, height = 0.2)#, distance = 5)
+        peaks, adds = find_peaks(arr_s, height = peaks_height)#, distance = 5)
+        peaks2, adds2 = find_peaks(-arr_s, height = peaks_height)#, distance = 5)
 
         # Merge close peaks manually
-        mpeaks = mergePeaks(peaks, adds, threshold = 20)
-        mpeaks2 = mergePeaks(peaks2, adds2, threshold = 20)
+        mpeaks = mergePeaks(peaks, adds, peaks_merge)
+        mpeaks2 = mergePeaks(peaks2, adds2, peaks_merge)
 
         peaks = np.unique(np.sort(np.concatenate((mpeaks, mpeaks2), axis=0)))
 
         # Detect parts without points
-        threshold = 12
         filling = []
         for j in range(len(peaks)-1):
-            if peaks[j+1] - peaks[j] > 12:
+            if peaks[j+1] - peaks[j] > peaks_filling:
                 filling += list(
                     np.linspace(
                         peaks[j],
                         peaks[j+1],
-                        int((peaks[j+1] - peaks[j]) / 12) + 1,
+                        int((peaks[j+1] - peaks[j]) / peaks_filling) + 1,
                         endpoint = False,
                         dtype = np.int
                     )
                 )[1:]
 
         # Detect over 0 switch and add a point there
-        threshold = int(threshold / 2) # How far the points has to be from filling to be added
         switching = []
         for j in range(len(peaks)-1):
             if np.sign(arr_s[peaks[j+1]]) != np.sign(arr_s[peaks[j]]):
@@ -191,7 +203,7 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
 
                 # Add the point only if too far from filling
                 for _p in filling:
-                    #if abs(_p - _index) <= threshold:
+                    #if abs(_p - _index) <= int(peaks_filling/2):
                     # Instead, check that between the peaks there is not filling
                     if _p in range(peaks[j] + 1, peaks[j + 1]):
                         break
