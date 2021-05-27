@@ -110,7 +110,7 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
 
     # Interpolate points
     n_interpolation_points = int(len(points)/8)
-    overlap_size = int(len(points)/24)
+    overlap_size = int(n_interpolation_points/2)
     alpha = cf.get_linspace(n_interpolation_points)
     delta = alpha[1] - alpha[0]
 
