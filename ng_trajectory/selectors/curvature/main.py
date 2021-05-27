@@ -14,6 +14,8 @@ from scipy.interpolate import interp1d
 from scipy.signal import find_peaks
 from . import curve_fitting as cf
 
+from typing import Dict
+
 
 ######################
 # Utility lambdas
@@ -22,6 +24,50 @@ from . import curve_fitting as cf
 # Taken from the profiler
 addOverlap = lambda points, overlap: np.vstack((points[-overlap:, :], points[:, :], points[:overlap]))
 removeOverlap = lambda points, overlap: points[overlap:-overlap]
+
+
+######################
+# Utility functions
+######################
+
+def mergePeaks(peaks_indices: np.ndarray, other: Dict[str, np.ndarray], threshold: int) -> np.ndarray:
+    """Merges close peaks.
+
+    Arguments:
+    peaks_indices -- indices of detected peaks, nx1 numpy.ndarray
+    other -- other information about peaks, dict of numpy.ndarrays
+    threshold -- surrounding area to gather, int
+
+    Returns:
+    merged_peaks -- indices of merged peaks, nx1 numpy.ndarray
+
+    Note: For this function 'peak_heights' is required in 'other'.
+    """
+
+    merged_peaks = []
+
+    _indices = peaks_indices.tolist()
+    _peaks = sorted(zip(_indices, other.get("peak_heights").tolist()), key = lambda x: x[1], reverse = True)
+
+    while len(_peaks) > 0:
+        _peak, _ = _peaks.pop(0)
+
+        if _peak not in _indices:
+            continue
+
+        _indices.remove(_peak)
+
+        nearby = set.intersection(
+            set(_indices),
+            set([ _peak + _i - int(threshold / 2) for _i in range(threshold) ])
+        )
+
+        merged_peaks.append(int((_peak + sum(nearby)) / (1 + len(nearby))))
+
+        for _p in nearby:
+            _indices.remove(_p)
+
+    return np.asarray(merged_peaks)
 
 
 ######################
@@ -101,9 +147,14 @@ def select(points: np.ndarray, remain: int, track_name: str = "unknown", plot: b
         arr_s = arr / max(np.abs(arr))
 
         # Detect peaks separately on both sides
-        peaks, _ = find_peaks(arr_s, height = 0.2)#, distance = 5)
-        peaks2, _ = find_peaks(-arr_s, height = 0.2)#, distance = 5)
-        peaks = np.unique(np.sort(np.concatenate((peaks, peaks2), axis=0)))
+        peaks, adds = find_peaks(arr_s, height = 0.2)#, distance = 5)
+        peaks2, adds2 = find_peaks(-arr_s, height = 0.2)#, distance = 5)
+
+        # Merge close peaks manually
+        mpeaks = mergePeaks(peaks, adds, threshold = 20)
+        mpeaks2 = mergePeaks(peaks2, adds2, threshold = 20)
+
+        peaks = np.unique(np.sort(np.concatenate((mpeaks, mpeaks2), axis=0)))
 
         # Detect parts without points
         threshold = 12
