@@ -186,7 +186,11 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
     # Prepare plot
     if _alg.get("plot", False):
         fig = plot.figureCreate()
-        plot.plotDyn(_alg.get("plot_args", [])[0], fig, **{**_alg, **{"track": track, "fitness": fitness, "rcandidate": rcandidate, "tcandidate": tcandidate, "result": result}})
+
+        # Append figure
+        _alg = {**_alg, **{"figure": fig}}
+
+        plot.plotDyn(_alg.get("plot_args", [])[0], **{**_alg, **{"track": track, "fitness": fitness, "rcandidate": rcandidate, "tcandidate": tcandidate, "result": result}})
         #plot.axisEqual()
         #plot.trackPlot(track)
 
@@ -207,7 +211,7 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
         #plot.pointsPlot(_result)
         #plot.pointsScatter(_rcandidate)
         if len(_alg.get("plot_args", [])) > 1:
-            plot.plotDyn(_alg.get("plot_args", [])[-1], fig, **{**_alg, **{"track": track, "fitness": _fitness, "rcandidate": _rcandidate, "tcandidate": _tcandidate, "result": _result}})
+            plot.plotDyn(_alg.get("plot_args", [])[-1], **{**_alg, **{"track": track, "fitness": _fitness, "rcandidate": _rcandidate, "tcandidate": _tcandidate, "result": _result}})
         if fileformat:
             plot.figureSave(fileformat % (loop_i[0]+1) + "-%s.png" % _alg.get("algorithm"))
         else:

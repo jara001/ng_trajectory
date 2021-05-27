@@ -83,5 +83,12 @@ def select(points: numpy.ndarray, remain: int, **overflown) -> numpy.ndarray:
 
     Returns:
     rpoints -- list of points, remainx2 numpy.ndarray
+
+    Note: When 'remain' is negative the functions raises an Exception.
     """
+
+    if remain < 0:
+        # Raise an exception, as we cannot guess number of points.
+        raise ValueError("Negative selection is not supported by 'uniform' selector.")
+
     return trajectoryReduce(points, remain)

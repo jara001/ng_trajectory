@@ -1,0 +1,549 @@
+#!/usr/bin/env python3.6
+#!ARGS::../../f1tenth-v1/base_overlay/src/storage/stage/map/torcs/Ruudskogen.pgm
+# ng_generate_data.py
+"""Script for generating *.npy data from maps.
+"""
+######################
+# Imports & Globals
+######################
+
+import sys, os, getopt
+
+# Load PIL with preserved typing
+# https://stackoverflow.com/questions/58236138/pil-and-python-static-typing
+from PIL import Image as P
+from PIL.Image import Image
+from PIL import ImageDraw as PDraw
+
+import numpy
+
+# Typing
+from typing import List, Generator
+
+
+# Global variables
+HOOD4 = numpy.asarray([[-1, 0], [0, -1], [1, 0], [0, 1]])
+HOOD8 = numpy.asarray([[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]])
+
+
+# Parameters
+PARAMETERS = {
+    "file":
+        {
+            "help": "Input source image, %s",
+            "type": str,
+            "short": "f:",
+        },
+    "resize":
+        {
+            "help": "Ratio to resize the source image, %f",
+            "type": float,
+            "short": "r:",
+            "long": "resize=",
+            "value": 1.0,
+        },
+    "resolution":
+        {
+            "help": "Resolution of the map inside source image, %f",
+            "type": float,
+            "long": "resolution=",
+            "value": 1.0,
+        },
+    "originx":
+        {
+            "help": "Location of origin by the x-axis, %f meters",
+            "type": float,
+            "long": "ox=",
+            "value": 0.0,
+        },
+    "originy":
+        {
+            "help": "Location of origin by the y-axis, %f meters",
+            "type": float,
+            "long": "oy=",
+            "value": 0.0,
+        },
+}
+
+HELP = """python3 ng_generate_data [ARGUMENTS] [INPUT_FILE]
+Utility for creating input data for ng_trajectory from a custom map image.
+
+Arguments:"""
+
+
+######################
+# Centerline generation
+######################
+
+def getWalls(im: Image) -> List[numpy.ndarray]:
+    """Get wall sequences from the image.
+
+    Arguments:
+    im -- source image, Image
+
+    Returns:
+    walls -- sets of points belonging to walls, m-list of x2 numpy.ndarray
+
+    Sources:
+    https://stackoverflow.com/questions/46083880/fill-in-a-hollow-shape-using-python-and-pillow-pil
+    """
+
+    # Duplicate image
+    _im = im.copy()
+
+    # Obtain wall color
+    # Note: In grayscale image, 0 is black, 1 is white.
+    hist = numpy.asarray(_im.histogram())
+    wall_color = numpy.argwhere(hist == hist[hist > 0][0])[0][0]
+
+    walls = []
+
+    # Progress
+    starting_value = _im.histogram()[wall_color]
+
+    while _im.histogram()[wall_color] > 0:
+
+        # Convert image to numpy array
+        _nd = numpy.asarray(_im)
+
+        # Find specified color somewhere
+        _wall = numpy.argwhere(_nd == wall_color)[0]
+
+        # Use PIL fill tool to color the wall
+        _color = numpy.argwhere(numpy.asarray(_im.histogram()) == 0)[0][0]
+        PDraw.floodfill(
+            _im,
+            xy = (int(_wall[1]), int(_wall[0])),
+            value = int(_color),
+            thresh = 0,
+        )
+
+        # Recast image to numpy
+        _nd = numpy.asarray(_im)
+
+        # Get coordinates of newly colored walls
+        walls.append(
+            numpy.argwhere(
+                _nd == _color
+            )
+        )
+
+        sys.stdout.write("\rObtaining walls... %03.2f%%" % (100.0 - (100.0 * _im.histogram()[wall_color] / starting_value)))
+
+    print (" - DONE")
+
+    return walls
+
+
+######################
+# PIL functions
+######################
+
+def intersectArrays(arr1: numpy.ndarray, arr2: numpy.ndarray) -> numpy.ndarray:
+    """Receive rows that are present in both arrays.
+
+    Arguments:
+    arr1, arr2 -- input array, numpy.ndarray
+
+    Returns:
+    iarr -- intersection of both arrays, numpy.ndarray
+
+    Source:
+    # https://stackoverflow.com/questions/9269681/intersection-of-2d-numpy-ndarrays
+    """
+
+    arr1_view = arr1.view([('',arr1.dtype)]*arr1.shape[1])
+    arr2_view = arr2.view([('',arr2.dtype)]*arr2.shape[1])
+    intersected = numpy.intersect1d(arr1_view, arr2_view)
+    return intersected.view(arr1.dtype).reshape(-1, arr1.shape[1])
+
+
+def processImage(im: Image) -> None:
+    """Loads an image from the file and generates .npy data.
+
+    Arguments:
+    im -- loaded image
+    """
+
+    # Get walls
+    walls = getWalls(im)
+
+    # Create numpy array
+    nd = numpy.asarray(im, dtype = numpy.int)
+
+    # Name colors (just in case)
+    WALL, UNKN, FREE = numpy.unique(nd)
+
+
+    ## Inflate walls
+
+    # Obtain all empty spaces
+    # Copy is required as argwhere returns 2xn array with nx2 view,
+    # which is unfortunately incompatible with current intersect function.
+    _free = numpy.argwhere(nd == FREE).copy()
+    #_free = numpy.argwhere(nd > (WALL + len(walls))).copy()
+
+    # Wall "iterator"
+    _w = 0
+
+    # Color initial walls
+    for i in range(len(walls)):
+        nd[walls[i][:, 0], walls[i][:, 1]] = i + 1
+
+    starting_value = len(_free)
+
+    # Until there are no more free elements left
+    while len(_free) > 0 and max([ len(wall) for wall in walls]) > 0:
+
+        # Obtain all walls of one color and replicate it
+        # https://stackoverflow.com/questions/53239242/how-to-duplicate-each-row-of-a-matrix-n-times-numpy
+        _wall = numpy.repeat(walls[_w], repeats = HOOD4.shape[0], axis = 0)
+
+        # Find the neighbourhood
+        _hood = numpy.add(
+            _wall,
+            numpy.tile(HOOD4, reps = (walls[_w].shape[0], 1))
+        )
+
+        # Throw away points that are outside the image and remove duplicits
+        _hood = numpy.unique(_hood[~numpy.any((_hood < 0) | (_hood >= nd.shape), axis = 1), :], axis = 0)
+
+        # Find all free points that are also in the neighbourhood
+        _new_wall = intersectArrays(_hood, _free)
+
+        # Mark newly found walls
+        nd[_new_wall[:, 0], _new_wall[:, 1]] = _w + 1
+        
+        # Save these walls for the next iteration
+        walls[_w] = _new_wall
+
+        # Prepare variables for new iteration
+        _w = (_w + 1) % len(walls)
+        _free = numpy.argwhere(nd == FREE).copy()
+        #_free = numpy.argwhere(nd > (WALL + len(walls))).copy()
+
+        sys.stdout.write("\rInflating map... %03.2f%%" % (100.0 - (100.0 * len(_free) / starting_value)))
+
+    print (" - DONE")
+
+
+    ## Obtain centerline
+    sys.stdout.write("\rGenerating centerline...")
+
+    # Get neighbourhood of wall 1 where it meets different wall.
+    wall0 = numpy.argwhere(nd == 1)
+    # Obtain all walls of one color and replicate it
+    # https://stackoverflow.com/questions/53239242/how-to-duplicate-each-row-of-a-matrix-n-times-numpy
+    _wall = numpy.repeat(wall0, repeats = HOOD4.shape[0], axis = 0)
+
+    # Find the neighbourhood
+    _hood = numpy.add(
+        _wall,
+        numpy.tile(HOOD4, reps = (wall0.shape[0], 1))
+    )
+
+    # Throw away points that are outside the image and remove duplicits
+    _hood = numpy.unique(_hood[~numpy.any((_hood < 0) | (_hood >= nd.shape), axis = 1), :], axis = 0)
+
+    # Find all points of other walls
+    _walls = numpy.argwhere((nd > 1) & (nd < UNKN)).copy()
+
+    # Find all free points that are also in the neighbourhood
+    border = intersectArrays(_hood, _walls)
+
+    print (" - DONE")
+
+
+    ## Filter centerline points
+    # This is taken from center_trajectory package, function 'on_border".
+
+    filtered_border = []
+    border_length = border.shape[0]-1
+
+    for _i in range(border.shape[0]):
+
+        r, c = border[_i, :]
+        row_neighbours, col_neighbours = (0, 0)
+
+        for _r, _c in HOOD8:
+
+            # In here, we should check for reaching the outside of the map.
+            # However, in the current design, this should not happen(?).
+
+            if _r == 0 and _c != 0 and nd[r, c + _c] == 1:
+                row_neighbours += 1
+
+            if _c == 0 and _r != 0 and nd[r + _r, c] == 1:
+                col_neighbours += 1
+
+            # ^^ These two will skip 'redundant' point as in:
+            #
+            #      1112                     1112                    0010
+            #      1112                     11X2                    0100
+            #      1122    is X redundant   1122  thus we will get  0100
+            #      1122                     1122                    0100
+
+        if row_neighbours < 2 and col_neighbours < 2:
+            filtered_border.append(border[_i, :].tolist())
+
+        sys.stdout.write("\rFiltering points... %03.2f%%" % (100.0 * _i / border_length))
+
+    print (" - DONE")
+
+
+    ## Sort centerline points
+    # Note: This is an adapted version from 'ng_trajectory:trajectorySort()'.
+    sorted_points = []
+    sorted_points.append(filtered_border.pop(0))
+
+    starting_value = len(filtered_border)
+
+    while len(filtered_border) > 0:
+        min_dist = 100000
+        point = None
+
+        for p in filtered_border:
+            dist = numpy.hypot(p[0] - sorted_points[-1][0], p[1] - sorted_points[-1][1])
+
+            if dist < min_dist:
+                min_dist = dist
+                point = p
+
+        sorted_points.append(point)
+        filtered_border.remove(point)
+
+        sys.stdout.write("\rSorting points... %03.2f%%" % (100.0 - (100.0 * len(filtered_border) / starting_value)))
+
+    print (" - DONE")
+
+    sorted_points = numpy.asarray(sorted_points)
+
+
+    ## Create and save image of the situation
+    sys.stdout.write("\rSaving the data...")
+
+    nnd = numpy.asarray(im, dtype = numpy.uint8).copy()
+    nnd[border[:, 0], border[:, 1]] = UNKN
+
+    nndi = P.fromarray(nnd)
+    nndi.convert("L")
+    nndi.save("generated_data.png")
+
+
+    ## Save into npy
+
+    start_points = numpy.asarray(sorted_points).astype(numpy.float)
+
+    # Flip y-axis
+    start_points -= [im.size[1], 0]
+    start_points[:, 0] = numpy.abs(start_points[:, 0])
+
+    # Convert to real units (if required)
+    if PARAMETERS["resolution"]["value"] != 1.0:# or PARAMETERS["resize"]["value"] != 1.0:
+        start_points *= PARAMETERS["resolution"]["value"] / PARAMETERS["resize"]["value"]
+
+    # Move the origin (if required)
+    if PARAMETERS["originx"]["value"] != 0.0 or PARAMETERS["originy"]["value"] != 0.0:
+        start_points += [PARAMETERS["originy"]["value"], PARAMETERS["originx"]["value"]]
+
+    # Swap yx
+    start_points = numpy.vstack((start_points[:, 1], start_points[:, 0])).T
+
+    numpy.save("start_points.npy", start_points)
+
+    valid_points = numpy.asarray(im, dtype = numpy.int)
+    valid_points = numpy.argwhere(valid_points == FREE).astype(numpy.float)
+
+    # Flip y-axis
+    valid_points -= [im.size[1], 0]
+    valid_points[:, 0] = numpy.abs(valid_points[:, 0])
+
+    # Convert to real units (if required)
+    if PARAMETERS["resolution"]["value"] != 1.0:# or PARAMETERS["resize"]["value"] != 1.0:
+        valid_points *= PARAMETERS["resolution"]["value"] / PARAMETERS["resize"]["value"]
+
+    # Move the origin (if required)
+    if PARAMETERS["originx"]["value"] != 0.0 or PARAMETERS["originy"]["value"] != 0.0:
+        valid_points += [PARAMETERS["originy"]["value"], PARAMETERS["originx"]["value"]]
+
+    # Swap yx
+    valid_points = numpy.vstack((valid_points[:, 1], valid_points[:, 0])).T
+
+    numpy.save("valid_points.npy", valid_points)
+
+    print (" - DONE")
+
+    
+def loadImage(filename: str) -> Image:
+    """Loads an image from the file and prepares it for processing.
+
+    Arguments:
+    filename -- path to the file, str
+
+    Returns:
+    im -- loaded image
+
+    Sources:
+    https://stackoverflow.com/questions/1065945/how-to-reduce-color-palette-with-pil
+    https://stackoverflow.com/questions/236692/how-do-i-convert-any-image-to-a-4-color-paletted-image-using-the-python-imaging-l
+    """
+
+    im = P.open(filename)
+    im = im.resize((int(im.size[0]*PARAMETERS["resize"]["value"]), int(im.size[1]*PARAMETERS["resize"]["value"])))#im.resize((im.size[0] * 2, im.size[1] * 2))
+
+    # Verify used palette
+    # Note: Only "L" is now usable.
+    if im.mode != "L":
+        im = im.convert("L")
+
+        #print ("Unsupported image mode %s, currently only %s is/are supported."
+        #    % (
+        #        im.mode,
+        #        ["L"],
+        #    ), file = sys.stderr
+        #)
+
+    # Obtain three most used colors
+    colors = []
+    hist = im.histogram()
+
+    while len(colors) < 3:
+        _index = hist.index(max(hist))
+        colors.append(_index)
+        hist[_index] = min(hist) - 1
+
+    # Create palette for quantization image
+    palette = []
+
+    for color in colors:
+        palette += [color, ] * 3
+
+    # Fill the rest of the palette
+    palette += [0, ] * 3 * (256 - len(palette))
+
+    # Create image for quantization
+    imQ = P.new("P", (1, 1), 0)
+    imQ.putpalette(palette)
+
+    # Convert source image to RGB
+    im = im.convert("RGB")
+
+    # Quantize colors in the image
+    im = im.quantize(3, method = 1)#palette = imQ) <- Palette is broken with rescaled images? (returns 4 colors instead of 3)
+
+    # Convert the image back to grayscale
+    im = im.convert("L")
+
+
+    ## Fix missaligned colors
+    # When changing the size, free space can appear outside the track and unknown inside.
+
+    # Obtain numpy array to locate colors
+    nd = numpy.asarray(im)
+    WALL, UNKN, FREE = numpy.unique(nd)
+
+    # Obtain all free spaces
+    free = numpy.argwhere(nd == FREE)
+
+    # 1: Find inner area of the track
+    for r, c in free:
+        for _r, _c in HOOD8:
+            if nd[r + _r, c + _c] != FREE:
+                break
+        else:
+            break
+    else:
+        return im
+
+    # 2: Color all free to unknown
+    starting_value = im.histogram()[FREE]
+
+    while im.histogram()[FREE] > 0:
+
+        # Convert image to numpy array
+        nd = numpy.asarray(im)
+
+        # Find specified color somewhere
+        free = numpy.argwhere(nd == FREE)[0]
+
+        # Use PIL fill tool to color the place
+        PDraw.floodfill(
+            im,
+            xy = (int(free[1]), int(free[0])),
+            value = int(UNKN),
+            thresh = 0,
+        )
+
+        # Recast image to numpy
+        nd = numpy.asarray(im)
+
+        sys.stdout.write("\rClearing resize fragments... %03.2f%%" % (100.0 - (100.0 * im.histogram()[FREE] / starting_value)))
+
+    print (" - DONE")
+
+    # 3: Finally, fill the inside section back again to free        
+    PDraw.floodfill(
+        im,
+        xy = (int(c), int(r)),
+        value = int(FREE),
+        thresh = 0,
+    )
+
+    return im
+
+
+######################
+# Main
+######################
+
+if __name__ == "__main__":
+
+    try:
+        opts, args = getopt.getopt(
+            sys.argv[1:],
+            "".join([ info.get("short") for opt, info in PARAMETERS.items() if "short" in info ] + [ "h" ]),
+            [ info.get("long") for opt, info in PARAMETERS.items() if "long" in info ] + [ "help" ],
+        )
+    except getopt.GetoptError as e:
+        print ("Unable to process arguments: %s" % e, file = sys.stderr)
+        exit(2)
+
+
+    for opt, arg in opts:
+        for param, info in PARAMETERS.items():
+            if opt in ("-h", "--help"):
+                print (HELP)
+                print ("\n".join([ " %s\n\t\t%s" % (", ".join((["-" + i.get("short").replace(":", "")] if "short" in i else []) + (["--" + i.get("long").replace("=", "")] if "long" in i else [])), i.get("help", "")) for o, i in PARAMETERS.items() ]))
+                exit (0)
+
+            if ("short" in info and opt in ("-" + info.get("short").replace(":", ""))) \
+               or ("long" in info and opt in ("--" + info.get("long").replace("=", ""))):
+
+                # Check type of the variable
+                if "type" in info:
+                    try:
+                        arg = info.get("type")(arg)
+                    except Exception as e:
+                        print ("Error during processing argument '%s': %s" % (opt, e), file = sys.stderr)
+                        exit(3)
+
+                info["value"] = arg
+
+    # Check whether file was given
+    if "value" not in PARAMETERS["file"]:
+        if len(args) < 1:
+            print ("Expected argument with path to the source image.", file=sys.stderr)
+            exit(10)
+        else:
+            PARAMETERS["file"]["value"] = args[0]
+
+    # Check that the file does exist
+    if not os.path.exists(PARAMETERS["file"]["value"]):
+        print ("File %s does not exist." % PARAMETERS["file"]["value"], file=sys.stderr)
+        exit(11)
+
+    # Run the program
+    im = loadImage(PARAMETERS["file"]["value"])
+    processImage(im)
+
+

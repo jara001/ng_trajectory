@@ -44,6 +44,7 @@ FILELOCK = Lock()
 HOLDMAP = None
 GRID = None
 PENALTY = None
+FIGURE = None
 
 
 ######################
@@ -73,6 +74,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         endpoint_accuracy: float = 0.02,
         line_reduction: float = 3,
         grid: List[float] = [],
+        figure: ngplot.matplotlib.figure.Figure = None,
         **kwargs):
     """Initialize variables for Braghin's transformation.
 
@@ -107,9 +109,10 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     endpoint_accuracy -- accuracy of the center-endpoint distance for transformation, float, default 0.02
     line_reduction -- factor by which the number of line points is lowered before internal interpolation, float, default 3
     grid -- size of the grid used for the points discretization, 2-float List, computed by default
+    figure -- target figure for plotting, matplotlib.figure.Figure, default None (get current)
     **kwargs -- arguments not caught by previous parts
     """
-    global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY, GRID, PENALTY
+    global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY, GRID, PENALTY, FIGURE
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS
 
     # Local to global variables
@@ -125,6 +128,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     VERBOSITY = logging_verbosity
     _holdtransform = hold_transform
     PENALTY = penalty
+    FIGURE = figure
 
 
     VALID_POINTS = points
@@ -138,16 +142,17 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         if plot:
             if plot_cuts:
                 for cut in CUTS:
-                    ngplot.pointsPlot(cut, color="indigo")
+                    ngplot.pointsPlot(cut, figure=figure, color="indigo")
 
                     # New center point
                     ngplot.pointsScatter(
-                        (numpy.divide(cut[1, :] - cut[0, :], 2) + cut[0, :])[:, numpy.newaxis].T
+                        (numpy.divide(cut[1, :] - cut[0, :], 2) + cut[0, :])[:, numpy.newaxis].T,
+                        figure=figure
                     )
 
             if plot_reduced_line:
                 i, i1, i2 = transform.pointsInterpolate(transform.trajectoryReduce(group_centerline, int(len(group_centerline)/line_reduction)), len(group_centerline))
-                ngplot.pointsPlot(numpy.asarray(i))
+                ngplot.pointsPlot(numpy.asarray(i), figure=figure)
 
         print ("Braghin's transformation constructed.")
 
@@ -160,7 +165,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
 
     # Optimizer definition
-    instrum = nevergrad.Instrumentation(nevergrad.var.Array(groups, 1).bounded(0, 1))
+    instrum = nevergrad.Instrumentation(nevergrad.var.Array(len(CUTS), 1).bounded(0, 1))
     OPTIMIZER = nevergrad.optimizers.DoubleFastGADiscreteOnePlusOne(instrumentation = instrum, budget = budget, num_workers = workers)
 
 
@@ -173,7 +178,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     tcpoints -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
     trajectory -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
     """
-    global OPTIMIZER, CUTS, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS
+    global OPTIMIZER, CUTS, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE
 
     with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
         recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
@@ -181,6 +186,30 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     points = transform.transform(recommendation.args[0], CUTS)
 
     final = _opt(numpy.asarray(recommendation.args[0]))
+
+
+    ## Plot invalid points if available
+
+    # Transform points
+    points = transform.transform(recommendation.args[0], CUTS)
+
+    # Interpolate received points
+    # It is expected that they are unique and sorted.
+    _points = INTERPOLATOR(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
+
+    # Check if all interpolated points are valid
+    # Note: This is required for low number of groups.
+    invalid = []
+
+    for _p in _points:
+        if not numpy.any(numpy.all(numpy.abs( numpy.subtract(VALID_POINTS, _p[:2]) ) < GRID, axis = 1)):
+            invalid.append(_p)
+
+    if len(invalid) > 0:
+        ngplot.pointsScatter(numpy.asarray(invalid), FIGURE, color="red", marker="x")
+
+
+    ##
 
     with FILELOCK:
         if VERBOSITY > 0:
