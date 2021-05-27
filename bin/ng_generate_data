@@ -389,7 +389,7 @@ def loadImage(filename: str) -> Image:
     """
 
     im = P.open(filename)
-    im = im.resize((int(im.size[0]*PARAMETERS["resize"]["value"]), int(im.size[1]*PARAMETERS["resize"]["value"])))#im.resize((im.size[0] * 2, im.size[1] * 2))
+    im = im.resize((int(im.size[0]*PARAMETERS["resize"]["value"]), int(im.size[1]*PARAMETERS["resize"]["value"])), resample = P.BILINEAR)
 
     # Verify used palette
     # Note: Only "L" is now usable.
