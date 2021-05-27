@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.2.1 - 2021-05-27
 ### Fixed
 - 'ng_generate_data': Resampling method used when resizing the image is now explicitly set to 'PIL.Image.BILINEAR' as it was changed in an older version of Pillow package.
 - 'ng_generate_data': Add `Pillow>=4.2.0` dependency to the setup file.
