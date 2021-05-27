@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Fixed
+- 'ng_generate_data': Resampling method used when resizing the image is now explicitly set to 'PIL.Image.BILINEAR' as it was changed in an older version of Pillow package.
+
 ## 1.2.0 - 2021-05-27
 ### Added
 - Optimizers: Final graph now contains invalid points as well (if present).
