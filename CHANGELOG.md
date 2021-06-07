@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.2.2 - 2021-06-07
 ### Added
 - Selectors: Curvature_sample selector (based on the Botta, 2012 article) by Ondra Benedikt.
 
