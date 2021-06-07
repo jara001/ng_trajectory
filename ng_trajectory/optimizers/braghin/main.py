@@ -14,7 +14,7 @@ from . import transform
 
 import nevergrad
 
-import sys
+import sys, os
 
 # Parallel computing of genetic algorithm
 from concurrent import futures
@@ -54,7 +54,7 @@ FIGURE = None
 def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: numpy.ndarray, \
         budget: int = 100,
         groups: int = 8,
-        workers: int = 4,
+        workers: int = os.cpu_count(),
         penalty: float = 100,
         criterion: Callable[[numpy.ndarray], float] = lambda x: 0,
         criterion_args: Dict[str, any] = {},
