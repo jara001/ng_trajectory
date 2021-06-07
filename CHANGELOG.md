@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Selectors: Curvature_sample selector (based on the Botta, 2012 article) by Ondra Benedikt.
+
+### Changed
+- Optimizers: Default number of workers is set to the number of logical processors.
+
 ## 1.2.1 - 2021-05-27
 ### Fixed
 - 'ng_generate_data': Resampling method used when resizing the image is now explicitly set to 'PIL.Image.BILINEAR' as it was changed in an older version of Pillow package.
