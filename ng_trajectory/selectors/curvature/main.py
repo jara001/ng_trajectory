@@ -236,15 +236,15 @@ def select(
             #axs[i].plot(_peaks, arr_s[_peaks], "x", color="black")
 
             original_peaks = _peaks[np.isin(_peaks, peaks)]
-            print ("1", original_peaks, peaks)
+            #print ("1", original_peaks, peaks)
             axs[i].plot(original_peaks, arr_s[original_peaks], "x", color="black")
 
             new_peaks = _peaks[np.isin(_peaks, filling)]
-            print ("2", new_peaks, filling)
+            #print ("2", new_peaks, filling)
             axs[i].plot(new_peaks, arr_s[new_peaks], "x", color="green")
 
             new_peaks2 = _peaks[np.isin(_peaks, switching)]
-            print ("3", new_peaks2, switching)
+            #print ("3", new_peaks2, switching)
             axs[i].plot(new_peaks2, arr_s[new_peaks2], "x", color="blue")
 
         i += 1
