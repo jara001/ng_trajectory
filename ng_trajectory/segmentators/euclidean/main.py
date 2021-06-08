@@ -13,6 +13,12 @@ from ng_trajectory.interpolators.utils import pointDistance
 from typing import List
 
 
+# Parameters
+from ng_trajectory.parameter import *
+P = ParameterList()
+P.createAdd("range_limit", 0, float, "Maximum distance from the center of the segment. 0 disables this.", "")
+
+
 ######################
 # Functions
 ######################
@@ -34,6 +40,9 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, range_limit:
     Returns:
     groups -- list of grouped points, m-list of x2 numpy.ndarrays
     """
+
+    # Update parameters
+    P.updateAll(overflown)
  
     _groups = [ [] for _i in range(len(group_centers)) ]
 
@@ -54,11 +63,11 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, range_limit:
 
     groups = [ numpy.asarray( g ) for g in _groups ]
 
-    if range_limit <= 0:
+    if P.getValue("range_limit") <= 0:
         return groups
 
     else:
         return [
-            x[numpy.sqrt( numpy.sum( numpy.power( numpy.subtract(x[:, :2], group_centers[ix][:2]), 2), axis = 1 ) ) < range_limit]
+            x[numpy.sqrt( numpy.sum( numpy.power( numpy.subtract(x[:, :2], group_centers[ix][:2]), 2), axis = 1 ) ) < P.getValue("range_limit")]
             for ix, x in enumerate(groups)
         ]

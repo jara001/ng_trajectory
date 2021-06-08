@@ -15,6 +15,12 @@ import numpy, sys
 ROTATE = 0
 
 
+# Parameters
+from ng_trajectory.parameter import *
+P = ParameterList()
+P.createAdd("rotate", 0, float, "Parameter for rotating the subset selection. 0 is not rotated. <0, 1)", "init")
+
+
 ######################
 # Functions
 ######################

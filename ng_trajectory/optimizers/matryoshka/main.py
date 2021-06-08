@@ -47,6 +47,27 @@ PENALTY = None
 FIGURE = None
 
 
+# Parameters
+from ng_trajectory.parameter import *
+P = ParameterList()
+P.createAdd("budget", 100, int, "Budget parameter for the genetic algorithm.", "init (general)")
+P.createAdd("groups", 8, int, "Number of groups to segmentate the track into.", "init (general)")
+P.createAdd("workers", "os.cpu_count()", int, "Number threads for the genetic algorithm.", "init (general)")
+P.createAdd("penalty", 100, float, "Constant used for increasing the penalty criterion.", "init (general)")
+P.createAdd("criterion", "static 0", callable, "Function to evaluate current criterion.", "init (general)")
+P.createAdd("criterion_args", {}, dict, "Arguments for the criterion function.", "init (general)")
+P.createAdd("interpolator", "return the same", callable, "Function to interpolate points.", "init (general)")
+P.createAdd("interpolator_args", {}, dict, "Arguments for the interpolator function.", "init (general)")
+P.createAdd("segmentator", "each segment span over the whole track", callable, "Function to segmentate track.", "init (general)")
+P.createAdd("segmentator_args", {}, dict, "Arguments for the segmentator function.", "init (general)")
+P.createAdd("selector", "first m points are selected", callable, "Function to select path points as segment centers.", "init (general)")
+P.createAdd("selector_args", {}, dict, "Arguments for the selector function.", "init (general)")
+P.createAdd("logging_verbosity", 2, int, "Index for verbosity of the logger.", "init (general)")
+P.createAdd("hold_matryoshka", False, bool, "Whether the transformation should be created only once.", "init (Matryoshka)")
+P.createAdd("plot", False, bool, "Whether a graphical representation should be created.", "init (viz.)")
+P.createAdd("grid", "computed by default", list, "X-size and y-size of the grid used for points discretization.", "init (Matryoshka)")
+
+
 ######################
 # Functions
 ######################

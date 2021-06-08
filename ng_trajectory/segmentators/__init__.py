@@ -1,3 +1,7 @@
+"""
+Segmentators are used for splitting the track into segments,
+based on the selection of their centers.
+"""
 #https://stackoverflow.com/questions/1057431/how-to-load-all-modules-in-a-folder
 from os.path import dirname, basename, isfile, join, isdir
 import glob

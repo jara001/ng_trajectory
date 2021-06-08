@@ -1,3 +1,6 @@
+"""
+Criterions are used for calculating a fitness value during the optimization.
+"""
 #https://stackoverflow.com/questions/1057431/how-to-load-all-modules-in-a-folder
 from os.path import dirname, basename, isfile, join, isdir
 import glob

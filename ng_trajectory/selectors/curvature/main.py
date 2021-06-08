@@ -17,6 +17,17 @@ from . import curve_fitting as cf
 from typing import Dict
 
 
+# Parameters
+from ng_trajectory.parameter import *
+P = ParameterList()
+P.createAdd("track_name", "unknown", str, "Name of the track.", "")
+P.createAdd("plot", False, bool, "Whether the images are generated.", "")
+P.createAdd("interpolation_factor", 24.0, float, "Factor to reduce number of points prior to the interpolation.", "")
+P.createAdd("peaks_height", 0.0, float, "Minimum absolute height of peaks.", "")
+P.createAdd("peaks_merge", 0, int, "Width of the area used for peaks merging.", "")
+P.createAdd("peaks_filling", 1000000, int, "Width of the area for filling the points.", "")
+
+
 ######################
 # Utility lambdas
 ######################
@@ -86,24 +97,12 @@ def init(**kwargs) -> None:
 def select(
         points: np.ndarray,
         remain: int,
-        track_name: str = "unknown",
-        plot: bool = False,
-        interpolation_factor: float = 24.0,
-        peaks_height: float = 0.0,
-        peaks_merge: int = 0,
-        peaks_filling: int = 1000000,
     **overflown) -> np.ndarray:
     """Select points from the path uniformly.
 
     Arguments:
     points -- list of points, nx2 numpy.ndarray
     remain -- number of points in the result, int
-    track_name -- name of the track, str, default "unknown"
-    plot -- when True, images are generated, default False
-    interpolation_factor -- factor to reduce number of points prior to the interpolation, float, default 24.0
-    peaks_height -- minimum height of peaks, float, default 0.0
-    peaks_merge -- width of area used for merging the peaks, int, default 0
-    peaks_filling -- width of area used for filling the points, int, default 1000000
     **overflown -- arguments not caught by previous parts
 
     Returns:
@@ -116,6 +115,9 @@ def select(
     if remain > 0:
         raise ValueError("Exact number of points cannot be handled by 'curvature' selector.")
 
+    # Update parameters
+    P.updateAll(overflown)
+
     # Repair points array
     # Sometimes the last point is the same as the first, and we do not want that.
     if (points[0] == points[-1]).all():
@@ -123,7 +125,7 @@ def select(
 
 
     # Interpolate points
-    n_interpolation_points = int(len(points)/interpolation_factor)
+    n_interpolation_points = int(len(points)/P.getValue("interpolation_factor"))
     overlap_size = int(n_interpolation_points/2)
     alpha = cf.get_linspace(n_interpolation_points)
     delta = alpha[1] - alpha[0]
@@ -151,7 +153,7 @@ def select(
     # Visualize peaks
     all_peaks = []
 
-    if plot:
+    if P.getValue("plot"):
         figP, axs = plt.subplots(3, 1, figsize=(15,15))
 
     i = 0
@@ -161,24 +163,24 @@ def select(
         arr_s = arr / max(np.abs(arr))
 
         # Detect peaks separately on both sides
-        peaks, adds = find_peaks(arr_s, height = peaks_height)#, distance = 5)
-        peaks2, adds2 = find_peaks(-arr_s, height = peaks_height)#, distance = 5)
+        peaks, adds = find_peaks(arr_s, height = P.getValue("peaks_height"))#, distance = 5)
+        peaks2, adds2 = find_peaks(-arr_s, height = P.getValue("peaks_height"))#, distance = 5)
 
         # Merge close peaks manually
-        mpeaks = mergePeaks(peaks, adds, peaks_merge)
-        mpeaks2 = mergePeaks(peaks2, adds2, peaks_merge)
+        mpeaks = mergePeaks(peaks, adds, P.getValue("peaks_merge"))
+        mpeaks2 = mergePeaks(peaks2, adds2, P.getValue("peaks_merge"))
 
         peaks = np.unique(np.sort(np.concatenate((mpeaks, mpeaks2), axis=0)))
 
         # Detect parts without points
         filling = []
         for j in range(len(peaks)-1):
-            if peaks[j+1] - peaks[j] > peaks_filling:
+            if peaks[j+1] - peaks[j] > P.getValue("peaks_filling"):
                 filling += list(
                     np.linspace(
                         peaks[j],
                         peaks[j+1],
-                        int((peaks[j+1] - peaks[j]) / peaks_filling) + 1,
+                        int((peaks[j+1] - peaks[j]) / P.getValue("peaks_filling")) + 1,
                         endpoint = False,
                         dtype = np.int
                     )
@@ -229,7 +231,7 @@ def select(
 
         all_peaks.append(_peaks)
 
-        if plot:
+        if P.getValue("plot"):
             arr_s = arr_s[overlap_size:-overlap_size]
             axs[i].title.set_text(lbl)
             axs[i].plot(arr_s, color="red")
@@ -249,8 +251,8 @@ def select(
 
         i += 1
 
-    if plot:
-        figP.savefig("peaks_" + track_name + ".pdf")
+    if P.getValue("plot"):
+        figP.savefig("peaks_" + P.getValue("track_name") + ".pdf")
         figP.show()
 
 
@@ -268,7 +270,7 @@ def select(
 
 
     # Visualize turns on the track
-    if plot:
+    if P.getValue("plot"):
         figP, axs = plt.subplots(3,2, figsize=(15,20))
 
         for i in range(3):
@@ -289,7 +291,7 @@ def select(
 
         peaks_on_track.append(interpolator([alpha[p_] for p_ in p]))
 
-        if plot:
+        if P.getValue("plot"):
             axs[i,1].title.set_text(lbl)
             axs[i,1].plot(np.linspace(0,1,len(arr)), np.abs(arr), label=lbl, color="gray")
             axs[i,1].plot(np.linspace(0,1,len(arr)), np.abs(arr_s), color="red")
@@ -300,8 +302,8 @@ def select(
             axs[i,0].scatter(peaks_on_track[i][:,0], peaks_on_track[i][:,1], marker="x", color="black", s=200)
             i += 1
 
-    if plot:
-        figP.savefig("turns_identification_" + track_name + ".pdf")
+    if P.getValue("plot"):
+        figP.savefig("turns_identification_" + P.getValue("track_name") + ".pdf")
         figP.show()
 
 
