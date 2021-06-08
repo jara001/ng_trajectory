@@ -1,0 +1,141 @@
+#!/usr/bin/env python3.6
+# ng_help.py
+"""Script for displaying help for ng_trajectory components.
+"""
+######################
+# Imports & Globals
+######################
+
+import sys, os, getopt
+
+import ng_trajectory
+import ng_trajectory.optimizers as optimizers
+import ng_trajectory.criterions as criterions
+import ng_trajectory.interpolators as interpolators
+import ng_trajectory.segmentators as segmentators
+import ng_trajectory.selectors as selectors
+
+
+# Parameters
+PARAMETERS = {
+    "help":
+        {
+            "help": "Show this help",
+            "type": str,
+            "short": "h:",
+            "long": "help",
+        },
+    "algorithm":
+        {
+            "help": "Show detailed help about an algorithm.",
+            "type": str,
+            "short": "a:",
+            "long": "algorithm=",
+        },
+}
+
+HELP = """Usage: python3 ng_help [ARGUMENTS]
+Utility for displaying help and usages of ng_trajectory algorithms.
+
+Run without arguments to get overview of all algorithms.
+
+Arguments:"""
+
+
+######################
+# Help/doc utilities
+######################
+
+def print_available_algorithms(modules: list):
+    print ("Available algorithms:")
+
+    # Get size of the longest item between the algorithms
+    column_width = len(max([alg for module in modules for alg in module.__all__], key = len))
+
+    for module in modules:
+        print("\n" + module.__name__ + ".*")
+        #column_width = len(max([alg for alg in module.__all__], key = len))
+        print ("\n".join(
+                [ "- %s  %s" % (algorithm.ljust(column_width), str(module.__getattribute__(algorithm).__doc__).split("\n", 1)[0])
+                    for algorithm in module.__all__ if algorithm != "utils"
+                ]
+            )
+        )
+
+
+def print_parameters(P):
+    print ()
+
+    # Sort into groups
+    gP = {}
+    for _name, _param in P.dict().items():
+
+        _g = _param.group
+
+        if _g in gP:
+            gP.get(_g).append(_param)
+        else:
+            gP[_g] = [_param]
+
+
+    # Iterate over groups
+    for _g in sorted(gP.keys()):
+        print ("\n" + _g.capitalize() + " parameters:" if _g != "" else "Parameters:")
+        print ("\n".join([ str(_p) for _p in gP.get(_g)]))
+
+
+######################
+# Main
+######################
+
+if __name__ == "__main__":
+
+    try:
+        opts, args = getopt.getopt(
+            sys.argv[1:],
+            "".join([ info.get("short") for opt, info in PARAMETERS.items() if "short" in info ]),
+            [ info.get("long") for opt, info in PARAMETERS.items() if "long" in info ],
+        )
+    except getopt.GetoptError as e:
+        print ("Unable to process arguments: %s" % e, file = sys.stderr)
+        exit (2)
+
+
+    for opt, arg in opts:
+        for param, info in PARAMETERS.items():
+            if opt in ("-h", "--help"):
+                print (HELP)
+                print ("\n".join([ " %s\n\t\t%s" % (", ".join((["-" + i.get("short").replace(":", "")] if "short" in i else []) + (["--" + i.get("long").replace("=", "")] if "long" in i else [])), i.get("help", "")) for o, i in PARAMETERS.items() ]))
+                exit (0)
+
+            if opt in ("-a", "--algorithm"):
+                if "." in arg:
+                    module, algorithm = arg.split(".")
+
+                    if module in dir(ng_trajectory) and algorithm in dir(ng_trajectory.__getattribute__(module)):
+                        print ("%s\n\n%s" % (arg, ng_trajectory.__getattribute__(module).__getattribute__(algorithm).__doc__))
+
+                        if "P" in dir(ng_trajectory.__getattribute__(module).__getattribute__(algorithm).main):
+                            print_parameters(ng_trajectory.__getattribute__(module).__getattribute__(algorithm).main.P)
+
+                        exit(0)
+                else:
+                    if arg in dir(ng_trajectory):
+                        print ("%s\n\n%s\n" % (arg, ng_trajectory.__getattribute__(arg).__doc__))
+
+                        print_available_algorithms([ng_trajectory.__getattribute__(arg)])
+
+                        if "P" in dir(ng_trajectory.__getattribute__(arg)):
+                            print_parameters(ng_trajectory.__getattribute__(arg).P)
+
+                        exit (0)
+
+                print ("Unable to find algorithm: %s" % arg, file = sys.stderr)
+                exit (3)
+
+    print ("%s" % (ng_trajectory.main.__doc__))
+
+    print_available_algorithms([optimizers, criterions, interpolators, segmentators, selectors])
+
+    if "P" in dir(ng_trajectory.main):
+        print_parameters(ng_trajectory.main.P)

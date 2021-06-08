@@ -64,5 +64,5 @@ setup(
     extras_require={
         "plot_support": "matplotlib"
     },
-    scripts=['bin/ng_run', 'bin/ng_generate_data'],
+    scripts=['bin/ng_run', 'bin/ng_generate_data', 'bin/ng_help'],
 )
