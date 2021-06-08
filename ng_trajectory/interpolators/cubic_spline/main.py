@@ -11,6 +11,12 @@ import numpy
 from scipy.interpolate import CubicSpline
 
 
+# Parameters
+from ng_trajectory.parameter import *
+P = ParameterList()
+P.createAdd("int_size", 400, int, "Number of points in the interpolation.", "")
+
+
 ######################
 # Functions
 ######################

@@ -1,3 +1,7 @@
+"""
+Interpolators are used for interpolating the waypoints / path subsets
+in order to get full (continuous) path.
+"""
 #https://stackoverflow.com/questions/1057431/how-to-load-all-modules-in-a-folder
 from os.path import dirname, basename, isfile, join, isdir
 import glob

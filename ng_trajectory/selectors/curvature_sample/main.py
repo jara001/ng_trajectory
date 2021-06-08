@@ -16,6 +16,12 @@ from . import curve_fitting as cf
 from typing import Dict
 
 
+# Parameters
+from ng_trajectory.parameter import *
+P = ParameterList()
+P.createAdd("interpolation_size", 100, int, "Number of points used for interpolation.", "")
+
+
 ######################
 # Functions
 ######################
@@ -32,14 +38,12 @@ def init(**kwargs) -> None:
 def select(
         points: np.ndarray,
         remain: int,
-        interpolation_size: int = 100,
     **overflown) -> np.ndarray:
     """Select points from the path uniformly based on the curvature.
 
     Arguments:
     points -- list of points, nx2 numpy.ndarray
     remain -- number of points in the result, int
-    interpolation_size -- number of points in the interpolation, int, default 100
     **overflown -- arguments not caught by previous parts
 
     Returns:
@@ -50,6 +54,11 @@ def select(
         # Raise an exception, as we cannot guess number of points.
         raise ValueError("Negative selection is not supported by 'curvature_sample' selector.")
 
+
+    # Update parameters
+    P.updateAll(overflown)
+
+
     # Repair points array
     # Sometimes the last point is the same as the first, and we do not want that.
     if (points[0] == points[-1]).all():
@@ -57,7 +66,7 @@ def select(
 
 
     # Interpolate points
-    n_interpolation_points = int(interpolation_size)
+    n_interpolation_points = int(P.getValue("interpolation_size"))
     alpha = cf.get_linspace(n_interpolation_points)
     delta = alpha[1] - alpha[0]
 

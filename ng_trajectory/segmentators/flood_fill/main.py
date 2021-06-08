@@ -19,19 +19,29 @@ MAP_ORIGIN = None
 MAP_GRID = None
 
 
+# Parameters
+from ng_trajectory.parameter import *
+P = ParameterList()
+P.createAdd("hold_map", False, bool, "When true, the map is created only once.", "init")
+P.createAdd("range_limit", 0, float, "Maximum distance from the center of the segment. 0 disables this.", "")
+
+
 ######################
 # Functions
 ######################
 
-def init(track: numpy.ndarray, hold_map: bool = False, **kwargs) -> None:
+def init(track: numpy.ndarray, **kwargs) -> None:
     """Initialize segmentator by creating map."""
     global MAP, MAP_ORIGIN, MAP_GRID
 
-    if MAP is None or not hold_map:
+    # Update parameters
+    P.updateAll(kwargs)
+
+    if MAP is None or not P.getValue("hold_map"):
         MAP, MAP_ORIGIN, MAP_GRID = mapCreate(track)
 
 
-def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, range_limit: float = 0, **overflown) -> List[numpy.ndarray]:
+def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown) -> List[numpy.ndarray]:
     """Divide 'points' into groups using flood fill algorithm.
 
     Arguments:
@@ -44,6 +54,9 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, range_limit:
     groups -- list of grouped points, m-list of x2 numpy.ndarrays
     """
     global MAP, MAP_ORIGIN, MAP_GRID
+
+    # Update parameters
+    P.updateAll(overflown)
 
     _groups = [ [] for _i in range(len(group_centers)) ]
 
@@ -85,11 +98,11 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, range_limit:
 
     groups = [ numpy.asarray( g ) for g in _groups ]
 
-    if range_limit <= 0:
+    if P.getValue("range_limit") <= 0:
         return groups
 
     else:
         return [
-            x[numpy.sqrt( numpy.sum( numpy.power( numpy.subtract(x[:, :2], group_centers[ix][:2]), 2), axis = 1 ) ) < range_limit]
+            x[numpy.sqrt( numpy.sum( numpy.power( numpy.subtract(x[:, :2], group_centers[ix][:2]), 2), axis = 1 ) ) < P.getValue("range_limit")]
             for ix, x in enumerate(groups)
         ]

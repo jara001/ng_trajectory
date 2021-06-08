@@ -1,6 +1,63 @@
 #!/usr/bin/env python3.6
 # main.py
-"""Main functions for ng_trajectory.
+"""Optimization toolbox ng_trajectory
+
+ng_trajectory is a toolbox for solving the optimal racing line
+problem using various methods and approaches. The main idea
+stands on using a genetic algorithm, although other approaches
+may be used as well.
+
+Currently we distinguish 5 groups of algorithms:
+1) Selectors
+   Selectors take the input path and select a subset of these
+   points.
+2) Segmentators
+   Segmentators split the track into segments using the selected
+   point subset.
+3) Interpolators
+   Interpolators are used for interpolating the selected point
+   subset in order to get, e.g., curvature.
+4) Optimizers
+   Optimizers take the data from the previous three parts and
+   use them to find the optimal racing line.
+5) Criterions
+   Criterions are used for obtaining the fitness value given
+   the waypoints.
+
+The whole application does run multiple times:
+ - variating "variate" parameter,
+ - repeating "loop" times,
+ - optimization "cascade".
+
+The configuration file is using "parent-nesting" parameter
+handling. This means that the parameter defined on the top level
+is visible in lower levels (i.e., instead of specifying
+segmentator for each part of the cascade, it can be set on the
+top level).
+
+Minimal version of the configuration:
+{
+    "_version": 2,
+    "loops": 1,
+    "groups": 20,
+    "interpolator": "cubic_spline",
+    "segmentator": "flood_fill",
+    "selector": "uniform",
+    "cascade": [
+        {
+            "algorithm": "matryoshka",
+            "budget": 10,
+            "layers": 5,
+            "criterion": "profile",
+            "criterion_args": {
+                "overlap": 100
+            }
+        }
+    ],
+    "start_points": "start_points.npy",
+    "valid_points": "valid_points.npy",
+    "logging_verbosity": 2
+}
 """
 ######################
 # Imports & Globals
@@ -23,6 +80,36 @@ import ng_trajectory.plot as plot
 # Typing
 from typing import Tuple, Dict
 Solution = Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]
+
+
+# Parameters
+from ng_trajectory.parameter import *
+P = ParameterList()
+P.createAdd("_version", None, int, "Version of the configuration.", "General")
+P.createAdd("_comment", None, str, "Commentary of the configuration file.", "General")
+P.createAdd("loops", None, int, "Number of repetitions.", "Optimization")
+P.createAdd("groups", None, int, "Number of segments on the track.", "Optimization")
+P.createAdd("variate", None, str, "Name of the field that contains multiple values. Its values are varied, run loop-cascade times.", "Optimization")
+P.createAdd("logging_verbosity", 1, int, "Index to the verbosity of used logger.", "Utility")
+P.createAdd("prefix", None, str, "Prefix of the output log file. When unset, use terminal.", "Utility")
+P.createAdd("cascade", None, list, "List of dicts, that is performed loops-times. Req. 'algorithm': OPTIMIZER", "General")
+P.createAdd("start_points", None, str, "Name of the file with initial solution (i.e., centerline).", "General")
+P.createAdd("valid_points", None, str, "Name of the file with valid positions of the track.", "General")
+P.createAdd("plot", None, bool, "When true, images are plotted.", "Utility")
+P.createAdd("plot_args", None, list, "List of dicts with information for plotter. 1 el. is used prior to the optimization, 2nd after.", "Utility")
+P.createAdd("silent_stub", False, bool, "When set, the application does not report that an algorithm for some part is missing.", "Utility")
+P.createAdd("criterion", None, str, "Name of the function to evaluate current criterion.", "Optimization")
+P.createAdd("criterion_init", {}, dict, "Arguments for the init part of the criterion function.", "Optimization")
+P.createAdd("criterion_args", {}, dict, "Arguments for the criterion function.", "Optimization")
+P.createAdd("interpolator", None, str, "Name of the function to interpolate points.", "Optimization")
+P.createAdd("interpolator_init", {}, dict, "Arguments for the init part of the interpolator function.", "Optimization")
+P.createAdd("interpolator_args", {}, dict, "Arguments for the interpolator function.", "Optimization")
+P.createAdd("segmentator", None, str, "Name of the function to segmentate track.", "Optimization")
+P.createAdd("segmentator_init", {}, dict, "Arguments for the init part of the segmentator function.", "Optimization")
+P.createAdd("segmentator_args", {}, dict, "Arguments for the segmentator function.", "Optimization")
+P.createAdd("selector", None, str, "Name of the function to select path points as segment centers.", "Optimization")
+P.createAdd("selector_init", {}, dict, "Arguments for the init part of the selector function.", "Optimization")
+P.createAdd("selector_args", {}, dict, "Arguments for the selector function.", "Optimization")
 
 
 ######################
