@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Script 'ng_help' for showing help for the algorithms and their parameters.
+- Utilizy 'parameter' for documented usage of parameters within the algorithms.
+
+### Changed
+- Use newly introduced ParameterList inside the algorithms, at least for the documentation.
+
 ## 1.2.2 - 2021-06-07
 ### Added
 - Selectors: Curvature_sample selector (based on the Botta, 2012 article) by Ondra Benedikt.
