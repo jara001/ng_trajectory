@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Changed
+- Optimizers: Matryoshka does not sort centerline before the selection (for segmentation).
+
 ## 1.3.0 - 2021-06-08
 ### Added
 - Script 'ng_help' for showing help for the algorithms and their parameters.
