@@ -147,7 +147,11 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     VALID_POINTS = points
 
     if MATRYOSHKA is None or not _holdmatryoshka:
-        group_centers = SELECTOR(**{**{"points": trajectorySort(group_centerline), "remain": groups}, **SELECTOR_ARGS})
+        # Note: In version <=1.3.0 the group_centerline passed to the SELECTOR was sorted using
+        #       ng_trajectory.interpolators.utils.trajectorySort, but it sometimes rotated the
+        #       already sorted centerline; interestingly, the result was counterclockwise at all
+        #       times (or at least very very often).
+        group_centers = SELECTOR(**{**{"points": group_centerline, "remain": groups}, **SELECTOR_ARGS})
 
         if plot:
             ngplot.indicesPlot(group_centers)
