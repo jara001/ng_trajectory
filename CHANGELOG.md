@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.4.0 - 2021-09-14
 ### Changed
 - Optimizers: Matryoshka does not sort centerline before the selection (for segmentation).
 
