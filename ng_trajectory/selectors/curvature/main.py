@@ -9,7 +9,14 @@ Suggested and designed by Ondra Benedikt.
 ######################
 
 import numpy as np
-from matplotlib import pyplot as plt
+
+try:
+    from ng_trajectory import pyplot as plt
+except:
+    pass
+
+from ng_trajectory import PLOT_AVAILABLE
+
 from scipy.interpolate import interp1d
 from scipy.signal import find_peaks
 from . import curve_fitting as cf

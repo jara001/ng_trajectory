@@ -60,6 +60,8 @@ try:
 
 except:
     print ("Matplotlib is not available.")
+    # Mimic matplotlib for Typing
+    matplotlib = type("matplotlib", (object, ), {"figure": type("figure", (object, ), {"Figure": 1})})
     PLOT_AVAILABLE = False
 
 
