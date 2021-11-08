@@ -169,7 +169,7 @@ def processImage(im: Image) -> None:
     walls = getWalls(im)
 
     # Create numpy array
-    nd = numpy.asarray(im, dtype = numpy.int)
+    nd = numpy.asarray(im, dtype = int)
 
     # Name colors (just in case)
     WALL, UNKN, FREE = numpy.unique(nd)
@@ -332,7 +332,7 @@ def processImage(im: Image) -> None:
 
     ## Save into npy
 
-    start_points = numpy.asarray(sorted_points).astype(numpy.float)
+    start_points = numpy.asarray(sorted_points).astype(float)
 
     # Flip y-axis
     start_points -= [im.size[1], 0]
@@ -351,8 +351,8 @@ def processImage(im: Image) -> None:
 
     numpy.save("start_points.npy", start_points)
 
-    valid_points = numpy.asarray(im, dtype = numpy.int)
-    valid_points = numpy.argwhere(valid_points == FREE).astype(numpy.float)
+    valid_points = numpy.asarray(im, dtype = int)
+    valid_points = numpy.argwhere(valid_points == FREE).astype(float)
 
     # Flip y-axis
     valid_points -= [im.size[1], 0]
