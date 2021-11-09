@@ -3,6 +3,8 @@
 # https://gist.github.com/prwhite/8168133#gistcomment-1716694
 # https://gist.github.com/prwhite/8168133#gistcomment-1737630
 
+.PHONY: build develop install uninstall reinstall
+
 help: ## Show this help message.
 	@echo "Usage: make [target] ..."
 	@echo
