@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Makefile for building/installing/removing the package.
+
 ## 1.4.1 - 2021-11-08
 ### Changed
 - Selectors: Curvature selector no longer imports `pyplot` directly.
