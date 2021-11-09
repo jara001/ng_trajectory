@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.4.2 - 2021-11-09
 ### Added
 - Makefile for building/installing/removing the package.
 - Functions `reset()` and `resetAll()` to restore default states of parameters.
