@@ -31,6 +31,7 @@ class Parameter(object):
         """
 
         self.name = name
+        self.default = default
         self.value = default
         self.type = type if type is not None else default.__class__
         self.description = description
@@ -45,6 +46,11 @@ class Parameter(object):
     def set(self, value: any):
         """Sets a value to the parameter."""
         self.value = value
+
+
+    def reset(self):
+        """Resets the value of the parameter to the default value."""
+        self.value = self.default
 
 
     def __str__(self):
@@ -97,13 +103,30 @@ class ParameterList(object):
             yield item
 
 
+    def reset(self, name: str):
+        """Resets a value of a parameter to its default state."""
+        self.parameters.get(name).reset()
+
+
+    def resetAll(self):
+        """Resets values of all parameters to their default states."""
+        for _p in self.parameters:
+            self.reset(_p)
+
+
     def update(self, name: str, value: any):
         """Updates a value of a parameter."""
         self.parameters.get(name).set(value)
 
 
-    def updateAll(self, kwargs: Dict[str, any]):
-        """Updates values of all parameters."""
+    def updateAll(self, kwargs: Dict[str, any], reset: bool = True):
+        """Updates values of all parameters.
+
+        reset -- When True all parameters are reset first.
+        """
+        if reset:
+            self.resetAll()
+
         for _p, _v in kwargs.items():
             if _p in self.parameters:
                 self.update(_p, _v)
