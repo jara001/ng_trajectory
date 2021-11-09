@@ -56,7 +56,7 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
     global MAP, MAP_ORIGIN, MAP_GRID
 
     # Update parameters
-    P.updateAll(overflown)
+    P.updateAll(overflown, reset = False)
 
     _groups = [ [] for _i in range(len(group_centers)) ]
 

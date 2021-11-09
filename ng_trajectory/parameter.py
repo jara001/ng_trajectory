@@ -119,8 +119,14 @@ class ParameterList(object):
         self.parameters.get(name).set(value)
 
 
-    def updateAll(self, kwargs: Dict[str, any]):
-        """Updates values of all parameters."""
+    def updateAll(self, kwargs: Dict[str, any], reset: bool = True):
+        """Updates values of all parameters.
+
+        reset -- When True all parameters are reset first.
+        """
+        if reset:
+            self.resetAll()
+
         for _p, _v in kwargs.items():
             if _p in self.parameters:
                 self.update(_p, _v)
