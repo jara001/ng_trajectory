@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Makefile for building/installing/removing the package.
 - Functions `reset()` and `resetAll()` to restore default states of parameters.
 - Parameter 'reset' for `updateAll()` to automatically reset all parameters.
+- Documentation exported from 'ng_help' to README.
 
 ### Fixed
 - Segmentators: Flood_fill is no longer using old parameters when restarting the cascade.
