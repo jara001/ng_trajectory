@@ -42,19 +42,27 @@ def plot_only(f):
 
 @plot_only
 def figureCreate() -> matplotlib.figure.Figure:
-    """Create a figure with export preset."""
+    """Create a figure with export preset.
+
+    Returns:
+    figure -- created Figure
+    """
     figure = pyplot.figure(dpi=300)
     figure.add_subplot(111)
     return figure
 
 
 @plot_only
-def axisEqual(figure: matplotlib.figure.Figure = None) -> None:
-    """Equal axis on current / selected figure."""
+def axisEqual(figure: matplotlib.figure.Figure = None) -> List[float]:
+    """Equal axis on current / selected figure.
+
+    Returns:
+    xmin, xmax, ymin, ymax -- the axis limits
+    """
     if figure is None:
         figure = pyplot.gcf()
 
-    figure.axes[0].axis("equal")
+    return figure.axes[0].axis("equal")
 
 
 @plot_only
@@ -124,31 +132,37 @@ def indicesPlot(points: numpy.ndarray, figure: matplotlib.figure.Figure = None) 
 ######################
 
 @plot_only
-def pointsScatter(points: numpy.ndarray, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+def pointsScatter(points: numpy.ndarray, figure: matplotlib.figure.Figure = None, **kwargs) -> matplotlib.collections.PathCollection:
     """Scatter points.
 
     Arguments:
     points -- points to be scattered, nx(>=2) numpy.ndarray
     **kwargs -- keyword arguments to be passed to scatter
+
+    Returns:
+    paths -- instance of PathCollection with scattered data
     """
     if figure is None:
         figure = pyplot.gcf()
 
-    figure.axes[0].scatter(points[:, 0], points[:, 1], **kwargs)
+    return figure.axes[0].scatter(points[:, 0], points[:, 1], **kwargs)
 
 
 @plot_only
-def pointsPlot(points: numpy.ndarray, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+def pointsPlot(points: numpy.ndarray, figure: matplotlib.figure.Figure = None, **kwargs) -> List[matplotlib.lines.Line2D]:
     """Plot points.
 
     Arguments:
     points -- points to be plotted, nx(>=2) numpy.ndarray
     **kwargs -- keyword arguments to be passed to plot
+
+    Returns:
+    lines -- list of Line2D objects representing the plotted data
     """
     if figure is None:
         figure = pyplot.gcf()
 
-    figure.axes[0].plot(points[:, 0], points[:, 1], **kwargs)
+    return figure.axes[0].plot(points[:, 0], points[:, 1], **kwargs)
 
 
 @plot_only
@@ -223,23 +237,26 @@ def labelText(point: numpy.ndarray, s: str, figure: matplotlib.figure.Figure = N
 # pyplot gateway
 ######################
 
-def _pyplot(*args, function: str, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+def _pyplot(*args, function: str, figure: matplotlib.figure.Figure = None, **kwargs) -> any:
     """Call directly a function of matplotlib pyplot.
 
     Arguments:
     function -- name of the function, str
     *args -- positional arguments to be passed to the function
     **kwargs -- keyword arguments to be passed to the function
+
+    Returns:
+    The returned object of the function.
     """
 
     if function not in dir(pyplot):
         print ("Unknown function '%s' of pyplot." % function, file = sys.stderr)
         return
 
-    pyplot.__getattribute__(function)(*args, **kwargs)
+    return pyplot.__getattribute__(function)(*args, **kwargs)
 
 
-def _figure(*args, function: str, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+def _figure(*args, function: str, figure: matplotlib.figure.Figure = None, **kwargs) -> any:
     """Call directly a function of matplotlib pyplot's figure.
 
     Arguments:
@@ -247,6 +264,9 @@ def _figure(*args, function: str, figure: matplotlib.figure.Figure = None, **kwa
     figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
     *args -- positional arguments to be passed to the function
     **kwargs -- keyword arguments to be passed to the function
+
+    Returns:
+    The returned object of the function.
     """
 
     if function not in dir(pyplot):
@@ -256,7 +276,7 @@ def _figure(*args, function: str, figure: matplotlib.figure.Figure = None, **kwa
     if figure is None:
         figure = pyplot.gcf()
 
-    figure.axes[0].__getattribute__(function)(*args, **kwargs)
+    return figure.axes[0].__getattribute__(function)(*args, **kwargs)
 
 
 ######################
