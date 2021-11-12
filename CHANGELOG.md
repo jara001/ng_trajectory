@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Changed
+- Un-nested plot functions return created objects.
+
+### Fixed
+- Selectors: Resolve missing peaks for Curvature selector.
+- Optimizers: Plot in Matryoshka only when it is allowed.
+- Add PHONY target to Makefile to get around 'target is up-to-date'.
+- Figure/pyplot wrappers are protected by `plot_only` decorator.
+
 ## 1.4.2 - 2021-11-09
 ### Added
 - Makefile for building/installing/removing the package.
