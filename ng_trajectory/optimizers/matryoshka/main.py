@@ -45,6 +45,7 @@ HOLDMAP = None
 GRID = None
 PENALTY = None
 FIGURE = None
+PLOT = None
 
 
 # Parameters
@@ -125,7 +126,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     figure -- target figure for plotting, matplotlib.figure.Figure, default None (get current)
     **kwargs -- arguments not caught by previous parts
     """
-    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE
+    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE, PLOT
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS
 
     # Local to global variables
@@ -142,6 +143,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     _holdmatryoshka = hold_matryoshka
     PENALTY = penalty
     FIGURE = figure
+    PLOT = plot
 
 
     VALID_POINTS = points
@@ -194,7 +196,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     tcpoints -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
     trajectory -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
     """
-    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE
+    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT
 
     with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
         recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
@@ -218,7 +220,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
         if not numpy.any(numpy.all(numpy.abs( numpy.subtract(VALID_POINTS, _p[:2]) ) < GRID, axis = 1)):
             invalid.append(_p)
 
-    if len(invalid) > 0:
+    if PLOT and len(invalid) > 0:
         ngplot.pointsScatter(numpy.asarray(invalid), FIGURE, color="red", marker="x")
 
 

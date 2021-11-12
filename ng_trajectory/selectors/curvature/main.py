@@ -133,7 +133,11 @@ def select(
 
     # Interpolate points
     n_interpolation_points = int(len(points)/P.getValue("interpolation_factor"))
-    overlap_size = int(n_interpolation_points/2)
+    # Note: In version <=1.4.2 we used overlap_size as half of the points length,
+    #       which however sometimes led to places without peaks (as they were
+    #       in different parts of the overlap). Using whole length solves this issue,
+    #       but also increases the required computation time.
+    overlap_size = int(n_interpolation_points)
     alpha = cf.get_linspace(n_interpolation_points)
     delta = alpha[1] - alpha[0]
 

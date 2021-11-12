@@ -61,7 +61,28 @@ try:
 except:
     print ("Matplotlib is not available.")
     # Mimic matplotlib for Typing
-    matplotlib = type("matplotlib", (object, ), {"figure": type("figure", (object, ), {"Figure": 1})})
+    matplotlib = type("matplotlib", (object, ),
+            {
+                "figure":
+                    type("figure", (object, ),
+                        {
+                            "Figure": 1
+                        }
+                    ),
+                "collections":
+                    type("collection", (object, ),
+                        {
+                            "PathCollection": 1
+                        }
+                    ),
+                "lines":
+                    type("lines", (object, ),
+                        {
+                            "Line2D": type("line2d", (object, ), {})
+                        }
+                    ),
+            }
+    )
     PLOT_AVAILABLE = False
 
 
