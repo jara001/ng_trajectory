@@ -20,9 +20,13 @@ from matplotlib.widgets import Slider, Button
 from ng_trajectory.selectors import curvature
 from ng_trajectory.selectors.curvature import curve_fitting
 
+# Path length
+from ng_trajectory.criterions.length import compute as pathLength
+
 ######################
 # Load data
 ######################
+
 
 VALID_POINTS = numpy.load("valid_points.npy")
 START_POINTS = numpy.load("start_points.npy")
@@ -92,6 +96,15 @@ slider_filling = Slider(
 )
 
 # Create vertical slider
+slider_intp_dist = Slider(
+    ax = plot._pyplot([0.025, 0.25, 0.0225, 0.63], function="axes"),
+    label = "Dist.",
+    valmin = pathLength(START_POINTS) * 0.0001 / len(START_POINTS),
+    valmax = pathLength(START_POINTS),
+    valinit = pathLength(START_POINTS) / int(len(START_POINTS) / params["interpolation_factor"]) if 0.0001 <= params["interpolation_factor"] else pathLength(START_POINTS) / int(len(START_POINTS) / 0.0001),
+    orientation = "vertical"
+)
+
 slider_intp = Slider(
     ax = plot._pyplot([0.1, 0.25, 0.0225, 0.63], function="axes"),
     label = "Intp.",
@@ -118,17 +131,38 @@ def update(val):
     params["peaks_filling"] = int(slider_filling.val)
     params["interpolation_factor"] = slider_intp.val
 
-    last_scatter = plot.pointsScatter(curvature.select(points = START_POINTS, remain=-3, **params), f, marker="x", color="black")
-    last_intp = plot.pointsPlot(curve_fitting.interpolate_points(START_POINTS, int(len(START_POINTS)/params["interpolation_factor"]), 4), f, marker="o", color="orange", linewidth=0.5, markersize=0.5)
 
+    scatter = curvature.select(points = START_POINTS, remain=-3, **params)
+    intp = curve_fitting.interpolate_points(START_POINTS, int(len(START_POINTS)/params["interpolation_factor"]), 4)
+    last_scatter = plot.pointsScatter(scatter, f, marker="x", color="black")
+    last_intp = plot.pointsPlot(intp, f, marker="o", color="orange", linewidth=0.5, markersize=0.5)
 
-update(0)
+    slider_intp_dist.eventson = False
+    slider_intp_dist.set_val(pathLength(intp) / len(intp))
+    slider_intp_dist.eventson = True
+
+    print ("Interpolation: length: %f, point distance: %f, # of points: %d" % (pathLength(intp), pathLength(intp) / len(intp), len(intp)))
+    print ("Scatter:       length: %f, point distance: %f, # of points: %d" % (pathLength(scatter), pathLength(scatter) / len(scatter), len(scatter)))
+
+    f.canvas.draw()
+
+def update_dist(val):
+    #https://stackoverflow.com/questions/64420927/matplotlib-update-one-slider-based-on-change-in-another-slider
+    slider_intp.eventson = False
+    slider_intp.set_val(len(START_POINTS) / (pathLength(START_POINTS) / slider_intp_dist.val))
+    slider_intp.eventson = True
+    update(0)
+
+print (pathLength(START_POINTS))
+
+#update(0)
+update_dist(0)
 
 slider_height.on_changed(update)
 slider_merge.on_changed(update)
 slider_filling.on_changed(update)
 slider_intp.on_changed(update)
 
+slider_intp_dist.on_changed(update_dist)
+
 plot.figureShow()
-
-
