@@ -33,6 +33,7 @@ P.createAdd("interpolation_factor", 24.0, float, "Factor to reduce number of poi
 P.createAdd("peaks_height", 0.0, float, "Minimum absolute height of peaks.", "")
 P.createAdd("peaks_merge", 0, int, "Width of the area used for peaks merging.", "")
 P.createAdd("peaks_filling", 1000000, int, "Width of the area for filling the points.", "")
+P.createAdd("downsample_factor", 4, int, "Downsample factor used prior to the interpolation.", "")
 
 
 ######################
@@ -141,7 +142,7 @@ def select(
     alpha = cf.get_linspace(n_interpolation_points)
     delta = alpha[1] - alpha[0]
 
-    ipoints = cf.interpolate_points(points, n_interpolation_points, 4)
+    ipoints = cf.interpolate_points(points, n_interpolation_points, P.getValue("downsample_factor"))
 
     distance = np.cumsum( np.sqrt(np.sum( np.diff(ipoints, axis=0)**2, axis=1 )) )
     distance = np.insert(distance, 0, 0)/distance[-1]

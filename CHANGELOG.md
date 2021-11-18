@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Selectors: Downsample factor for Curvature selector.
+
 ## 1.4.3 - 2021-11-12
 ### Changed
 - Un-nested plot functions return created objects.
