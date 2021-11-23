@@ -70,7 +70,7 @@ plot._pyplot(left=0.25, bottom=0.25, top=0.98, right=0.98, function="subplots_ad
 
 # Create sliders
 slider_height = Slider(
-    ax = plot._pyplot([0.25, 0.1, 0.65, 0.03], function="axes"),
+    ax = plot._pyplot([0.25, 0.14, 0.65, 0.03], function="axes"),
     label = "Height",
     valmin = 0.0,
     valmax = 1.0,
@@ -78,7 +78,7 @@ slider_height = Slider(
 )
 
 slider_merge = Slider(
-    ax = plot._pyplot([0.25, 0.06, 0.65, 0.03], function="axes"),
+    ax = plot._pyplot([0.25, 0.1, 0.65, 0.03], function="axes"),
     label = "Merge",
     valmin = 0,
     valmax = params["peaks_merge"] if params["peaks_merge"] > 50 else 50,
@@ -87,11 +87,20 @@ slider_merge = Slider(
 )
 
 slider_filling = Slider(
-    ax = plot._pyplot([0.25, 0.02, 0.65, 0.03], function="axes"),
+    ax = plot._pyplot([0.25, 0.06, 0.65, 0.03], function="axes"),
     label = "Filling",
     valmin = 0,
     valmax = params["peaks_filling"] if params["peaks_filling"] > 100 else 100,
     valinit = params["peaks_filling"] if 0 <= params["peaks_filling"] else 0,
+    valfmt = '%d'
+)
+
+slider_downsample = Slider(
+    ax = plot._pyplot([0.25, 0.02, 0.65, 0.03], function="axes"),
+    label = "Dsample",
+    valmin = 1,
+    valmax = params["downsample_factor"] if params["downsample_factor"] > 20 else 20,
+    valinit = params["downsample_factor"] if 1 <= params["downsample_factor"] else 1,
     valfmt = '%d'
 )
 
@@ -114,11 +123,15 @@ slider_intp = Slider(
     orientation = "vertical"
 )
 
+scatter = None
+intp = None
 last_scatter = None
 last_intp = None
 
 def update(val):
+    global scatter, intp
     global last_scatter, last_intp
+    global curvature, curve_fitting
     if (last_scatter is not None):
         last_scatter.remove()
 
@@ -130,6 +143,7 @@ def update(val):
     params["peaks_merge"] = int(slider_merge.val)
     params["peaks_filling"] = int(slider_filling.val)
     params["interpolation_factor"] = slider_intp.val
+    params["downsample_factor"] = int(slider_downsample.val)
 
 
     scatter = curvature.select(points = START_POINTS, remain=-3, **params)
@@ -162,6 +176,7 @@ slider_height.on_changed(update)
 slider_merge.on_changed(update)
 slider_filling.on_changed(update)
 slider_intp.on_changed(update)
+slider_downsample.on_changed(update)
 
 slider_intp_dist.on_changed(update_dist)
 
