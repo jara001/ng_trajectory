@@ -61,6 +61,16 @@ params = {
     "plot": True
 }
 
+params = {
+    "interpolation_factor": 4.89,
+    "peaks_height": 0.17,
+    "peaks_merge": 3,
+    "peaks_filling": 13,
+    "plot": True,
+    "downsample_factor": 4,
+    "show_plot": False
+}
+
 ## Slider
 # https://matplotlib.org/stable/gallery/widgets/slider_demo.html
 
