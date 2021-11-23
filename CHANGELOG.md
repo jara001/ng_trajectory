@@ -8,7 +8,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Selectors: Downsample factor for Curvature selector.
 - Selectors: Option 'show_plot' for Curvature selector.
 - Selectors: Fixed selector that returns preset list of points.
-
+- Intermediate results are stored inside logs, allowing to pause the experiments. (Only at the loop end.)
+- Checking for already present logs and resuming the experiment at the loop it has ended.
 
 ## 1.4.3 - 2021-11-12
 ### Changed
