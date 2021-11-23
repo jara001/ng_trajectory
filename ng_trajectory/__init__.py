@@ -35,6 +35,9 @@ from scipy.interpolate import CubicSpline, bisplrep, bisplev
 # Support for type hints
 from typing import List, Tuple, Callable, Dict, TextIO
 
+# Version of the package
+from .version import __version__
+
 
 # Optional packages
 ROS_AVAILABLE = None
