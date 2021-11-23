@@ -190,4 +190,48 @@ slider_downsample.on_changed(update)
 
 slider_intp_dist.on_changed(update_dist)
 
+# Auto-tune button
+button = Button(
+    plot._pyplot([0.02, 0.035, 0.12, 0.08], function="axes"),
+    'Auto Tune',
+    #color=axcolor,
+    hovercolor='0.975'
+)
+
+def autotune(event):
+    try:
+        slider_intp_dist.set_val(1)
+        slider_merge.set_val(0)
+        slider_filling.set_val(10000)
+        slider_height.set_val(1)
+
+        #TODO: Tune HEIGHT
+        slider_height.set_val(0.2)
+
+        # Tune filling
+        #for i in range(1, 100):
+        #    slider_filling.set_val(i)
+        #
+        #    if (pathLength(scatter) / len(scatter)) > 2:
+        #        break
+        for i in reversed(range(1, 20)):
+            slider_filling.set_val(i)
+
+            if (pathLength(scatter) / len(scatter)) < 4:
+                break
+
+        # Tune merge
+        #for i in range(1, 100):
+        #    slider_merge.set_val(i)
+        #
+        #    if (pathLength(scatter) / len(scatter)) > 2:
+        #        break
+
+        print ("DONE!")
+
+    except:
+        exit(1)
+
+button.on_clicked(autotune)
+
 plot.figureShow()
