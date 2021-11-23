@@ -6,7 +6,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ## Unreleased
 ### Added
 - Selectors: Downsample factor for Curvature selector.
+- Selectors: Option 'show_plot' for Curvature selector.
 - Selectors: Fixed selector that returns preset list of points.
+
 
 ## 1.4.3 - 2021-11-12
 ### Changed

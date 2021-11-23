@@ -29,6 +29,7 @@ from ng_trajectory.parameter import *
 P = ParameterList()
 P.createAdd("track_name", "unknown", str, "Name of the track.", "")
 P.createAdd("plot", False, bool, "Whether the images are generated.", "")
+P.createAdd("show_plot", True, bool, "Whether the generated images are shown.", "")
 P.createAdd("interpolation_factor", 24.0, float, "Factor to reduce number of points prior to the interpolation.", "")
 P.createAdd("peaks_height", 0.0, float, "Minimum absolute height of peaks.", "")
 P.createAdd("peaks_merge", 0, int, "Width of the area used for peaks merging.", "")
@@ -265,7 +266,14 @@ def select(
 
     if P.getValue("plot"):
         figP.savefig("peaks_" + P.getValue("track_name") + ".pdf")
-        figP.show()
+
+        if P.getValue("show_plot"):
+            figP.show()
+
+        # Close the figure, as it is not normally closed and it stays in the memory,
+        # leading to matplotlib warning.
+        else:
+            plt.close(figP)
 
 
     # Remove overlaps
@@ -316,7 +324,14 @@ def select(
 
     if P.getValue("plot"):
         figP.savefig("turns_identification_" + P.getValue("track_name") + ".pdf")
-        figP.show()
+
+        if P.getValue("show_plot"):
+            figP.show()
+
+        # Close the figure, as it is not normally closed and it stays in the memory,
+        # leading to matplotlib warning.
+        else:
+            plt.close(figP)
 
 
     # Select method for final points
