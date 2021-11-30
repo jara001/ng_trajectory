@@ -33,6 +33,29 @@ def pointDistance(a: list, b: list) -> float:
         ))
 
 
+def pointsDistance(points: numpy.ndarray) -> numpy.ndarray:
+    """Computes distances points in array of points in 2D.
+
+    Arguments:
+    points -- set of points, nx(>=2) numpy.ndarray
+
+    Returns:
+    d -- set of distances, nx1 numpy.ndarray
+
+    Note: Taken from 'length' criterion.
+    """
+    return numpy.sqrt(
+                numpy.sum(
+                    numpy.power(
+                        numpy.subtract(
+                            numpy.roll(points[:, :2], 1, axis=0),
+                            points[:, :2]
+                        ),
+                    2),
+                axis=1)
+            )
+
+
 ######################
 # Utilities (Trajectory)
 ######################
