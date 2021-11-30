@@ -10,6 +10,9 @@ import numpy
 
 from ng_trajectory.segmentators.utils import *
 
+# PointDistance
+from ng_trajectory.interpolators.utils import pointDistance
+
 from typing import List
 
 
@@ -24,6 +27,78 @@ from ng_trajectory.parameter import *
 P = ParameterList()
 P.createAdd("hold_map", False, bool, "When true, the map is created only once.", "init")
 P.createAdd("range_limit", 0, float, "Maximum distance from the center of the segment. 0 disables this.", "")
+
+
+######################
+# Utilities
+######################
+
+def segmentDistance(p: List[float], a: List[float], b: List[float]) -> float:
+    """Computes the distance of a point from a segment.
+
+    Arguments:
+    p -- point that is being inspected, (>=2)-list like structure of floats
+    a -- one endpoint of the segment, (>=2)-list like structure of floats
+    b -- other endpoint of the segment, (>=2)-list like structure of floats
+
+    Returns:
+    d -- distance from the segment, float
+
+    Source:
+    https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
+    https://www.kite.com/python/answers/how-to-get-the-angle-between-two-vectors-in-python
+    ... and edited
+
+    Note: Throws an ValueError exception when an unexpected situation occurs.
+    """
+    line_length = pointDistance(a, b)
+
+    distance_to_seg = abs((b[0] - a[0]) * (a[1] - p[1]) - (a[0] - p[0]) * (b[1] - a[1])) / \
+            numpy.sqrt(
+                numpy.power(
+                    b[0] - a[0],
+                    2
+                ) +
+                numpy.power(
+                    b[1] - a[1],
+                    2
+                )
+            )
+
+    unit_ap = [p[0] - a[0], p[1] - a[1]]
+    unit_ab = [b[0] - a[0], b[1] - a[1]]
+
+    unit_ap = unit_ap / numpy.linalg.norm(unit_ap)
+    unit_ab = unit_ab / numpy.linalg.norm(unit_ab)
+    dot_ap = numpy.dot(unit_ap, unit_ab)
+    # Fix overflowing the float
+    dot_ap = min(1.0, max(-1.0, dot_ap))
+    angle_ap = numpy.degrees(numpy.arccos(dot_ap))
+
+    unit_bp = [p[0] - b[0], p[1] - b[1]]
+    unit_ba = [a[0] - b[0], a[1] - b[1]]
+
+    unit_bp = unit_bp / numpy.linalg.norm(unit_bp)
+    unit_ba = unit_ba / numpy.linalg.norm(unit_ba)
+    dot_bp = numpy.dot(unit_bp, unit_ba)
+    dot_bp = min(1.0, max(-1.0, dot_bp))
+    angle_bp = numpy.degrees(numpy.arccos(dot_bp))
+
+    if 0.0 <= angle_ap <= 90.0 and 0.0 <= angle_bp <= 90.0:
+        return distance_to_seg
+
+    elif angle_ap > 90.0:
+        return pointDistance(a, p)
+
+    elif angle_bp > 90.0:
+        return pointDistance(b, p)
+
+    print ("segmentDistance: Unexpected situation.")
+    print ("segmentDistance: point = %s, a = %s, b = %s" % (p, a, b))
+    print ("segmentDistance: angle_ap = %f, angle_bp = %f" % (angle_ap, angle_bp))
+    print ("segmentDistance: d_to_seg = %f, d_ap = %f, d_bp = %f" % (distance_to_seg, pointDistance(a, p), pointDistance(b, p)))
+    print ("segmentDistance: V_ap = %s, V_ab = %s, V_ap*V_ab = %s" % (unit_ap, unit_ab, numpy.dot(unit_ap, unit_ab)))
+    raise ValueError("Unexpected situation at 'segmentDistance'. Read the output for values of the variables.")
 
 
 ######################
