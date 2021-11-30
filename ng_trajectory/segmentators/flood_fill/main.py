@@ -27,6 +27,7 @@ from ng_trajectory.parameter import *
 P = ParameterList()
 P.createAdd("hold_map", False, bool, "When true, the map is created only once.", "init")
 P.createAdd("range_limit", 0, float, "Maximum distance from the center of the segment. 0 disables this.", "")
+P.createAdd("reserve_width", False, bool, "When true, the segments are reserved a path towards both walls.", "")
 
 
 ######################
@@ -135,11 +136,98 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
 
     _groups = [ [] for _i in range(len(group_centers)) ]
 
-    _map = MAP.copy()
-    _map[_map == 100] = 255
+    if not P.getValue("reserve_width"):
+        _map = MAP.copy()
+        _map[_map == 100] = 255
 
-    for _i, _c in enumerate(pointsToMap(group_centers)):
-        _map[tuple(_c)] = _i
+        for _i, _c in enumerate(pointsToMap(group_centers)):
+            _map[tuple(_c)] = _i
+
+    else: # if reserve_width
+        print ("Computing reserved zones...")
+
+        # Use enlarged map (required for walls)
+        _map = numpy.zeros((MAP.shape[0] + 2, MAP.shape[1] + 2), dtype=numpy.uint8)
+        _map[1:-1, 1:-1] = MAP.copy()
+        _map[_map == 100] = 255
+
+
+        # Detect walls and color them
+        color = 200
+        # Find an occurence of wall
+        walls = numpy.where(_map == 0)
+
+        # Color them
+        while len(walls[0]) > 0:
+            queue = [(walls[0][0], walls[1][0])]
+
+            while len(queue) > 0:
+                cell = queue.pop(0)
+
+                for _a in [-1, 0, 1]:
+                    for _b in [-1, 0, 1]:
+                        if _a == 0 and _b == 0:
+                            continue
+
+                        # Try does catch larger values but not negative
+                        if cell[0] + _a < 0 or cell[1] + _b < 0:
+                            continue
+
+                        try:
+                            _cell = _map[cell[0] + _a, cell[1] + _b]
+                        except:
+                            continue
+
+                        if _cell == 0:
+                            _map[cell[0] + _a, cell[1] + _b] = color
+                            queue.append((cell[0] + _a, cell[1] + _b))
+
+            color = color + 1
+            walls = numpy.where(_map == 0)
+
+        # TODO: Ensure that we have only two walls. Otherwise merge them.
+
+
+        for _i, _c in enumerate(pointsToMap(group_centers)):
+            _map[tuple(_c)] = _i
+
+            # Create "links" to the nearest of both walls
+
+            # Find closest points
+            for _wall_index in range(2):
+                distance = 100000
+                closest = None
+
+                walls = numpy.where(_map == (200 + _wall_index))
+
+                for _wx, _wy in zip(walls[0], walls[1]):
+                    _distance = numpy.sqrt(
+                        numpy.power(
+                            _wx - _c[0],
+                            2
+                        ) +
+                        numpy.power(
+                            _wy - _c[1],
+                            2
+                        )
+                    )
+
+                    if _distance < distance:
+                        distance = _distance
+                        closest = (_wx, _wy)
+
+                #print ("Closest to this:", closest, distance)
+
+                # Create link to the wall; color all points that are in proximity of the line
+                valids = numpy.where(_map == 255)
+
+                for _vx, _vy in zip(valids[0], valids[1]):
+                    _distance = segmentDistance((_vx, _vy), _c, closest)
+
+                    if _distance < 2:
+                        _map[_vx, _vy] = 100 + _i #+ _wall_index
+
+
 
     queue = pointsToMap(group_centers).tolist()
 
@@ -160,17 +248,19 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
                 except:
                     continue
 
-                if _cell == 255:
+                # Color if its empty or reserved for this group
+                if _cell == 255 or (_cell == 100 + _map[tuple(cell)]):
                     _map[cell[0] + _a, cell[1] + _b] = _map[tuple(cell)]
                     queue.append((cell[0] + _a, cell[1] + _b))
 
     for p in points:
         _i = _map[tuple(pointToMap(p))]
 
-        if _i != 255:
+        # Group only taken points
+        if _i != 255 and _i < 100:
             _groups[ _i ].append( p )
 
-
+    # TODO: Investigate whether 'if len(g) > 1' is required here.
     groups = [ numpy.asarray( g ) for g in _groups ]
 
     if P.getValue("range_limit") <= 0:
