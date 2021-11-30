@@ -250,26 +250,27 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
 
     # Check for logging file
     # If exists, we continue to next round.
-    try:
-        with open(fileformat % (loop_i[0]+1) + "-%s.log" % _alg.get("algorithm"), "r") as f:
-            _stored = { name: json.loads(value) for name, value in [ line.split(":") for line in f.readlines() if line[0] == "#" ]}
+    if fileformat:
+        try:
+            with open(fileformat % (loop_i[0]+1) + "-%s.log" % _alg.get("algorithm"), "r") as f:
+                _stored = { name: json.loads(value) for name, value in [ line.split(":") for line in f.readlines() if line[0] == "#" ]}
 
-            if _stored["#fitness"] < fitness:
-                return _stored["#fitness"], \
-                       numpy.asarray(_stored["#rcandidate"]), \
-                       numpy.asarray(_stored["#tcandidate"]), \
-                       numpy.asarray(_stored["#trajectory"])
-            else:
-                return loop_output
+                if _stored["#fitness"] < fitness:
+                    return _stored["#fitness"], \
+                           numpy.asarray(_stored["#rcandidate"]), \
+                           numpy.asarray(_stored["#tcandidate"]), \
+                           numpy.asarray(_stored["#trajectory"])
+                else:
+                    return loop_output
 
-    # File not found, therefore we want to run this.
-    except FileNotFoundError:
-        pass
+        # File not found, therefore we want to run this.
+        except FileNotFoundError:
+            pass
 
-    # One of the values is not found, meaning we probably have corrupted log.
-    # So we just to the measurement again.
-    except KeyError:
-        pass
+        # One of the values is not found, meaning we probably have corrupted log.
+        # So we just to the measurement again.
+        except KeyError:
+            pass
 
     # Open up logging file
     if fileformat:
