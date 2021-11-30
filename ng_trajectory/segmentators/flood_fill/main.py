@@ -6,7 +6,7 @@
 # Imports & Globals
 ######################
 
-import numpy
+import numpy, sys
 
 from ng_trajectory.segmentators.utils import *
 
@@ -186,9 +186,11 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
             walls = numpy.where(_map == 0)
 
         # TODO: Ensure that we have only two walls. Otherwise merge them.
+        print ("\tDetected walls: %d" % (color - 200))
 
 
         for _i, _c in enumerate(pointsToMap(group_centers)):
+            print ("\tSegment %d/%d:" % (_i, len(group_centers)))
             _map[tuple(_c)] = _i
 
             # Create "links" to the nearest of both walls
@@ -216,17 +218,23 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
                         distance = _distance
                         closest = (_wx, _wy)
 
+                sys.stdout.write("\t\tWall %i... %03.2f%%" % (_wall_index, 0.0))
                 #print ("Closest to this:", closest, distance)
 
                 # Create link to the wall; color all points that are in proximity of the line
                 valids = numpy.where(_map == 255)
+                valids_length = len(valids[0])
 
-                for _vx, _vy in zip(valids[0], valids[1]):
+                for _vi, (_vx, _vy) in enumerate(zip(valids[0], valids[1])):
                     _distance = segmentDistance((_vx, _vy), _c, closest)
 
                     if _distance < 2:
                         _map[_vx, _vy] = 100 + _i #+ _wall_index
 
+                    if _vi % 1000 == 0:
+                        sys.stdout.write("\r\t\tWall %i... %03.2f%%" % (_wall_index, 100.0 * _vi / valids_length))
+
+                sys.stdout.write("\r\t\tWall %i... %03.2f%%\n" % (_wall_index, 100.0))
 
 
     queue = pointsToMap(group_centers).tolist()
