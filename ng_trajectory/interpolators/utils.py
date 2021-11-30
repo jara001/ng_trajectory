@@ -60,11 +60,13 @@ def pointsDistance(points: numpy.ndarray) -> numpy.ndarray:
 # Utilities (Trajectory)
 ######################
 
-def trajectorySort(points: numpy.ndarray) -> numpy.ndarray:
+def trajectorySort(points: numpy.ndarray, verify_sort: bool = False) -> numpy.ndarray:
     """Sorts a trajectory (array of points) to be "in order".
 
     Arguments:
     points -- list of points, nx2 numpy.ndarray
+    verify_sort -- when True, the trajectory is checked for incorrect
+                   sorting and outliers are moved to their appropriate places
 
     Returns:
     spoints -- sorted points, nx2 numpy.ndarray
@@ -96,7 +98,69 @@ def trajectorySort(points: numpy.ndarray) -> numpy.ndarray:
         sorted_points.append(point)
         _points.remove(point)
 
-    return numpy.asarray(sorted_points)
+
+    # Verify the sorting
+    # Sometimes, when multiple points with same distance are present,
+    # the result is not correct. This checks for points outside the
+    # expected sqrt(2)*_grid distance and tries to move them to better
+    # positions.
+    spoints = numpy.asarray(sorted_points)
+
+    if verify_sort:
+        # Obtain grid size
+        _grid = numpy.min(
+                [
+                    numpy.abs(
+                        numpy.min( numpy.subtract(spoints[1:], spoints[:-1]) )
+                    ) for u in
+                            [
+                                numpy.unique( spoints[:, d] ) for d in range(spoints.shape[1])
+                            ]
+                ]
+            )
+
+        # FIXME: We are currently deleting outliers, one by one.
+        # TODO: Remake this with reconnection.
+        while True:
+
+            # Get distances between consecutive points
+            _dists = pointsDistance(spoints)
+
+            # Find outliers
+            _outliers = _dists[_dists > numpy.sqrt(2) * _grid]
+
+
+            # In case that there is only one, there is probably some larger problem.
+            # TODO: Investigate whether this can happen.
+            # FIXME: Raise an Exception?
+            if len(_outliers) == 1:
+                print ("trajectorySort: Only one large jump in the trajectory found.")
+                print ("trajectorySort: points = %s" % spoints.tolist())
+                print ("trajectorySort: dists = %s" % _dists.tolist())
+                print ("trajectorySort: Continuing without dealing with outliers.")
+                break
+
+            # Continue only if outliers found
+            elif len(_outliers) > 0:
+                # Outlier indices
+                _oi = numpy.argwhere(_dists > numpy.sqrt(2) * _grid)
+
+                # Find group sizes
+                _groups = (
+                    [ (_oi[_i]+1, _oi[_i+1], _oi[_i+1] - _oi[_i]) for _i in range(len(_oi) - 1) ] + [ (_oi[-1]+1, _oi[0], _oi[0] + len(spoints) - _oi[-1]) ]
+                ) # start id, end id (both inclusive), size of the group
+
+                # Sort the groups in order to find the largest group
+                _groups = sorted(_groups, key = lambda x: x[-1], reverse = True)
+
+                # TODO: Do a reconnection here.
+                # Delete outlier
+                spoints = numpy.delete(spoints, ( _groups[0][1] ) % len(spoints), axis = 0)
+
+            else:
+                break
+
+    return spoints
 
 
 def trajectoryReduce(points: numpy.ndarray, remain: int) -> numpy.ndarray:
