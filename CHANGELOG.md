@@ -5,11 +5,21 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
+- Interpolators: Function `pointsDistance()` for computing distances between points in a set.
+- Interpolators: Parameter `verify_sort` for `trajectorySort()` that removes outliers from the trajectory.
+- Optimizers: Use `verify_sort` when obtaining borders.
+- Segmentators: Function `segmentDistance()` for Flood Fill segmentator that computes distance from a point to a segment.
+- Segmentators: Parameter `reserve_width` for Flood Fill that creates a reserved region for each segment in order to touch both (outer and inner) walls.
 - Selectors: Downsample factor for Curvature selector.
 - Selectors: Option 'show_plot' for Curvature selector.
 - Selectors: Fixed selector that returns preset list of points.
 - Intermediate results are stored inside logs, allowing to pause the experiments. (Only at the loop end.)
 - Checking for already present logs and resuming the experiment at the loop it has ended.
+- Variable `__version__` to be used for scripts.
+- Script 'ng_curvature_gui' for testing the Curvature selector parameters.
+
+### Changed
+- Track is plotted using lighter gray that is not in the standard palette. Therefore the colors should not overlap anymore.
 
 ## 1.4.3 - 2021-11-12
 ### Changed
