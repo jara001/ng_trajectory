@@ -29,6 +29,7 @@ P.createAdd("hold_map", False, bool, "When true, the map is created only once.",
 P.createAdd("range_limit", 0, float, "Maximum distance from the center of the segment. 0 disables this.", "")
 P.createAdd("reserve_width", False, bool, "When true, the segments are reserved a path towards both walls.", "")
 P.createAdd("reserve_selected", [], list, "IDs of segments that should use the reservation method, when empty, use all.", "")
+P.createAdd("reserve_distance", 2.0, float, "Distance from the line segment that is reserved to the segment.", "")
 
 
 ######################
@@ -232,7 +233,7 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
                 for _vi, (_vx, _vy) in enumerate(zip(valids[0], valids[1])):
                     _distance = segmentDistance((_vx, _vy), _c, closest)
 
-                    if _distance < 2:
+                    if _distance < P.getValue("reserve_distance"):
                         _map[_vx, _vy] = 100 + _i #+ _wall_index
 
                     if _vi % 1000 == 0:
