@@ -320,6 +320,8 @@ def select(
 
             # Draw the turns onto the track
             axs[i,0].scatter(peaks_on_track[i][:,0], peaks_on_track[i][:,1], marker="x", color="black", s=200)
+
+            axs[i,0].axis("equal")
             i += 1
 
     if P.getValue("plot"):

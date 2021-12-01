@@ -23,6 +23,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Changed
 - Track is plotted using lighter gray that is not in the standard palette. Therefore the colors should not overlap anymore.
 
+### Fixed
+- Selectors: Track with identified turns is plotted with equal axes.
+
 ## 1.4.3 - 2021-11-12
 ### Changed
 - Un-nested plot functions return created objects.
