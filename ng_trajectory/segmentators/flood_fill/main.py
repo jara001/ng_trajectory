@@ -28,6 +28,7 @@ P = ParameterList()
 P.createAdd("hold_map", False, bool, "When true, the map is created only once.", "init")
 P.createAdd("range_limit", 0, float, "Maximum distance from the center of the segment. 0 disables this.", "")
 P.createAdd("reserve_width", False, bool, "When true, the segments are reserved a path towards both walls.", "")
+P.createAdd("reserve_selected", [], list, "IDs of segments that should use the reservation method, when empty, use all.", "")
 
 
 ######################
@@ -192,6 +193,9 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
         for _i, _c in enumerate(pointsToMap(group_centers)):
             print ("\tSegment %d/%d:" % (_i, len(group_centers)))
             _map[tuple(_c)] = _i
+
+            if len(P.getValue("reserve_selected")) > 0 and _i not in P.getValue("reserve_selected"):
+                continue
 
             # Create "links" to the nearest of both walls
 

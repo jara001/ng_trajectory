@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Optimizers: Use `verify_sort` when obtaining borders.
 - Segmentators: Function `segmentDistance()` for Flood Fill segmentator that computes distance from a point to a segment.
 - Segmentators: Parameter `reserve_width` for Flood Fill that creates a reserved region for each segment in order to touch both (outer and inner) walls.
+- Segmentators: Parameter `reserve_selected` with list of segments that should use the reservation method. When unset, all are used.
 - Selectors: Downsample factor for Curvature selector.
 - Selectors: Option 'show_plot' for Curvature selector.
 - Selectors: Fixed selector that returns preset list of points.
