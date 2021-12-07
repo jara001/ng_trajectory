@@ -5,16 +5,23 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
-- Interpolators: Function `pointsDistance()` for computing distances between points in a set.
-- Interpolators: Parameter `verify_sort` for `trajectorySort()` that removes outliers from the trajectory.
-- Optimizers: Use `verify_sort` when obtaining borders.
-- Segmentators: Function `segmentDistance()` for Flood Fill segmentator that computes distance from a point to a segment.
-- Segmentators: Parameter `reserve_width` for Flood Fill that creates a reserved region for each segment in order to touch both (outer and inner) walls.
-- Segmentators: Parameter `reserve_selected` with list of segments that should use the reservation method. When unset, all are used.
-- Segmentators: Parameter `reserve_distance` that sets the distance from the wall-segment connector that is reserved for the segment.
-- Selectors: Downsample factor for Curvature selector.
-- Selectors: Option 'show_plot' for Curvature selector.
-- Selectors: Fixed selector that returns preset list of points.
+- Interpolators
+    - Function `pointsDistance()` for computing distances between points in a set.
+    - Parameter `verify_sort` for `trajectorySort()` that removes outliers from the trajectory.
+- Optimizers
+    - _Matryoshka_
+        - Use `verify_sort` when obtaining borders.
+- Segmentators
+    - _Flood Fill_
+        - Function `segmentDistance()` that computes distance from a point to a segment.
+        - Parameter `reserve_width` that creates a reserved region for each segment in order to touch both (outer and inner) walls.
+        - Parameter `reserve_selected` with list of segments that should use the reservation method. When unset, all are used.
+        - Parameter `reserve_distance` that sets the distance from the wall-segment connector that is reserved for the segment.
+- Selectors
+    - _Curvature_
+        - Parameter `downsample_factor` that controls downsampling prior to the interpolation.
+        - Option `show_plot` that hides the plot even though it is saved to file.
+    - New selector 'Fixed' that returns preset list of points.
 - Intermediate results are stored inside logs, allowing to pause the experiments. (Only at the loop end.)
 - Checking for already present logs and resuming the experiment at the loop it has ended.
 - Variable `__version__` to be used for scripts.
@@ -24,7 +31,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Track is plotted using lighter gray that is not in the standard palette. Therefore the colors should not overlap anymore.
 
 ### Fixed
-- Selectors: Track with identified turns is plotted with equal axes.
+- Selectors
+    - _Curvature_
+        - Track with identified turns is plotted with equal axes.
 
 ## 1.4.3 - 2021-11-12
 ### Changed
