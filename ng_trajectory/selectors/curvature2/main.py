@@ -20,6 +20,7 @@ from ng_trajectory.criterions.length import compute as pathLength
 
 import ng_trajectory.plot as ngplot
 
+
 # Parameters
 from ng_trajectory.parameter import *
 P = ParameterList()
@@ -31,6 +32,16 @@ P.createAdd("sampling_distance", 1.0, float, "[m] Distance of super-sampling bef
 P.createAdd("peaks_height", 1.0, float, "[m^-1] Minimum absolute height of peaks.", "")
 P.createAdd("peaks_distance", 16, int, "Minimum distance between two identified peaks.", "")
 P.createAdd("peaks_bounds", 8, int, "Distance to the turn boundaries (created pseudo-peaks), skipped when 0.", "")
+P.createAdd("peaks_filling", 10.0, float, "[m] Maximum distance between two consecutive peaks in the final array.", "")
+
+
+######################
+# Utility lambdas
+######################
+
+# Taken from the profiler
+addOverlap = lambda points, overlap: numpy.vstack((points[-overlap:, :], points[:, :], points[:overlap]))
+removeOverlap = lambda points, overlap: points[overlap:-overlap]
 
 
 ######################
@@ -52,6 +63,35 @@ def pathPrepare(points: numpy.ndarray) -> numpy.ndarray:
     return points[1:, :2] if (points[0, :2] == points[-1, :2]).all() else points[:, :2]
 
 
+def pathPointDistance(points: numpy.ndarray, index_1: int, index_2: int) -> float:
+    """Compute the distance between points of a path given by indices.
+
+    Arguments:
+    points -- list of points, nx(>=2) numpy.ndarray
+    index_1 -- index of the first point, int
+    index_2 -- index of the seconds point, int
+
+    Returns:
+    distance -- distance between the points, [m], float
+
+    Note: Adapted from Length criterion.
+    """
+    return float(
+        numpy.sum(
+            numpy.sqrt(
+                numpy.sum(
+                    numpy.power(
+                        numpy.subtract(
+                            points[index_1+1:index_2+1, :2],
+                            points[index_1:index_2, :2]
+                        ),
+                    2),
+                axis=1)
+            )
+        )
+    )
+
+
 def pathPointDistanceAvg(points: numpy.ndarray) -> float:
     """Get average distance between consecutive points in an array.
 
@@ -59,7 +99,7 @@ def pathPointDistanceAvg(points: numpy.ndarray) -> float:
     points -- list of points, nx(>=2) numpy.ndarray
 
     Returns:
-    avg_dist -- average distance between points, float
+    avg_dist -- average distance between points, [m], float
     """
     return pathLength(points) / len(points)
 
@@ -176,6 +216,30 @@ def select(
     )
 
 
+    # Step 5
+    # Fill additional points to ensure maximum distance between two consecutive points
+    filling = []
+    # Use overlap to make it simpler
+    _points = addOverlap(points, len(points))
+    _peaks = peaksN + len(points)
+    _peaks = numpy.insert(_peaks, 0, peaksN[-1])
+    _peaks = numpy.append(_peaks, peaksN[0] + 2 * len(points))
+    for i in range(len(peaksN) - 1):
+        _distance = pathPointDistance(_points, _peaks[i], _peaks[i+1])
+
+        if _distance > P.getValue("peaks_filling"):
+            filling += list(
+                numpy.linspace(
+                    _peaks[i],
+                    _peaks[i+1],
+                    int(_distance / P.getValue("peaks_filling")) + 1,
+                    endpoint = False,
+                    dtype = numpy.int
+                )
+            )[1:]
+    filling = [ index - len(points) for index in filling if len(points) <= index < 2 * len(points) ]
+
+
     # Optional
     # Plot the track with curvature if requested
     if P.getValue("plot"):
@@ -186,10 +250,12 @@ def select(
         ax[0].plot(points[:, 0], points[:, 1])
         ax[0].scatter(points[peaks, 0], points[peaks, 1], marker="x", color="black")
         ax[0].scatter(points[peaksN, 0], points[peaksN, 1], marker="x", color="green")
+        ax[0].scatter(points[filling, 0], points[filling, 1], marker="x", color="blue")
 
         ax[1].plot(points[:, 2])
         ax[1].scatter(peaks, points[peaks, 2], marker="x", color="black")
         ax[1].scatter(peaksN, points[peaksN, 2], marker="x", color="green")
+        ax[1].scatter(filling, points[filling, 2], marker="x", color="blue")
 
         fig.savefig("curvature2_" + P.getValue("track_name") + ".pdf")
 
@@ -197,6 +263,18 @@ def select(
             fig.show()
         else:
             ngplot.pyplot.close(fig)
+
+
+    # Join the filling
+    if len(filling) > 0:
+        peaksN = numpy.unique(
+            numpy.sort(
+                numpy.concatenate(
+                    (peaksN, filling),
+                    axis = 0
+                )
+            )
+        )
 
 
     return points[peaksN, :]
