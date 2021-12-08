@@ -144,7 +144,7 @@ def resolutionEstimate(points: numpy.ndarray, resolution: float) -> int:
     return int(len(points) * factorCompute(points, resolution))
 
 
-def fillingCompute(points: numpy.ndarray, peaks: List[int], max_distance: float) -> List[int]:
+def peaksFill(points: numpy.ndarray, peaks: List[int], max_distance: float) -> List[int]:
     """Compute indices of filling points to constrain the distance between peaks.
 
     Arguments:
@@ -270,7 +270,7 @@ def select(
 
     # Step 5
     # Fill additional points to ensure maximum distance between two consecutive points
-    filling = fillingCompute(points, peaksN, P.getValue("peaks_filling"))
+    filling = peaksFill(points, peaksN, P.getValue("peaks_filling"))
 
     # Join the filling
     if len(filling) > 0:
