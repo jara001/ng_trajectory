@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Intermediate results are stored inside logs, allowing to pause the experiments. (Only at the loop end.)
 - Checking for already present logs and resuming the experiment at the loop it has ended.
 - Variable `__version__` to be used for scripts.
+- Current version is reported on every 'ng_run' start and at the beginning of every log (when logging enabled).
 - Script 'ng_curvature_gui' for testing the Curvature selector parameters.
 
 ### Changed

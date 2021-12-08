@@ -69,6 +69,8 @@ import sys, numpy, json, time
 #from ng_trajectory.configuration import CONFIGURATION
 CONFIGURATION = {}
 
+import ng_trajectory
+
 import ng_trajectory.optimizers as optimizers
 import ng_trajectory.criterions as criterions
 import ng_trajectory.interpolators as interpolators
@@ -276,6 +278,7 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
     if fileformat:
         LOGFILE = open(fileformat % (loop_i[0]+1) + "-%s.log" % _alg.get("algorithm"), "w")
         print (_alg, file=LOGFILE)
+        print ("Running %s version %s" % (ng_trajectory.__name__, ng_trajectory.__version__), file=LOGFILE)
         LOGFILE.flush()
     else:
         LOGFILE = sys.stdout
@@ -464,6 +467,8 @@ def execute(START_POINTS: numpy.ndarray = None, VALID_POINTS: numpy.ndarray = No
                 - cascadeRun() step-times
     """
     global CONFIGURATION
+
+    print ("Starting %s version %s" % (ng_trajectory.__name__, ng_trajectory.__version__))
 
     # Overall time
     overall_time = time.time()
