@@ -208,6 +208,8 @@ def select(
     # Update parameters
     P.updateAll(overflown)
 
+    final_peaks = None
+
     # Prepare the path
     #points = pathPrepare(points)
     points = points[1:, :] if (points[0, :2] == points[-1, :2]).all() else points
@@ -259,11 +261,23 @@ def select(
             )
         )
     )
+    final_peaks = peaksN
 
 
     # Step 5
     # Fill additional points to ensure maximum distance between two consecutive points
     filling = fillingCompute(points, peaksN, P.getValue("peaks_filling"))
+
+    # Join the filling
+    if len(filling) > 0:
+        final_peaks = numpy.unique(
+            numpy.sort(
+                numpy.concatenate(
+                    (final_peaks, filling),
+                    axis = 0
+                )
+            )
+        )
 
 
     # Optional
@@ -291,16 +305,4 @@ def select(
             ngplot.pyplot.close(fig)
 
 
-    # Join the filling
-    if len(filling) > 0:
-        peaksN = numpy.unique(
-            numpy.sort(
-                numpy.concatenate(
-                    (peaksN, filling),
-                    axis = 0
-                )
-            )
-        )
-
-
-    return points[peaksN, :]
+    return points[final_peaks, :]
