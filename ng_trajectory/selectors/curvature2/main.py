@@ -77,8 +77,33 @@ def pathPrepare(points: numpy.ndarray) -> numpy.ndarray:
     return points[1:, :2] if (points[0, :2] == points[-1, :2]).all() else points[:, :2]
 
 
+def pathPointDistanceCompute(points: numpy.ndarray, index_1: int, index_2: int) -> numpy.ndarray:
+    """Compute the distance between consecutive points of a path limited by indices.
+
+    Arguments:
+    points -- list of points, nx(>=2) numpy.ndarray
+    index_1 -- index of the first point, int
+    index_2 -- index of the seconds point, int
+
+    Returns:
+    distances -- distances between consecutive points, [m], (index_2-index_1)x1 numpy.ndarray
+
+    Note: Adapted from Length criterion.
+    """
+    return numpy.sqrt(
+        numpy.sum(
+            numpy.power(
+                numpy.subtract(
+                    points[index_1+1:index_2+1, :2],
+                    points[index_1:index_2, :2]
+                ),
+            2),
+        axis=1)
+    )
+
+
 def pathPointDistance(points: numpy.ndarray, index_1: int, index_2: int) -> float:
-    """Compute the distance between points of a path given by indices.
+    """Compute the distance between two points of a path given by indices.
 
     Arguments:
     points -- list of points, nx(>=2) numpy.ndarray
@@ -92,16 +117,7 @@ def pathPointDistance(points: numpy.ndarray, index_1: int, index_2: int) -> floa
     """
     return float(
         numpy.sum(
-            numpy.sqrt(
-                numpy.sum(
-                    numpy.power(
-                        numpy.subtract(
-                            points[index_1+1:index_2+1, :2],
-                            points[index_1:index_2, :2]
-                        ),
-                    2),
-                axis=1)
-            )
+            pathPointDistanceCompute(points, index_1, index_2)
         )
     )
 
