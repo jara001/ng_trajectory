@@ -53,7 +53,7 @@ removeOverlap = lambda points, overlap: points[overlap:-overlap]
 # in order to still point to the same path element.
 addOverlap2 = lambda indices, overlap: numpy.hstack((indices[-1], indices + overlap, indices[0] + 2 * overlap))
 removeOverlap2 = lambda indices, overlap: \
-        indices[overlap <= indices < 2 * overlap] - overlap \
+        indices[(overlap <= indices) & (indices < 2 * overlap)] - overlap \
         if isinstance(indices, numpy.ndarray) \
         else [ index - overlap for index in indices if overlap <= index < 2 * overlap ]
 
