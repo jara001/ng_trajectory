@@ -274,7 +274,14 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
             _groups[ _i ].append( p )
 
     # TODO: Investigate whether 'if len(g) > 1' is required here.
-    groups = [ numpy.asarray( g ) for g in _groups ]
+    # Note: 'len(g) > 0' is required when there is a group with zero elements.
+    # This can happen when the selected group center is inside of a wall.
+    # ...
+    # Instead, we ensure in the beginning that the center is inside of reachable
+    # area by moving it there.
+    # FIXME: It is really correct way to do it?
+    # FIXME: Implement any solution and remove the condition.
+    groups = [ numpy.asarray( g ) for g in _groups if len(g) > 0 ]
 
     if P.getValue("range_limit") <= 0:
         return groups
