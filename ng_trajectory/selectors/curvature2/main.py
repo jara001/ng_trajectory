@@ -14,11 +14,17 @@ import numpy
 # Peak detector
 from scipy.signal import find_peaks
 
+# Cubic spline interpolator
 from ng_trajectory.interpolators import cubic_spline
 
+# Path length for estimating the path resolution
 from ng_trajectory.criterions.length import compute as pathLength
 
+# Plot support
 import ng_trajectory.plot as ngplot
+
+# Typing
+from typing import List
 
 
 # Parameters
@@ -130,6 +136,45 @@ def resolutionEstimate(points: numpy.ndarray, resolution: float) -> int:
     return int(len(points) * factorCompute(points, resolution))
 
 
+def fillingCompute(points: numpy.ndarray, peaks: List[int], max_distance: float) -> List[int]:
+    """Compute indices of filling points to constrain the distance between peaks.
+
+    Arguments:
+    points -- list of points, nx(>=2) numpy.ndarray
+    peaks -- list of peak indices, m-list of ints
+    max_distance -- maximum distance between two consecutive peaks, float
+
+    Returns:
+    filling -- list of additional indices, p-list of ints
+    """
+
+    # Use overlap to make it simpler
+    _points = addOverlap(points, len(points))
+
+    # Modify peaks to support overlap
+    _peaks = peaks + len(points)
+    _peaks = numpy.insert(_peaks, 0, peaks[-1])
+    _peaks = numpy.append(_peaks, peaks[0] + 2 * len(points))
+
+    filling = []
+
+    for i in range(len(peaks) - 1):
+        _distance = pathPointDistance(_points, _peaks[i], _peaks[i+1])
+
+        if _distance > max_distance:
+            filling += list(
+                numpy.linspace(
+                    _peaks[i],
+                    _peaks[i+1],
+                    int(_distance / max_distance) + 1,
+                    endpoint = False,
+                    dtype = numpy.int
+                )
+            )[1:]
+
+    return [ index - len(points) for index in filling if len(points) <= index < 2 * len(points) ]
+
+
 ######################
 # Functions
 ######################
@@ -218,26 +263,7 @@ def select(
 
     # Step 5
     # Fill additional points to ensure maximum distance between two consecutive points
-    filling = []
-    # Use overlap to make it simpler
-    _points = addOverlap(points, len(points))
-    _peaks = peaksN + len(points)
-    _peaks = numpy.insert(_peaks, 0, peaksN[-1])
-    _peaks = numpy.append(_peaks, peaksN[0] + 2 * len(points))
-    for i in range(len(peaksN) - 1):
-        _distance = pathPointDistance(_points, _peaks[i], _peaks[i+1])
-
-        if _distance > P.getValue("peaks_filling"):
-            filling += list(
-                numpy.linspace(
-                    _peaks[i],
-                    _peaks[i+1],
-                    int(_distance / P.getValue("peaks_filling")) + 1,
-                    endpoint = False,
-                    dtype = numpy.int
-                )
-            )[1:]
-    filling = [ index - len(points) for index in filling if len(points) <= index < 2 * len(points) ]
+    filling = fillingCompute(points, peaksN, P.getValue("peaks_filling"))
 
 
     # Optional
