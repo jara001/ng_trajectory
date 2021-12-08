@@ -49,6 +49,14 @@ P.createAdd("peaks_filling", 10.0, float, "[m] Maximum distance between two cons
 addOverlap = lambda points, overlap: numpy.vstack((points[-overlap:, :], points[:, :], points[:overlap]))
 removeOverlap = lambda points, overlap: points[overlap:-overlap]
 
+# Overlaps2 are used for arrays of indices where we want to modify the content
+# in order to still point to the same path element.
+addOverlap2 = lambda indices, overlap: numpy.hstack((indices[-1], indices + overlap, indices[0] + 2 * overlap))
+removeOverlap2 = lambda indices, overlap: \
+        indices[overlap <= indices < 2 * overlap] - overlap \
+        if isinstance(indices, numpy.ndarray) \
+        else [ index - overlap for index in indices if overlap <= index < 2 * overlap ]
+
 
 ######################
 # Utilities
@@ -141,8 +149,8 @@ def fillingCompute(points: numpy.ndarray, peaks: List[int], max_distance: float)
 
     Arguments:
     points -- list of points, nx(>=2) numpy.ndarray
-    peaks -- list of peak indices, m-list of ints
-    max_distance -- maximum distance between two consecutive peaks, float
+    peaks -- list of peak indices, m-list of ints / mx1 numpy.ndarray
+    max_distance -- maximum distance between two consecutive peaks, [m], float
 
     Returns:
     filling -- list of additional indices, p-list of ints
@@ -150,11 +158,7 @@ def fillingCompute(points: numpy.ndarray, peaks: List[int], max_distance: float)
 
     # Use overlap to make it simpler
     _points = addOverlap(points, len(points))
-
-    # Modify peaks to support overlap
-    _peaks = peaks + len(points)
-    _peaks = numpy.insert(_peaks, 0, peaks[-1])
-    _peaks = numpy.append(_peaks, peaks[0] + 2 * len(points))
+    _peaks = addOverlap2(peaks, len(points))
 
     filling = []
 
@@ -172,7 +176,7 @@ def fillingCompute(points: numpy.ndarray, peaks: List[int], max_distance: float)
                 )
             )[1:]
 
-    return [ index - len(points) for index in filling if len(points) <= index < 2 * len(points) ]
+    return removeOverlap2(filling, len(points))
 
 
 ######################
