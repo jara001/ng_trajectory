@@ -39,6 +39,7 @@ P.createAdd("peaks_height", 1.0, float, "[m^-1] Minimum absolute height of peaks
 P.createAdd("peaks_distance", 16, int, "Minimum distance between two identified peaks.", "")
 P.createAdd("peaks_bounds", 8, int, "Distance to the turn boundaries (created pseudo-peaks), skipped when 0.", "")
 P.createAdd("peaks_filling", 10.0, float, "[m] Maximum distance between two consecutive peaks in the final array.", "")
+P.createAdd("peaks_merge", 0, int, "Maximum distance between two subsequent peaks to be merged.", "")
 
 
 ######################
@@ -195,6 +196,64 @@ def peaksFill(points: numpy.ndarray, peaks: List[int], max_distance: float) -> L
     return removeOverlap2(filling, len(points))
 
 
+def peaksMerge(points: numpy.ndarray, peaks: List[int], min_distance: float) -> List[int]:
+    """Merge too close peaks based on their mutual distance.
+
+    Arguments:
+    points -- list of points, nx(>=2) numpy.ndarray
+    peaks -- list of peak indices, m-list of ints / mx1 numpy.ndarray
+    min_distance -- minimum required distance between peaks, [m], float
+
+    Returns:
+    merged_peaks -- list of merged peak indices, p-list of ints
+    """
+
+    # Use overlap here as well
+    _points = addOverlap(points, len(points))
+    _peaks = addOverlap2(peaks, len(points))
+
+    # Precompute the distances
+    _distances = pathPointDistanceCompute(_points, min(_peaks), max(_peaks))
+    _offset = min(_peaks) # Offset the distances to lower the computation
+
+    # Merge the peaks
+    while True:
+        _peak_distances = [
+            sum(
+                [ _distances[_i - _offset] for _i in range(peak1, peak2) ]
+            ) for peak1, peak2 in zip(_peaks[0:-1], _peaks[1:])
+        ]
+
+        _closest_distance = min(_peak_distances)
+
+        # Finish if the peaks are far away
+        if _closest_distance > min_distance:
+            break
+
+        # Find the closest peaks
+        _closest_i = _peak_distances.index(_closest_distance)
+
+        # Find point in-between of them
+        # We take the subset of distances and find the closest cumulative sum closest to the average
+        _average_i = numpy.argmin(
+                numpy.abs(
+                    numpy.subtract(
+                        numpy.cumsum( # Cumulative sum
+                            _distances[_peaks[_closest_i] - _offset:_peaks[_closest_i+1] - _offset] # Subset
+                        ),
+                        _closest_distance / 2
+                    )
+                )
+            )
+
+        # Replace one of the peaks with the average and delete the other
+        _peaks[_closest_i] = _peaks[_closest_i] + _average_i
+        _peaks = numpy.delete(_peaks, _closest_i + 1)
+
+
+    return removeOverlap2(_peaks, len(points))
+
+
 ######################
 # Functions
 ######################
@@ -300,6 +359,11 @@ def select(
         )
 
 
+    # Step 6
+    # Merge too close peaks
+    merged = peaksMerge(points, final_peaks, P.getValue("peaks_merge"))
+
+
     # Optional
     # Plot the track with curvature if requested
     if P.getValue("plot"):
@@ -308,11 +372,13 @@ def select(
         ngplot.axisEqual(fig)
 
         ax[0].plot(points[:, 0], points[:, 1])
+        ax[0].scatter(points[merged, 0], points[merged, 1], marker="o", color="orange")
         ax[0].scatter(points[peaks, 0], points[peaks, 1], marker="x", color="black")
         ax[0].scatter(points[peaksN, 0], points[peaksN, 1], marker="x", color="green")
         ax[0].scatter(points[filling, 0], points[filling, 1], marker="x", color="blue")
 
         ax[1].plot(points[:, 2])
+        ax[1].scatter(merged, points[merged, 2], marker="o", color="orange")
         ax[1].scatter(peaks, points[peaks, 2], marker="x", color="black")
         ax[1].scatter(peaksN, points[peaksN, 2], marker="x", color="green")
         ax[1].scatter(filling, points[filling, 2], marker="x", color="blue")
@@ -325,4 +391,4 @@ def select(
             ngplot.pyplot.close(fig)
 
 
-    return points[final_peaks, :]
+    return points[merged, :]
