@@ -119,17 +119,20 @@ def init(track: numpy.ndarray, **kwargs) -> None:
         MAP, MAP_ORIGIN, MAP_GRID = mapCreate(track)
 
 
-def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown) -> List[numpy.ndarray]:
+def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, create_borderlines: bool = False, **overflown) -> List[numpy.ndarray]:
     """Divide 'points' into groups using flood fill algorithm.
 
     Arguments:
     points -- points to be divided into groups, nx2 numpy.ndarray
     group_centers -- center points of to-be-created groups, mx2 numpy.ndarray
+    create_borderlines -- computes and also returns borderlines, bool, default False
     range_limit -- maximum distance to the center, float, default 0 (disabled)
     **overflown -- arguments not caught by previous parts
 
     Returns:
     groups -- list of grouped points, m-list of x2 numpy.ndarrays
+    borderlines -- borderlines of all segments, stored as m-dict of dicts of x2 numpy.ndarrays,
+                   only returned when create_borderlines == True
     """
     global MAP, MAP_ORIGIN, MAP_GRID
 
@@ -244,6 +247,9 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
 
     queue = pointsToMap(group_centers).tolist()
 
+    if create_borderlines:
+        borderlines_map = { i: {} for i in range(len(group_centers)) }
+
     while len(queue) > 0:
         cell = queue.pop(0)
 
@@ -265,6 +271,19 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
                 if _cell == 255 or (_cell == 100 + _map[tuple(cell)]):
                     _map[cell[0] + _a, cell[1] + _b] = _map[tuple(cell)]
                     queue.append((cell[0] + _a, cell[1] + _b))
+                # Save some steps by continuing sooner when borderlines are not created
+                elif not create_borderlines:
+                    continue
+                # Store it if its another segment
+                elif _cell < 100 and _cell != _map[tuple(cell)]: # Otherwise we also get "neighbours to itself".
+                    borderlines_map[_map[tuple(cell)]][(cell[0] + _a, cell[1] + _b)] = _cell
+                # ... also in case that we are using reservations
+                elif _cell < 200 and _cell != _map[tuple(cell)]:
+                    borderlines_map[_map[tuple(cell)]][(cell[0] + _a, cell[1] + _b)] = _cell - 100
+
+
+    if create_borderlines:
+        borderlines_real = { i: { j: [] for j in range(len(group_centers)) } for i in range(len(group_centers)) }
 
     for p in points:
         _i = _map[tuple(pointToMap(p))]
@@ -272,6 +291,23 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
         # Group only taken points
         if _i != 255 and _i < 100:
             _groups[ _i ].append( p )
+
+            if create_borderlines:
+                # Also add it to borderlines if on edge
+                # Note: This does only "own" borderlines.
+                #if tuple(pointToMap(p)) in borderlines_map[_i]:
+                #    borderlines_real[_i][borderlines_map[_i][tuple(pointToMap(p))]].append(p)
+
+                # Create all combinations of borderlines in real coordinates
+                for i in range(len(group_centers)):
+                    if tuple(pointToMap(p)) in borderlines_map[i]:
+                        borderlines_real[i][borderlines_map[i][tuple(pointToMap(p))]].append(p)
+
+
+    # Finally process the borderlines
+    if create_borderlines:
+        borderlines = { i: { j: numpy.asarray(borderlines_real[i][j]) for j in range(len(group_centers)) if len(borderlines_real[i][j]) > 0 } for i in range(len(group_centers)) }
+
 
     # TODO: Investigate whether 'if len(g) > 1' is required here.
     # Note: 'len(g) > 0' is required when there is a group with zero elements.
@@ -281,12 +317,13 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
     # ...
     # Instead, we ensure in the beginning that the center is inside of reachable
     # area by moving it there.
-    # FIXME: It is really correct way to do it?
+    # FIXME: Is it really the correct way to do it?
     # FIXME: Implement any solution and remove the condition from sections below.
     groups = [ numpy.asarray( g ) for g in _groups ]
 
     if P.getValue("range_limit") <= 0:
-        return [ g for g in groups if len(g) > 0 ]
+        groups = [ g for g in groups if len(g) > 0 ]
+        return groups if not create_borderlines else (groups, borderlines)
 
     else:
         return [
