@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Optimizers
     - _Matryoshka_
         - Use `verify_sort` when obtaining borders.
+        - Support for penalizing the optimization results using borderlines. The algorithm returns `PENALTY * d`, where `d` is the distance to the nearest borderline point that the candidate point belongs to.
+        - Parameter `use_borderlines` that activates borderline-based penalization.
 - Segmentators
     - _Flood Fill_
         - Function `segmentDistance()` that computes distance from a point to a segment.

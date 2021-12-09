@@ -46,6 +46,8 @@ GRID = None
 PENALTY = None
 FIGURE = None
 PLOT = None
+USE_BORDERLINES = None
+BORDERLINES = None
 
 
 # Parameters
@@ -67,6 +69,7 @@ P.createAdd("logging_verbosity", 2, int, "Index for verbosity of the logger.", "
 P.createAdd("hold_matryoshka", False, bool, "Whether the transformation should be created only once.", "init (Matryoshka)")
 P.createAdd("plot", False, bool, "Whether a graphical representation should be created.", "init (viz.)")
 P.createAdd("grid", "computed by default", list, "X-size and y-size of the grid used for points discretization.", "init (Matryoshka)")
+P.createAdd("use_borderlines", False, bool, "Whether to use borderlines for calculating the penalty.", "init (Matryoshka)")
 
 
 ######################
@@ -92,6 +95,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         hold_matryoshka: bool = False,
         plot: bool = False,
         grid: List[float] = [],
+        use_borderlines: bool = False,
         figure: ngplot.matplotlib.figure.Figure = None,
         **kwargs):
     """Initialize variables for Matryoshka transformation.
@@ -123,10 +127,11 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     hold_matryoshka -- whether the Matryoshka should be created only once, bool, default False
     plot -- whether a graphical representation should be created, bool, default False
     grid -- size of the grid used for the points discretization, 2-float List, computed by default
+    use_borderlines -- whether to use borderlines for calculating the penalty, bool, default False
     figure -- target figure for plotting, matplotlib.figure.Figure, default None (get current)
     **kwargs -- arguments not caught by previous parts
     """
-    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE, PLOT
+    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE, PLOT, USE_BORDERLINES, BORDERLINES
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS
 
     # Local to global variables
@@ -144,6 +149,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     PENALTY = penalty
     FIGURE = figure
     PLOT = plot
+    USE_BORDERLINES = use_borderlines
 
 
     VALID_POINTS = points
@@ -159,7 +165,15 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
             ngplot.indicesPlot(group_centers)
 
         # Matryoshka construction
-        _groups = SEGMENTATOR(points=points, group_centers=group_centers, **{**SEGMENTATOR_ARGS})
+        _groups = SEGMENTATOR(points=points, group_centers=group_centers, create_borderlines=USE_BORDERLINES, **{**SEGMENTATOR_ARGS})
+
+        if type(_groups) == tuple:
+            BORDERLINES = _groups[1]
+            _groups = _groups[0]
+        elif USE_BORDERLINES:
+            print ("Borderlines requested but not received from the segmentator. Switching this off.")
+            USE_BORDERLINES = False
+
         grouplayers = transform.groupsBorderObtain(_groups)
         grouplayers = transform.groupsBorderBeautify(grouplayers, 400)
 
@@ -252,7 +266,7 @@ def _opt(points: numpy.ndarray) -> float:
 
     Note: This function is called after all necessary data is received.
     """
-    global VALID_POINTS, CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
+    global VALID_POINTS, CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY, USE_BORDERLINES, BORDERLINES
 
     # Transform points
     points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p])[0] for i, p in enumerate(points) ]
@@ -261,13 +275,54 @@ def _opt(points: numpy.ndarray) -> float:
     # It is expected that they are unique and sorted.
     _points = INTERPOLATOR(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
 
+    # Mapping between the created points and their interpolation
+    if USE_BORDERLINES:
+        _points_line_mapping = [
+            numpy.argmin(
+                numpy.sqrt(
+                    numpy.sum(
+                        numpy.power(
+                            numpy.subtract(
+                                _points[:, :2],
+                                points[i]
+                            ),
+                            2
+                        ),
+                        axis = 1
+                    )
+                )
+            ) for i in range(len(points))
+        ]
+
     # Check if all interpolated points are valid
     # Note: This is required for low number of groups.
-    invalid = 0
+    invalid = 0 if not USE_BORDERLINES else 1000
 
-    for _p in _points:
+    for _ip, _p in enumerate(_points):
         if not numpy.any(numpy.all(numpy.abs( numpy.subtract(VALID_POINTS, _p[:2]) ) < GRID, axis = 1)):
-            invalid += 1
+            if not USE_BORDERLINES:
+                invalid += 1
+
+            else:
+                # Note: Trying borderlines here, it works the same, just the meaning of 'invalid' is different.
+                _segment_id = len([ _plm for _plm in _points_line_mapping if _plm < _ip ]) - 1
+                _invalid = numpy.min(
+                    numpy.sqrt(
+                        numpy.sum(
+                            numpy.power(
+                                numpy.subtract(
+                                    BORDERLINES[_segment_id][(_segment_id + 1) % len(points)],
+                                    _p[:2]
+                                ),
+                                2
+                            ),
+                            axis = 1
+                        )
+                    )
+                )
+
+                invalid = min(invalid, _invalid)
+
 
     if ( invalid > 0 ):
         with FILELOCK:
