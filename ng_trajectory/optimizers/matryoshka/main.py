@@ -297,9 +297,12 @@ def _opt(points: numpy.ndarray) -> float:
     # Check if all interpolated points are valid
     # Note: This is required for low number of groups.
     invalid = 0 if not USE_BORDERLINES else 1000
+    any_invalid = False
 
     for _ip, _p in enumerate(_points):
         if not numpy.any(numpy.all(numpy.abs( numpy.subtract(VALID_POINTS, _p[:2]) ) < GRID, axis = 1)):
+            any_invalid = True
+
             if not USE_BORDERLINES:
                 invalid += 1
 
@@ -324,7 +327,7 @@ def _opt(points: numpy.ndarray) -> float:
                 invalid = min(invalid, _invalid)
 
 
-    if ( invalid > 0 ):
+    if ( any_invalid ):
         with FILELOCK:
             if VERBOSITY > 2:
                 print ("pointsA:%s" % str(points), file=LOGFILE)
