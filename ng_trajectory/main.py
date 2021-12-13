@@ -91,6 +91,7 @@ Solution = Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]
 # Parameters
 from ng_trajectory.parameter import *
 P = ParameterList()
+# FIXME: Actually, the default values do not work here as it was not adapted for ParameterList.
 P.createAdd("_version", None, int, "Version of the configuration.", "General")
 P.createAdd("_comment", None, str, "Commentary of the configuration file.", "General")
 P.createAdd("loops", None, int, "Number of repetitions.", "Optimization")
