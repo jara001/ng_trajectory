@@ -22,6 +22,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Penalizer 'Borderlines' calculates minimum of maximum of the distances between misplaced points and their associated borderline (sets of points on the borders between two adjacent segments).
         - ~~**Warning** Currently, this works only for Matryoshka.~~
         - **Warning** Currently, this works only for Flood Fill segmentator.
+    - _Centerline_
+        - Penalizer 'Centerline' finds the minimum of maximum of the distances between misplaced points and their associated part of the centerline.
 - Segmentators
     - _Flood Fill_
         - Function `segmentDistance()` that computes distance from a point to a segment.
