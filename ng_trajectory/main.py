@@ -300,6 +300,9 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
     itp = obtain(interpolators, "interpolator")
     seg = obtain(segmentators, "segmentator")
     sel = obtain(selectors, "selector")
+    # Set default penalizer. Not used in 'ParameterList' as it has no effect.
+    if "penalizer" not in _alg:
+        _alg = {**_alg, **{"penalizer": "count"}}
     pen = obtain(penalizers, "penalizer")
 
     # Show up current progress
