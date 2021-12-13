@@ -183,6 +183,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
         # Call the init function of penalizer
         PENALIZER.init(
+            valid_points = VALID_POINTS,
             map = SEGMENTATOR.main.MAP,
             map_origin = SEGMENTATOR.main.MAP_ORIGIN,
             map_grid = SEGMENTATOR.main.MAP_GRID,
