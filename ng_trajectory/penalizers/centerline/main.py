@@ -98,20 +98,40 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
             # Note: We used to have '<' here, however that failed with invalid index 0.
             _segment_id = len([ _plm for _plm in _points_line_mapping if _plm <= _ip ]) - 1
 
-            _invalid = numpy.max(
-                numpy.sqrt(
-                    numpy.sum(
-                        numpy.power(
-                            numpy.subtract(
-                                CENTERLINE[_points_line_mapping[_segment_id-1]:_points_line_mapping[_segment_id]+1, :2],
-                                _p[:2]
+            # We need to wrap around for _segment_id 0
+            if _segment_id == 0:
+                _invalid = numpy.max(
+                    numpy.sqrt(
+                        numpy.sum(
+                            numpy.power(
+                                numpy.subtract(
+                                    numpy.hstack((
+                                        CENTERLINE[_points_line_mapping[-1]:, :2],
+                                        CENTERLINE[0:_points_line_mapping[_segment_id]+1, :2]
+                                    )),
+                                    _p[:2]
+                                ),
+                                2
                             ),
-                            2
-                        ),
-                        axis = 1
+                            axis = 1
+                        )
                     )
                 )
-            )
+            else:
+                _invalid = numpy.max(
+                    numpy.sqrt(
+                        numpy.sum(
+                            numpy.power(
+                                numpy.subtract(
+                                    CENTERLINE[_points_line_mapping[_segment_id-1]:_points_line_mapping[_segment_id]+1, :2],
+                                    _p[:2]
+                                ),
+                                2
+                            ),
+                            axis = 1
+                        )
+                    )
+                )
 
             invalid = min(invalid, _invalid)
 
