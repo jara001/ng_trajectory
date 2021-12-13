@@ -28,7 +28,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Parameter `reserve_width` that creates a reserved region for each segment in order to touch both (outer and inner) walls.
         - Parameter `reserve_selected` with list of segments that should use the reservation method. When unset, all are used.
         - Parameter `reserve_distance` that sets the distance from the wall-segment connector that is reserved for the segment.
-        - Parameter `create_borderlines` that creates a nested dict of borderlines between segments.
+        - ~~Parameter `create_borderlines` that creates a nested dict of borderlines between segments.~~
 - Selectors
     - _Curvature_
         - Parameter `downsample_factor` that controls downsampling prior to the interpolation.
