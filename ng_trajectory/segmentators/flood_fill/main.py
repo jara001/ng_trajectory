@@ -134,7 +134,7 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, create_borde
     borderlines -- borderlines of all segments, stored as m-dict of dicts of x2 numpy.ndarrays,
                    only returned when create_borderlines == True
     """
-    global MAP, MAP_ORIGIN, MAP_GRID
+    global MAP, MAP_ORIGIN, MAP_GRID, MAP_LAST
 
     # Update parameters
     P.updateAll(overflown, reset = False)
@@ -281,6 +281,9 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, create_borde
                 elif _cell < 200 and _cell != _map[tuple(cell)]:
                     borderlines_map[_map[tuple(cell)]][(cell[0] + _a, cell[1] + _b)] = _cell - 100
 
+
+    # Save last map
+    MAP_LAST = _map
 
     if create_borderlines:
         borderlines_real = { i: { j: [] for j in range(len(group_centers)) } for i in range(len(group_centers)) }

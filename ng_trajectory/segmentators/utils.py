@@ -12,6 +12,7 @@ import numpy
 MAP = None
 MAP_ORIGIN = None
 MAP_GRID = None
+MAP_LAST = None
 
 
 ######################

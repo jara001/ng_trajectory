@@ -187,6 +187,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
             map = SEGMENTATOR.main.MAP,
             map_origin = SEGMENTATOR.main.MAP_ORIGIN,
             map_grid = SEGMENTATOR.main.MAP_GRID,
+            map_last = SEGMENTATOR.main.MAP_LAST,
             group_centers = group_centers,
             **{**PENALIZER_INIT}
         )
