@@ -287,7 +287,7 @@ def _opt(points: numpy.ndarray) -> float:
 
     # Check if all interpolated points are valid and compute penalty
     # Note: This is required for low number of groups.
-    penalty = PENALIZER(**{**{"points": _points, "valid_points": VALID_POINTS, "grid": GRID, "penalty": PENALTY}, **PENALIZER_ARGS})
+    penalty = PENALIZER(**{**{"points": _points, "valid_points": VALID_POINTS, "grid": GRID, "penalty": PENALTY, "candidate": points}, **PENALIZER_ARGS})
 
     if ( penalty != 0 ):
         with FILELOCK:

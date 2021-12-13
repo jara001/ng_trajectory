@@ -289,7 +289,7 @@ def _opt(points: numpy.ndarray) -> float:
     _points = INTERPOLATOR(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
 
     # Check the correctness of the points and compute penalty
-    penalty = PENALIZER(**{**{"points": _points, "valid_points": VALID_POINTS, "grid": GRID, "penalty": PENALTY}, **PENALIZER_ARGS})
+    penalty = PENALIZER(**{**{"points": _points, "valid_points": VALID_POINTS, "grid": GRID, "penalty": PENALTY, "candidate": points, "borderlines": BORDERLINES}, **PENALIZER_ARGS})
 
     if ( penalty != 0 ):
         with FILELOCK:
