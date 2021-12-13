@@ -49,4 +49,4 @@ def penalize(points: numpy.ndarray, valid_points: numpy.ndarray, grid: float, pe
         if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
             invalid += 1
 
-    return invalid
+    return invalid * penalty
