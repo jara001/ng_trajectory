@@ -11,8 +11,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Optimizers
     - _Matryoshka_
         - Use `verify_sort` when obtaining borders.
-        - Support for penalizing the optimization results using borderlines. The algorithm returns `PENALTY * d`, where `d` is the distance to the nearest borderline point that the candidate point belongs to.
-        - Parameter `use_borderlines` that activates borderline-based penalization.
+        - ~~Support for penalizing the optimization results using borderlines. The algorithm returns `PENALTY * d`, where `d` is the distance to the nearest borderline point that the candidate point belongs to.~~
+        - ~~Parameter `use_borderlines` that activates borderline-based penalization.~~
 - Penalizers
     - New group of algorithms which are used for evaluating whether the candidate is incorrect. In that case penalty is computed.
     - In constrast to other algorithms, `init()` of penalizers should be executed during `init()` of optimizers.

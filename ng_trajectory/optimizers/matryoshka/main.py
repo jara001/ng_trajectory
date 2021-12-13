@@ -49,8 +49,6 @@ GRID = None
 PENALTY = None
 FIGURE = None
 PLOT = None
-USE_BORDERLINES = None
-BORDERLINES = None
 
 
 # Parameters
@@ -75,7 +73,6 @@ P.createAdd("logging_verbosity", 2, int, "Index for verbosity of the logger.", "
 P.createAdd("hold_matryoshka", False, bool, "Whether the transformation should be created only once.", "init (Matryoshka)")
 P.createAdd("plot", False, bool, "Whether a graphical representation should be created.", "init (viz.)")
 P.createAdd("grid", "computed by default", list, "X-size and y-size of the grid used for points discretization.", "init (Matryoshka)")
-P.createAdd("use_borderlines", False, bool, "Whether to use borderlines for calculating the penalty.", "init (Matryoshka)")
 
 
 ######################
@@ -104,7 +101,6 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         hold_matryoshka: bool = False,
         plot: bool = False,
         grid: List[float] = [],
-        use_borderlines: bool = False,
         figure: ngplot.matplotlib.figure.Figure = None,
         **kwargs):
     """Initialize variables for Matryoshka transformation.
@@ -144,11 +140,10 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     hold_matryoshka -- whether the Matryoshka should be created only once, bool, default False
     plot -- whether a graphical representation should be created, bool, default False
     grid -- size of the grid used for the points discretization, 2-float List, computed by default
-    use_borderlines -- whether to use borderlines for calculating the penalty, bool, default False
     figure -- target figure for plotting, matplotlib.figure.Figure, default None (get current)
     **kwargs -- arguments not caught by previous parts
     """
-    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE, PLOT, USE_BORDERLINES, BORDERLINES
+    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE, PLOT
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER, PENALIZER_INIT, PENALIZER_ARGS
 
     # Local to global variables
@@ -169,7 +164,6 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     PENALTY = penalty
     FIGURE = figure
     PLOT = plot
-    USE_BORDERLINES = use_borderlines
 
 
     VALID_POINTS = points
@@ -185,14 +179,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
             ngplot.indicesPlot(group_centers)
 
         # Matryoshka construction
-        _groups = SEGMENTATOR.segmentate(points=points, group_centers=group_centers, create_borderlines=USE_BORDERLINES, **{**SEGMENTATOR_ARGS})
-
-        if type(_groups) == tuple:
-            BORDERLINES = _groups[1]
-            _groups = _groups[0]
-        elif USE_BORDERLINES:
-            print ("Borderlines requested but not received from the segmentator. Switching this off.")
-            USE_BORDERLINES = False
+        _groups = SEGMENTATOR.segmentate(points=points, group_centers=group_centers, **{**SEGMENTATOR_ARGS})
 
         # Call the init function of penalizer
         PENALIZER.init(
@@ -296,7 +283,7 @@ def _opt(points: numpy.ndarray) -> float:
     Note: This function is called after all necessary data is received.
     """
     global VALID_POINTS, CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, PENALIZER, PENALIZER_ARGS
-    global MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY, USE_BORDERLINES, BORDERLINES
+    global MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
 
     # Transform points
     points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p])[0] for i, p in enumerate(points) ]
@@ -306,7 +293,7 @@ def _opt(points: numpy.ndarray) -> float:
     _points = INTERPOLATOR.interpolate(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
 
     # Check the correctness of the points and compute penalty
-    penalty = PENALIZER.penalize(**{**{"points": _points, "valid_points": VALID_POINTS, "grid": GRID, "penalty": PENALTY, "candidate": points, "borderlines": BORDERLINES}, **PENALIZER_ARGS})
+    penalty = PENALIZER.penalize(**{**{"points": _points, "valid_points": VALID_POINTS, "grid": GRID, "penalty": PENALTY, "candidate": points}, **PENALIZER_ARGS})
 
     if ( penalty != 0 ):
         with FILELOCK:
