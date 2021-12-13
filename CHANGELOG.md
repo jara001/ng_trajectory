@@ -44,6 +44,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - _Flood Fill_
         - Remove empty segments caused mostly by a selected group center outside of the valid area. This will probably change in the future.
 - Track is plotted using lighter gray that is not in the standard palette. Therefore the colors should not overlap anymore.
+- Algorithms are passed to the optimizer as modules not callables. Therefore it is possible to call other functions of the module as well.
 
 ### Fixed
 - Selectors
