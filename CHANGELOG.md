@@ -20,7 +20,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Penalizer 'Count' is the basic penalizer used in ng_trajectory. It counts number of points outside the valid area.
     - _Borderlines_
         - Penalizer 'Borderlines' calculates minimum of maximum of the distances between misplaced points and their associated borderline (sets of points on the borders between two adjacent segments).
-        - **Warning** Currently, this works only for Matryoshka.
+        - ~~**Warning** Currently, this works only for Matryoshka.~~
+        - **Warning** Currently, this works only for Flood Fill segmentator.
 - Segmentators
     - _Flood Fill_
         - Function `segmentDistance()` that computes distance from a point to a segment.
