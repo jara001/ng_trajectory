@@ -14,6 +14,7 @@ import ng_trajectory.criterions as criterions
 import ng_trajectory.interpolators as interpolators
 import ng_trajectory.segmentators as segmentators
 import ng_trajectory.selectors as selectors
+import ng_trajectory.penalizers as penalizers
 
 
 # Parameters
@@ -135,7 +136,7 @@ if __name__ == "__main__":
 
     print ("%s" % (ng_trajectory.main.__doc__))
 
-    print_available_algorithms([optimizers, criterions, interpolators, segmentators, selectors])
+    print_available_algorithms([optimizers, criterions, interpolators, segmentators, selectors, penalizers])
 
     if "P" in dir(ng_trajectory.main):
         print_parameters(ng_trajectory.main.P)

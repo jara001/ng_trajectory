@@ -23,6 +23,9 @@ Currently we distinguish 5 groups of algorithms:
 5) Criterions
    Criterions are used for obtaining the fitness value given
    the waypoints.
+6) Penalizers
+   Penalizers are used to decide whether the candidate is invalid,
+   and in that case compute its penalty.
 
 The whole application does run multiple times:
  - variating "variate" parameter,
@@ -76,6 +79,7 @@ import ng_trajectory.criterions as criterions
 import ng_trajectory.interpolators as interpolators
 import ng_trajectory.segmentators as segmentators
 import ng_trajectory.selectors as selectors
+import ng_trajectory.penalizers as penalizers
 
 import ng_trajectory.plot as plot
 
@@ -112,6 +116,9 @@ P.createAdd("segmentator_args", {}, dict, "Arguments for the segmentator functio
 P.createAdd("selector", None, str, "Name of the function to select path points as segment centers.", "Optimization")
 P.createAdd("selector_init", {}, dict, "Arguments for the init part of the selector function.", "Optimization")
 P.createAdd("selector_args", {}, dict, "Arguments for the selector function.", "Optimization")
+P.createAdd("penalizer", None, str, "Name of the function to evaluate penalty criterion.", "Optimization")
+P.createAdd("penalizer_init", {}, dict, "Arguments for the init part of the penalizer function.", "Optimization")
+P.createAdd("penalizer_args", {}, dict, "Arguments for the penalizer function.", "Optimization")
 
 
 ######################
@@ -292,9 +299,10 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
     itp = obtain(interpolators, "interpolator")
     seg = obtain(segmentators, "segmentator")
     sel = obtain(selectors, "selector")
+    pen = obtain(penalizers, "penalizer")
 
     # Show up current progress
-    print (notification % (loop_i[0]+1) + " %s with %s criterion, int. by %s" % (_alg.get("algorithm", ""), _alg.get("criterion", ""), _alg.get("interpolator", "")), file=LOGFILE)
+    print (notification % (loop_i[0]+1) + " %s with %s criterion (penalized by %s), int. by %s" % (_alg.get("algorithm", ""), _alg.get("criterion", ""), _alg.get("penalizer", ""), _alg.get("interpolator", "")), file=LOGFILE)
     LOGFILE.flush()
 
     # Prepare plot
@@ -313,7 +321,8 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
     itp.init(**{**_alg, **_alg.get("interpolator_init", {}), **{"logfile": LOGFILE}})
     seg.init(track, **{**_alg, **_alg.get("segmentator_init", {}), **{"logfile": LOGFILE}})
     cri.init(**{**_alg, **_alg.get("criterion_init", {}), **{"logfile": LOGFILE}})
-    opt.init(track, rcandidate, result, **{**_alg, **{"criterion": cri.compute}, **{"interpolator": itp.interpolate}, **{"segmentator": seg.segmentate}, **{"selector": sel.select}, **{"logfile": LOGFILE}})
+    pen.init(**{**_alg, **_alg.get("penalizer_init", {}), **{"logfile": LOGFILE}})
+    opt.init(track, rcandidate, result, **{**_alg, **{"criterion": cri.compute}, **{"interpolator": itp.interpolate}, **{"segmentator": seg.segmentate}, **{"selector": sel.select}, **{"penalizer": pen.penalize}, **{"logfile": LOGFILE}})
 
 
     ## Optimization
