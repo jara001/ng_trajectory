@@ -325,7 +325,6 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
     itp.init(**{**_alg, **_alg.get("interpolator_init", {}), **{"logfile": LOGFILE}})
     seg.init(track, **{**_alg, **_alg.get("segmentator_init", {}), **{"logfile": LOGFILE}})
     cri.init(**{**_alg, **_alg.get("criterion_init", {}), **{"logfile": LOGFILE}})
-    pen.init(**{**_alg, **_alg.get("penalizer_init", {}), **{"logfile": LOGFILE}})
     opt.init(track, rcandidate, result, **{**_alg, **{"criterion": cri}, **{"interpolator": itp}, **{"segmentator": seg}, **{"selector": sel}, **{"penalizer": pen}, **{"logfile": LOGFILE}})
 
 

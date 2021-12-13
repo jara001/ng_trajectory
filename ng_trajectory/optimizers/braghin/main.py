@@ -39,6 +39,7 @@ SEGMENTATOR_ARGS = None
 SELECTOR = None
 SELECTOR_ARGS = None
 PENALIZER = None
+PENALIZER_INIT = None
 PENALIZER_ARGS = None
 LOGFILE = None
 VERBOSITY = 3
@@ -65,6 +66,7 @@ P.createAdd("segmentator_args", {}, dict, "Arguments for the segmentator functio
 P.createAdd("selector", None, types.ModuleType, "Module to select path points as segment centers.", "init (general)")
 P.createAdd("selector_args", {}, dict, "Arguments for the selector function.", "init (general)")
 P.createAdd("penalizer", None, types.ModuleType, "Module to evaluate penalty criterion.", "init (general)")
+P.createAdd("penalizer_init", {}, dict, "Arguments for the init part of the penalizer function.", "init (general)")
 P.createAdd("penalizer_args", {}, dict, "Arguments for the penalizer function.", "init (general)")
 P.createAdd("logging_verbosity", 2, int, "Index for verbosity of the logger.", "init (general)")
 P.createAdd("hold_transform", False, bool, "Whether the transformation should be created only once.", "init (Braghin)")
@@ -95,6 +97,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         selector: types.ModuleType = None,
         selector_args: Dict[str, any] = {},
         penalizer: types.ModuleType = None,
+        penalizer_init: Dict[str, any] = {},
         penalizer_args: Dict[str, any] = {},
         logfile: TextIO = sys.stdout,
         logging_verbosity: int = 2,
@@ -137,6 +140,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     penalizer -- module to evaluate penalty criterion,
                  module with penalize callable (nx(>=2) numpy.ndarray + mx2 numpy.ndarray -> float),
                  default None
+    penalizer_init -- arguments for the init part of the penalizer function, dict, default {}
     penalizer_args -- arguments for the penalizer function, dict, default {}
     logfile -- file descriptor for logging, TextIO, default sys.stdout
     logging_verbosity -- index for verbosity of logger, int, default 2
@@ -152,7 +156,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     **kwargs -- arguments not caught by previous parts
     """
     global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY, GRID, PENALTY, FIGURE
-    global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER, PENALIZER_ARGS
+    global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER, PENALIZER_INIT, PENALIZER_ARGS
 
     # Local to global variables
     CRITERION = criterion
@@ -164,6 +168,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     SELECTOR = selector
     SELECTOR_ARGS = selector_args
     PENALIZER = penalizer
+    PENALIZER_INIT = penalizer_init
     PENALIZER_ARGS = penalizer_args
     LOGFILE = logfile
     VERBOSITY = logging_verbosity
@@ -179,6 +184,16 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         # Transform construction
         group_centers_ = SELECTOR.select(**{**{"points": group_centerline, "remain": groups}, **SELECTOR_ARGS})
         CUTS = transform.create(points, group_centerline, group_centers_, endpoint_distance, endpoint_accuracy, line_reduction)
+
+        # Call init part of the penalizer
+        # TODO: Check whether this works.
+        PENALIZER.init(
+            map = SEGMENTATOR.main.MAP,
+            map_origin = SEGMENTATOR.main.MAP_ORIGIN,
+            map_grid = SEGMENTATOR.main.MAP_GRID,
+            group_centers = group_centers,
+            **{**PENALIZER_INIT}
+        )
 
         if plot:
             if plot_cuts:

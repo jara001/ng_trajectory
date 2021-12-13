@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Parameter `use_borderlines` that activates borderline-based penalization.
 - Penalizers
     - New group of algorithms which are used for evaluating whether the candidate is incorrect. In that case penalty is computed.
+    - In constrast to other algorithms, `init()` of penalizers should be executed during `init()` of optimizers.
     - _Count_
         - Penalizer 'Count' is the basic penalizer used in ng_trajectory. It counts number of points outside the valid area.
     - _Borderlines_
