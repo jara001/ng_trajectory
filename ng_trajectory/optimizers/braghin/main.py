@@ -38,6 +38,8 @@ SEGMENTATOR = None
 SEGMENTATOR_ARGS = None
 SELECTOR = None
 SELECTOR_ARGS = None
+PENALIZER = None
+PENALIZER_ARGS = None
 LOGFILE = None
 VERBOSITY = 3
 FILELOCK = Lock()
@@ -62,6 +64,8 @@ P.createAdd("segmentator", "each segment span over the whole track", callable, "
 P.createAdd("segmentator_args", {}, dict, "Arguments for the segmentator function.", "init (general)")
 P.createAdd("selector", "first m points are selected", callable, "Function to select path points as segment centers.", "init (general)")
 P.createAdd("selector_args", {}, dict, "Arguments for the selector function.", "init (general)")
+P.createAdd("penalizer", "0 is returned", callable, "Function to evaluate penalty criterion.", "init (general)")
+P.createAdd("penalizer_args", {}, dict, "Arguments for the penalizer function.", "init (general)")
 P.createAdd("logging_verbosity", 2, int, "Index for verbosity of the logger.", "init (general)")
 P.createAdd("hold_transform", False, bool, "Whether the transformation should be created only once.", "init (Braghin)")
 P.createAdd("plot", False, bool, "Whether a graphical representation should be created.", "init (viz.)")
@@ -90,6 +94,8 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         segmentator_args: Dict[str, any] = {},
         selector: Callable[[numpy.ndarray, int], numpy.ndarray] = lambda x, y: [ x for i in range(y) ],
         selector_args: Dict[str, any] = {},
+        penalizer: Callable[[numpy.ndarray, numpy.ndarray], float] = lambda x, y: 0,
+        penalizer_args: Dict[str, any] = {},
         logfile: TextIO = sys.stdout,
         logging_verbosity: int = 2,
         hold_transform: bool = False,
@@ -125,6 +131,10 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
                 callable (nx2 numpy.ndarray + m -> m-list of rx2 numpy.ndarray),
                 default 'first m points are selected'
     selector_args -- arguments for the selector function, dict, default {}
+    penalizer -- function to evaluate penalty criterion,
+                callable (nx(>=2) numpy.ndarray + mx2 numpy.ndarray -> float),
+                default '0 is returned'
+    penalizer_args -- arguments for the penalizer function, dict, default {}
     logfile -- file descriptor for logging, TextIO, default sys.stdout
     logging_verbosity -- index for verbosity of logger, int, default 2
     hold_transform -- whether the transformation should be created only once, bool, default False
@@ -139,7 +149,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     **kwargs -- arguments not caught by previous parts
     """
     global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY, GRID, PENALTY, FIGURE
-    global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS
+    global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER, PENALIZER_ARGS
 
     # Local to global variables
     CRITERION = criterion
@@ -150,6 +160,8 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     SEGMENTATOR_ARGS = segmentator_args
     SELECTOR = selector
     SELECTOR_ARGS = selector_args
+    PENALIZER = penalizer
+    PENALIZER_ARGS = penalizer_args
     LOGFILE = logfile
     VERBOSITY = logging_verbosity
     _holdtransform = hold_transform
@@ -263,7 +275,8 @@ def _opt(points: numpy.ndarray) -> float:
 
     Note: This function is called after all necessary data is received.
     """
-    global VALID_POINTS, CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, CUTS, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
+    global VALID_POINTS, CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, PENALIZER, PENALIZER_ARGS
+    global CUTS, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
 
     # Transform points
     points = transform.transform(points, CUTS)
@@ -272,23 +285,19 @@ def _opt(points: numpy.ndarray) -> float:
     # It is expected that they are unique and sorted.
     _points = INTERPOLATOR(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
 
-    # Check if all interpolated points are valid
+    # Check if all interpolated points are valid and compute penalty
     # Note: This is required for low number of groups.
-    invalid = 0
+    penalty = PENALIZER(**{**{"points": _points, "valid_points": VALID_POINTS, "grid": GRID, "penalty": PENALTY}, **PENALIZER_ARGS})
 
-    for _p in _points:
-        if not numpy.any(numpy.all(numpy.abs( numpy.subtract(VALID_POINTS, _p[:2]) ) < GRID, axis = 1)):
-            invalid += 1
-
-    if ( invalid > 0 ):
+    if ( penalty != 0 ):
         with FILELOCK:
             if VERBOSITY > 2:
                 print ("pointsA:%s" % str(points), file=LOGFILE)
                 print ("pointsT:%s" % str(_points.tolist()), file=LOGFILE)
             if VERBOSITY > 1:
-                print ("invalid:%f" % invalid, file=LOGFILE)
+                print ("penalty:%f" % penalty, file=LOGFILE)
             LOGFILE.flush()
-        return PENALTY * invalid
+        return penalty
 
     _c = CRITERION(**{**{'points': _points}, **CRITERION_ARGS})
     with FILELOCK:
