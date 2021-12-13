@@ -308,7 +308,8 @@ def _opt(points: numpy.ndarray) -> float:
 
             else:
                 # Note: Trying borderlines here, it works the same, just the meaning of 'invalid' is different.
-                _segment_id = len([ _plm for _plm in _points_line_mapping if _plm < _ip ]) - 1
+                # Note: We used to have '<' here, however that failed with invalid index 0.
+                _segment_id = len([ _plm for _plm in _points_line_mapping if _plm <= _ip ]) - 1
                 _invalid = numpy.min(
                     numpy.sqrt(
                         numpy.sum(
