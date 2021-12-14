@@ -66,7 +66,7 @@ def init(**kwargs) -> None:
     """Initialize selector."""
 
     # Update parameters
-    P.update(kwargs)
+    P.updateAll(kwargs)
 
 
 def select(points: numpy.ndarray, remain: int, **overflown) -> numpy.ndarray:
