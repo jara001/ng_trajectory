@@ -28,11 +28,18 @@ P.createAdd("method", "min", str, "Optimization method for final penalty -- min 
 ######################
 
 METHODS = {
-    "min": lambda x, y: min(x, y),
-    "max": lambda x, y: max(x, y),
+    "min": {
+        "function": lambda x, y: min(x, y),
+        "initial": 1000,
+    },
+    "max": {
+        "function": lambda x, y: max(x, y),
+        "initial": 0,
+    }
 }
 
-METHOD = METHODS["min"]
+METHOD = METHODS["min"]["function"]
+INITIAL = METHODS["min"]["initial"]
 
 
 ######################
@@ -52,7 +59,7 @@ def init(start_points: numpy.ndarray, **kwargs) -> None:
     Arguments:
     start_points -- initial line on the track, should be a centerline, nx2 numpy.ndarray
     """
-    global CENTERLINE, METHOD
+    global CENTERLINE, METHOD, INITIAL
 
 
     # Update parameters
@@ -61,7 +68,8 @@ def init(start_points: numpy.ndarray, **kwargs) -> None:
 
     # Update method
     if P.getValue("method") in METHODS:
-        METHOD = METHODS[P.getValue("method")]
+        METHOD = METHODS[P.getValue("method")]["function"]
+        INITIAL = METHODS[P.getValue("method")]["initial"]
 
 
     if CENTERLINE is None:
@@ -110,7 +118,7 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
 
     # Check if all interpolated points are valid
     # Note: This is required for low number of groups.
-    invalid = 1000
+    invalid = INITIAL
     any_invalid = False
 
     for _ip, _p in enumerate(points):
@@ -158,6 +166,6 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
             invalid = METHOD(invalid, _invalid)
 
 
-    return invalid * penalty if invalid != 1000 else 0
+    return invalid * penalty if invalid != INITIAL else 0
 
 
