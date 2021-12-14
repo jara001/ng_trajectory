@@ -80,6 +80,12 @@ def figureShow() -> None:
     pyplot.show()
 
 
+@plot_only
+def figureClose(figure: matplotlib.figure.Figure = None) -> None:
+    """Close figure."""
+    pyplot.show(figure)
+
+
 ######################
 # Type plot functions
 ######################
