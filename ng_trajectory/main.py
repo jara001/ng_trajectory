@@ -340,6 +340,7 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
             plot.plotDyn(_alg.get("plot_args", [])[-1], **{**_alg, **{"track": track, "fitness": _fitness, "rcandidate": _rcandidate, "tcandidate": _tcandidate, "result": _result}})
         if fileformat:
             plot.figureSave(fileformat % (loop_i[0]+1) + "-%s.png" % _alg.get("algorithm"))
+            plot.figureClose()
         else:
             plot.figureShow()
 
