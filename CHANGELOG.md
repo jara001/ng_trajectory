@@ -38,6 +38,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Option `show_plot` that hides the plot even though it is saved to file.
     - New selector 'Fixed' that returns preset list of points.
     - New selector 'Curvature2' that uses metric units for peaks identification and operates more automatically.
+    - New selector 'Uniform_distance' that equidistantly samples the path.
 - Intermediate results are stored inside logs, allowing to pause the experiments. (Only at the loop end.)
 - Checking for already present logs and resuming the experiment at the loop it has ended.
 - Variable `__version__` to be used for scripts.
