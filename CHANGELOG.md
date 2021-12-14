@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Use `verify_sort` when obtaining borders.
         - ~~Support for penalizing the optimization results using borderlines. The algorithm returns `PENALTY * d`, where `d` is the distance to the nearest borderline point that the candidate point belongs to.~~
         - ~~Parameter `use_borderlines` that activates borderline-based penalization.~~
-- Penalizers
+- [**NEW**] Penalizers
     - New group of algorithms which are used for evaluating whether the candidate is incorrect. In that case penalty is computed.
     - In constrast to other algorithms, `init()` of penalizers should be executed during `init()` of optimizers.
     - _Count_
@@ -36,9 +36,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - _Curvature_
         - Parameter `downsample_factor` that controls downsampling prior to the interpolation.
         - Option `show_plot` that hides the plot even though it is saved to file.
-    - New selector 'Fixed' that returns preset list of points.
-    - New selector 'Curvature2' that uses metric units for peaks identification and operates more automatically.
-    - New selector 'Uniform_distance' that equidistantly samples the path.
+    - [**NEW**] _Fixed_
+        - Selector 'Fixed' returns preset list of points.
+    - [**NEW**] _Curvature2_
+        - Selector 'Curvature2' uses metric units for peaks identification and operates more automatically than 'Curvature'.
+    - [**NEW**] _Uniform_distance_
+        - Selector 'Uniform_distance' equidistantly samples the path.
 - Intermediate results are stored inside logs, allowing to pause the experiments. (Only at the loop end.)
 - Checking for already present logs and resuming the experiment at the loop it has ended.
 - Variable `__version__` to be used for scripts.
