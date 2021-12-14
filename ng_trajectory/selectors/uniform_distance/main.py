@@ -14,7 +14,7 @@ import numpy, sys
 from ng_trajectory.interpolators import cubic_spline
 
 # Functions for equidistant resampling and selection
-from ng_trajectory.selectors.curvature2 import resolutionEstimate, factorCompute, pathPointDistanceAvg, pathLength
+from ng_trajectory.selectors.curvature2.main import resolutionEstimate, factorCompute, pathPointDistanceAvg, pathLength
 
 
 # Global variables
