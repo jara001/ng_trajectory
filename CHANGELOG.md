@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - **Warning** Currently, this works only for Flood Fill segmentator.
     - _Centerline_
         - Penalizer 'Centerline' finds the minimum of maximum of the distances between misplaced points and their associated part of the centerline.
+        - Parameter `method` that allows selecting whether the penalty is minimum or maximum of all found distances.
 - Segmentators
     - _Flood Fill_
         - Function `segmentDistance()` that computes distance from a point to a segment.

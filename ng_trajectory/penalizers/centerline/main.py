@@ -18,9 +18,21 @@ CENTERLINE = None
 
 
 # Parameters
-#from ng_trajectory.parameter import *
-#P = ParameterList()
-#P.createAdd("int_size", 400, int, "Number of points in the interpolation.", "")
+from ng_trajectory.parameter import *
+P = ParameterList()
+P.createAdd("method", "min", str, "Optimization method for final penalty -- min / max.", "Init.")
+
+
+######################
+# Optimization methods
+######################
+
+METHODS = {
+    "min": lambda x, y: min(x, y),
+    "max": lambda x, y: max(x, y),
+}
+
+METHOD = METHODS["min"]
 
 
 ######################
@@ -40,7 +52,17 @@ def init(start_points: numpy.ndarray, **kwargs) -> None:
     Arguments:
     start_points -- initial line on the track, should be a centerline, nx2 numpy.ndarray
     """
-    global CENTERLINE
+    global CENTERLINE, METHOD
+
+
+    # Update parameters
+    P.updateAll(kwargs)
+
+
+    # Update method
+    if P.getValue("method") in METHODS:
+        METHOD = METHODS[P.getValue("method")]
+
 
     if CENTERLINE is None:
         CENTERLINE = start_points
@@ -133,7 +155,7 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
                     )
                 )
 
-            invalid = min(invalid, _invalid)
+            invalid = METHOD(invalid, _invalid)
 
 
     return invalid * penalty if invalid != 1000 else 0
