@@ -83,7 +83,7 @@ def figureShow() -> None:
 @plot_only
 def figureClose(figure: matplotlib.figure.Figure = None) -> None:
     """Close figure."""
-    pyplot.show(figure)
+    pyplot.close(figure)
 
 
 ######################
