@@ -38,6 +38,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - _Curvature_
         - Parameter `downsample_factor` that controls downsampling prior to the interpolation.
         - Option `show_plot` that hides the plot even though it is saved to file.
+        - Parameter `split_peaks` that was used for some time that adds +-1 points around the peaks.
     - [**NEW**] _Fixed_
         - Selector 'Fixed' returns preset list of points.
     - [**NEW**] _Curvature2_

@@ -35,6 +35,7 @@ P.createAdd("peaks_height", 0.0, float, "Minimum absolute height of peaks.", "")
 P.createAdd("peaks_merge", 0, int, "Width of the area used for peaks merging.", "")
 P.createAdd("peaks_filling", 1000000, int, "Width of the area for filling the points.", "")
 P.createAdd("downsample_factor", 4, int, "Downsample factor used prior to the interpolation.", "")
+P.createAdd("split_peaks", False, bool, "Whether we want to split the height peaks.", "")
 
 
 ######################
@@ -179,11 +180,18 @@ def select(
         peaks, adds = find_peaks(arr_s, height = P.getValue("peaks_height"))#, distance = 5)
         peaks2, adds2 = find_peaks(-arr_s, height = P.getValue("peaks_height"))#, distance = 5)
 
+        # TODO: To chce nejdřív splitnout a pak spojit!
+        #print (peaks, adds)
+
         # Merge close peaks manually
         mpeaks = mergePeaks(peaks, adds, P.getValue("peaks_merge"))
         mpeaks2 = mergePeaks(peaks2, adds2, P.getValue("peaks_merge"))
 
         peaks = np.unique(np.sort(np.concatenate((mpeaks, mpeaks2), axis=0)))
+
+        # Split peaks
+        if P.getValue("split_peaks"):
+            peaks = np.unique(np.sort(np.concatenate(([i - 1 for i in peaks], [i + 1 for i in peaks]), axis=0)))
 
         # Detect parts without points
         filling = []
