@@ -4,6 +4,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.5.0 - 2022-01-03
+### Added
+- Interpolators
+    - Function `pointsDistance()` for computing distances between points in a set.
+    - Parameter `verify_sort` for `trajectorySort()` that removes outliers from the trajectory.
+- Optimizers
+    - _Matryoshka_
+        - Use `verify_sort` when obtaining borders.
+        - ~~Support for penalizing the optimization results using borderlines. The algorithm returns `PENALTY * d`, where `d` is the distance to the nearest borderline point that the candidate point belongs to.~~
+        - ~~Parameter `use_borderlines` that activates borderline-based penalization.~~
+        - Parameter `plot_mapping` that shows the transformation by mapping a grid onto the track. (Use only for demonstration.)
+- [**NEW**] Penalizers
+    - New group of algorithms which are used for evaluating whether the candidate is incorrect. In that case penalty is computed.
+    - In constrast to other algorithms, `init()` of penalizers should be executed during `init()` of optimizers.
+    - _Count_
+        - Penalizer 'Count' is the basic penalizer used in ng_trajectory. It counts number of points outside the valid area.
+    - _Borderlines_
+        - Penalizer 'Borderlines' calculates minimum of maximum of the distances between misplaced points and their associated borderline (sets of points on the borders between two adjacent segments).
+        - ~~**Warning** Currently, this works only for Matryoshka.~~
+        - **Warning** Currently, this works only for Flood Fill segmentator.
+    - _Centerline_
+        - Penalizer 'Centerline' finds the minimum of maximum of the distances between misplaced points and their associated part of the centerline.
+        - Parameter `method` that allows selecting whether the penalty is minimum or maximum of all found distances.
+- Segmentators
+    - _Flood Fill_
+        - Function `segmentDistance()` that computes distance from a point to a segment.
+        - Parameter `reserve_width` that creates a reserved region for each segment in order to touch both (outer and inner) walls.
+        - Parameter `reserve_selected` with list of segments that should use the reservation method. When unset, all are used.
+        - Parameter `reserve_distance` that sets the distance from the wall-segment connector that is reserved for the segment.
+        - ~~Parameter `create_borderlines` that creates a nested dict of borderlines between segments.~~
+        - Parameter `plot_flood` to plot the flooded areas into the figure. (Only for demonstration.)
+- Selectors
+    - _Curvature_
+        - Parameter `downsample_factor` that controls downsampling prior to the interpolation.
+        - Option `show_plot` that hides the plot even though it is saved to file.
+        - Parameter `split_peaks` that was used for some time that adds +-1 points around the peaks.
+    - [**NEW**] _Fixed_
+        - Selector 'Fixed' returns preset list of points.
+    - [**NEW**] _Curvature2_
+        - Selector 'Curvature2' uses metric units for peaks identification and operates more automatically than 'Curvature'.
+    - [**NEW**] _Uniform_distance_
+        - Selector 'Uniform_distance' equidistantly samples the path.
+- Intermediate results are stored inside logs, allowing to pause the experiments. (Only at the loop end.)
+- Checking for already present logs and resuming the experiment at the loop it has ended.
+- Variable `__version__` to be used for scripts.
+- Current version is reported on every 'ng_run' start and at the beginning of every log (when logging enabled).
+- Script 'ng_curvature_gui' for testing the Curvature selector parameters.
+- Function `figureClose()` for closing the figures. It should be called after saving the figure to free used memory.
+- Parameter `--gendoc` for 'ng_help' to generate the README in the repository.
+- Script 'release.sh' as a guideline for successful creating of a new release.
+
+### Changed
+- Segmentators
+    - _Flood Fill_
+        - Remove empty segments caused mostly by a selected group center outside of the valid area. This will probably change in the future.
+- Track is plotted using lighter gray that is not in the standard palette. Therefore the colors should not overlap anymore.
+- Algorithms are passed to the optimizer as modules not callables. Therefore it is possible to call other functions of the module as well.
+- Figures created during the optimization are closed after saving.
+
+### Fixed
+- Selectors
+    - _Curvature_
+        - Track with identified turns is plotted with equal axes.
+
 ## 1.4.3 - 2021-11-12
 ### Changed
 - Un-nested plot functions return created objects.

@@ -29,10 +29,13 @@ from ng_trajectory.parameter import *
 P = ParameterList()
 P.createAdd("track_name", "unknown", str, "Name of the track.", "")
 P.createAdd("plot", False, bool, "Whether the images are generated.", "")
+P.createAdd("show_plot", True, bool, "Whether the generated images are shown.", "")
 P.createAdd("interpolation_factor", 24.0, float, "Factor to reduce number of points prior to the interpolation.", "")
 P.createAdd("peaks_height", 0.0, float, "Minimum absolute height of peaks.", "")
 P.createAdd("peaks_merge", 0, int, "Width of the area used for peaks merging.", "")
 P.createAdd("peaks_filling", 1000000, int, "Width of the area for filling the points.", "")
+P.createAdd("downsample_factor", 4, int, "Downsample factor used prior to the interpolation.", "")
+P.createAdd("split_peaks", False, bool, "Whether we want to split the height peaks.", "")
 
 
 ######################
@@ -141,7 +144,7 @@ def select(
     alpha = cf.get_linspace(n_interpolation_points)
     delta = alpha[1] - alpha[0]
 
-    ipoints = cf.interpolate_points(points, n_interpolation_points, 4)
+    ipoints = cf.interpolate_points(points, n_interpolation_points, P.getValue("downsample_factor"))
 
     distance = np.cumsum( np.sqrt(np.sum( np.diff(ipoints, axis=0)**2, axis=1 )) )
     distance = np.insert(distance, 0, 0)/distance[-1]
@@ -177,11 +180,18 @@ def select(
         peaks, adds = find_peaks(arr_s, height = P.getValue("peaks_height"))#, distance = 5)
         peaks2, adds2 = find_peaks(-arr_s, height = P.getValue("peaks_height"))#, distance = 5)
 
+        # TODO: To chce nejdřív splitnout a pak spojit!
+        #print (peaks, adds)
+
         # Merge close peaks manually
         mpeaks = mergePeaks(peaks, adds, P.getValue("peaks_merge"))
         mpeaks2 = mergePeaks(peaks2, adds2, P.getValue("peaks_merge"))
 
         peaks = np.unique(np.sort(np.concatenate((mpeaks, mpeaks2), axis=0)))
+
+        # Split peaks
+        if P.getValue("split_peaks"):
+            peaks = np.unique(np.sort(np.concatenate(([i - 1 for i in peaks], [i + 1 for i in peaks]), axis=0)))
 
         # Detect parts without points
         filling = []
@@ -264,7 +274,14 @@ def select(
 
     if P.getValue("plot"):
         figP.savefig("peaks_" + P.getValue("track_name") + ".pdf")
-        figP.show()
+
+        if P.getValue("show_plot"):
+            figP.show()
+
+        # Close the figure, as it is not normally closed and it stays in the memory,
+        # leading to matplotlib warning.
+        else:
+            plt.close(figP)
 
 
     # Remove overlaps
@@ -311,11 +328,20 @@ def select(
 
             # Draw the turns onto the track
             axs[i,0].scatter(peaks_on_track[i][:,0], peaks_on_track[i][:,1], marker="x", color="black", s=200)
+
+            axs[i,0].axis("equal")
             i += 1
 
     if P.getValue("plot"):
         figP.savefig("turns_identification_" + P.getValue("track_name") + ".pdf")
-        figP.show()
+
+        if P.getValue("show_plot"):
+            figP.show()
+
+        # Close the figure, as it is not normally closed and it stays in the memory,
+        # leading to matplotlib warning.
+        else:
+            plt.close(figP)
 
 
     # Select method for final points

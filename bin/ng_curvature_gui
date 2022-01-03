@@ -1,0 +1,237 @@
+#!/usr/bin/env python3.6
+#!ARGS::start_points.npy valid_points.npy
+# ng_curvature_gui
+"""Script for testing the parameters of curvature selector of ng_trajectory.
+"""
+######################
+# Imports & Globals
+######################
+
+# Plotting the data and creating the GUI
+import matplotlib
+
+import numpy
+
+from ng_trajectory import plot
+
+# Widgets
+from matplotlib.widgets import Slider, Button
+
+from ng_trajectory.selectors import curvature
+from ng_trajectory.selectors.curvature import curve_fitting
+
+# Path length
+from ng_trajectory.criterions.length import compute as pathLength
+
+######################
+# Load data
+######################
+
+
+VALID_POINTS = numpy.load("valid_points.npy")
+START_POINTS = numpy.load("start_points.npy")
+
+f = plot.figureCreate()
+plot.axisEqual(f)
+
+plot.trackPlot(VALID_POINTS, f)
+plot.pointsPlot(START_POINTS, f)
+
+## Curvature
+# P.createAdd("track_name", "unknown", str, "Name of the track.", "")
+# P.createAdd("plot", False, bool, "Whether the images are generated.", "")
+# P.createAdd("interpolation_factor", 24.0, float, "Factor to reduce number of points prior to the interpolation.", "")
+# P.createAdd("peaks_height", 0.0, float, "Minimum absolute height of peaks.", "")
+# P.createAdd("peaks_merge", 0, int, "Width of the area used for peaks merging.", "")
+# P.createAdd("peaks_filling", 1000000, int, "Width of the area for filling the points.", "")
+
+params = {
+    "interpolation_factor": 24.0,
+    "peaks_height": 0.0,
+    "peaks_merge": 0,
+    "peaks_filling": 100,
+}
+
+# Problem HERE
+params = {
+    "interpolation_factor": 24.0,
+    "peaks_height": 0.775,
+    "peaks_merge": 4,
+    "peaks_filling": 3,
+    "plot": True
+}
+
+params = {
+    "interpolation_factor": 4.89,
+    "peaks_height": 0.17,
+    "peaks_merge": 3,
+    "peaks_filling": 13,
+    "plot": True,
+    "downsample_factor": 4,
+    "show_plot": False
+}
+
+## Slider
+# https://matplotlib.org/stable/gallery/widgets/slider_demo.html
+
+# Adjust the main plot
+plot._pyplot(left=0.25, bottom=0.25, top=0.98, right=0.98, function="subplots_adjust")
+
+
+# Create sliders
+slider_height = Slider(
+    ax = plot._pyplot([0.25, 0.14, 0.65, 0.03], function="axes"),
+    label = "Height",
+    valmin = 0.0,
+    valmax = 1.0,
+    valinit = params["peaks_height"] if 0.0 <= params["peaks_height"] <= 1.0 else 0.0
+)
+
+slider_merge = Slider(
+    ax = plot._pyplot([0.25, 0.1, 0.65, 0.03], function="axes"),
+    label = "Merge",
+    valmin = 0,
+    valmax = params["peaks_merge"] if params["peaks_merge"] > 50 else 50,
+    valinit = params["peaks_merge"] if 0 <= params["peaks_merge"] else 0,
+    valfmt = '%d'
+)
+
+slider_filling = Slider(
+    ax = plot._pyplot([0.25, 0.06, 0.65, 0.03], function="axes"),
+    label = "Filling",
+    valmin = 0,
+    valmax = params["peaks_filling"] if params["peaks_filling"] > 100 else 100,
+    valinit = params["peaks_filling"] if 0 <= params["peaks_filling"] else 0,
+    valfmt = '%d'
+)
+
+slider_downsample = Slider(
+    ax = plot._pyplot([0.25, 0.02, 0.65, 0.03], function="axes"),
+    label = "Dsample",
+    valmin = 1,
+    valmax = params["downsample_factor"] if params["downsample_factor"] > 20 else 20,
+    valinit = params["downsample_factor"] if 1 <= params["downsample_factor"] else 1,
+    valfmt = '%d'
+)
+
+# Create vertical slider
+slider_intp_dist = Slider(
+    ax = plot._pyplot([0.025, 0.25, 0.0225, 0.63], function="axes"),
+    label = "Dist.",
+    valmin = pathLength(START_POINTS) * 0.0001 / len(START_POINTS),
+    valmax = pathLength(START_POINTS),
+    valinit = pathLength(START_POINTS) / int(len(START_POINTS) / params["interpolation_factor"]) if 0.0001 <= params["interpolation_factor"] else pathLength(START_POINTS) / int(len(START_POINTS) / 0.0001),
+    orientation = "vertical"
+)
+
+slider_intp = Slider(
+    ax = plot._pyplot([0.1, 0.25, 0.0225, 0.63], function="axes"),
+    label = "Intp.",
+    valmin = 0.0001,
+    valmax = params["interpolation_factor"] if params["interpolation_factor"] > 100 else 100,
+    valinit = params["interpolation_factor"] if 0.0001 <= params["interpolation_factor"] else 0.0001,
+    orientation = "vertical"
+)
+
+scatter = None
+intp = None
+last_scatter = None
+last_intp = None
+
+def update(val):
+    global scatter, intp
+    global last_scatter, last_intp
+    global curvature, curve_fitting
+    if (last_scatter is not None):
+        last_scatter.remove()
+
+    if (last_intp is not None):
+        for linedata in last_intp:
+            linedata.remove()
+
+    params["peaks_height"] = slider_height.val
+    params["peaks_merge"] = int(slider_merge.val)
+    params["peaks_filling"] = int(slider_filling.val)
+    params["interpolation_factor"] = slider_intp.val
+    params["downsample_factor"] = int(slider_downsample.val)
+
+
+    scatter = curvature.select(points = START_POINTS, remain=-3, **params)
+    intp = curve_fitting.interpolate_points(START_POINTS, int(len(START_POINTS)/params["interpolation_factor"]), 4)
+    last_scatter = plot.pointsScatter(scatter, f, marker="x", color="black")
+    last_intp = plot.pointsPlot(intp, f, marker="o", color="orange", linewidth=0.5, markersize=0.5)
+
+    slider_intp_dist.eventson = False
+    slider_intp_dist.set_val(pathLength(intp) / len(intp))
+    slider_intp_dist.eventson = True
+
+    print ("Interpolation: length: %f, point distance: %f, # of points: %d" % (pathLength(intp), pathLength(intp) / len(intp), len(intp)))
+    print ("Scatter:       length: %f, point distance: %f, # of points: %d" % (pathLength(scatter), pathLength(scatter) / len(scatter), len(scatter)))
+
+    f.canvas.draw()
+
+def update_dist(val):
+    #https://stackoverflow.com/questions/64420927/matplotlib-update-one-slider-based-on-change-in-another-slider
+    slider_intp.eventson = False
+    slider_intp.set_val(len(START_POINTS) / (pathLength(START_POINTS) / slider_intp_dist.val))
+    slider_intp.eventson = True
+    update(0)
+
+print (pathLength(START_POINTS))
+
+#update(0)
+update_dist(0)
+
+slider_height.on_changed(update)
+slider_merge.on_changed(update)
+slider_filling.on_changed(update)
+slider_intp.on_changed(update)
+slider_downsample.on_changed(update)
+
+slider_intp_dist.on_changed(update_dist)
+
+# Auto-tune button
+button = Button(
+    plot._pyplot([0.02, 0.035, 0.12, 0.08], function="axes"),
+    'Auto Tune',
+    #color=axcolor,
+    hovercolor='0.975'
+)
+
+def autotune(event):
+    try:
+        slider_intp_dist.set_val(1)
+        slider_merge.set_val(0)
+        slider_filling.set_val(10000)
+        slider_height.set_val(1)
+
+        #TODO: Tune HEIGHT
+        slider_height.set_val(0.2)
+
+        # Tune filling
+        #for i in range(1, 100):
+        #    slider_filling.set_val(i)
+        #
+        #    if (pathLength(scatter) / len(scatter)) > 2:
+        #        break
+        for i in reversed(range(1, 20)):
+            slider_filling.set_val(i)
+
+            if (pathLength(scatter) / len(scatter)) < 4:
+                break
+
+        # Tune merge
+        #for i in range(1, 100):
+        #    slider_merge.set_val(i)
+        #
+        #    if (pathLength(scatter) / len(scatter)) > 2:
+        #        break
+
+        print ("DONE!")
+
+    except:
+        exit(1)
+
+button.on_clicked(autotune)
+
+plot.figureShow()

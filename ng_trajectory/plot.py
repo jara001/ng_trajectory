@@ -80,6 +80,12 @@ def figureShow() -> None:
     pyplot.show()
 
 
+@plot_only
+def figureClose(figure: matplotlib.figure.Figure = None) -> None:
+    """Close figure."""
+    pyplot.close(figure)
+
+
 ######################
 # Type plot functions
 ######################
@@ -91,7 +97,7 @@ def trackPlot(track: numpy.ndarray, figure: matplotlib.figure.Figure = None) -> 
     track -- points of the track valid area, nx2 numpy.ndarray
     figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
     """
-    pointsScatter(track, figure, s=1, color="gray")
+    pointsScatter(track, figure, s=1, color="gainsboro")
 
 
 def bordersPlot(borders: List[numpy.ndarray], colored: bool = True, figure: matplotlib.figure.Figure = None) -> None:

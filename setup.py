@@ -39,6 +39,11 @@ with open("VERSION", "w") as file:
     file.write(VERSION)
 
 
+# Also store the version to be seen from the code
+with open("./ng_trajectory/version.py", "w") as file:
+    file.write("__version__ = '%s'" % VERSION)
+
+
 setup(
     name = "ng_trajectory",
     version = VERSION,
@@ -64,5 +69,5 @@ setup(
     extras_require={
         "plot_support": "matplotlib"
     },
-    scripts=['bin/ng_run', 'bin/ng_generate_data', 'bin/ng_help'],
+    scripts=['bin/ng_run', 'bin/ng_generate_data', 'bin/ng_help', 'bin/ng_curvature_gui'],
 )

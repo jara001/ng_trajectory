@@ -23,7 +23,7 @@ from concurrent import futures
 from threading import Lock
 
 # Typing
-from typing import Tuple, Callable, Dict, TextIO, List
+from typing import Tuple, Callable, Dict, TextIO, List, types
 
 
 # Global variables
@@ -38,6 +38,9 @@ SEGMENTATOR = None
 SEGMENTATOR_ARGS = None
 SELECTOR = None
 SELECTOR_ARGS = None
+PENALIZER = None
+PENALIZER_INIT = None
+PENALIZER_ARGS = None
 LOGFILE = None
 VERBOSITY = 3
 FILELOCK = Lock()
@@ -55,18 +58,22 @@ P.createAdd("budget", 100, int, "Budget parameter for the genetic algorithm.", "
 P.createAdd("groups", 8, int, "Number of groups to segmentate the track into.", "init (general)")
 P.createAdd("workers", "os.cpu_count()", int, "Number threads for the genetic algorithm.", "init (general)")
 P.createAdd("penalty", 100, float, "Constant used for increasing the penalty criterion.", "init (general)")
-P.createAdd("criterion", "static 0", callable, "Function to evaluate current criterion.", "init (general)")
+P.createAdd("criterion", None, types.ModuleType, "Module to evaluate current criterion.", "init (general)")
 P.createAdd("criterion_args", {}, dict, "Arguments for the criterion function.", "init (general)")
-P.createAdd("interpolator", "return the same", callable, "Function to interpolate points.", "init (general)")
+P.createAdd("interpolator", None, types.ModuleType, "Module to interpolate points.", "init (general)")
 P.createAdd("interpolator_args", {}, dict, "Arguments for the interpolator function.", "init (general)")
-P.createAdd("segmentator", "each segment span over the whole track", callable, "Function to segmentate track.", "init (general)")
+P.createAdd("segmentator", None, types.ModuleType, "Module to segmentate track.", "init (general)")
 P.createAdd("segmentator_args", {}, dict, "Arguments for the segmentator function.", "init (general)")
-P.createAdd("selector", "first m points are selected", callable, "Function to select path points as segment centers.", "init (general)")
+P.createAdd("selector", None, types.ModuleType, "Module to select path points as segment centers.", "init (general)")
 P.createAdd("selector_args", {}, dict, "Arguments for the selector function.", "init (general)")
+P.createAdd("penalizer", None, types.ModuleType, "Module to evaluate penalty criterion.", "init (general)")
+P.createAdd("penalizer_init", {}, dict, "Arguments for the init part of the penalizer function.", "init (general)")
+P.createAdd("penalizer_args", {}, dict, "Arguments for the penalizer function.", "init (general)")
 P.createAdd("logging_verbosity", 2, int, "Index for verbosity of the logger.", "init (general)")
 P.createAdd("hold_matryoshka", False, bool, "Whether the transformation should be created only once.", "init (Matryoshka)")
 P.createAdd("plot", False, bool, "Whether a graphical representation should be created.", "init (viz.)")
 P.createAdd("grid", "computed by default", list, "X-size and y-size of the grid used for points discretization.", "init (Matryoshka)")
+P.createAdd("plot_mapping", False, bool, "Whether a grid should be mapped onto the track (to show the mapping).", "init (viz.)")
 
 
 ######################
@@ -79,14 +86,17 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         groups: int = 8,
         workers: int = os.cpu_count(),
         penalty: float = 100,
-        criterion: Callable[[numpy.ndarray], float] = lambda x: 0,
+        criterion: types.ModuleType = None,
         criterion_args: Dict[str, any] = {},
-        interpolator: Callable[[numpy.ndarray], numpy.ndarray] = lambda x: x,
+        interpolator: types.ModuleType = None,
         interpolator_args: Dict[str, any] = {},
-        segmentator: Callable[[numpy.ndarray, numpy.ndarray], numpy.ndarray] = lambda x, y: [ x for i in y ],
+        segmentator: types.ModuleType = None,
         segmentator_args: Dict[str, any] = {},
-        selector: Callable[[numpy.ndarray, int], numpy.ndarray] = lambda x, y: [ x for i in range(y) ],
+        selector: types.ModuleType = None,
         selector_args: Dict[str, any] = {},
+        penalizer: types.ModuleType = None,
+        penalizer_init: Dict[str, any] = {},
+        penalizer_args: Dict[str, any] = {},
         logfile: TextIO = sys.stdout,
         logging_verbosity: int = 2,
         hold_matryoshka: bool = False,
@@ -105,19 +115,27 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     groups -- number of groups to segmentate the track into, int, default 8
     workers -- number of threads for GA, int, default 4
     penalty -- constant used for increasing the penalty criterion, float, default 100
-    criterion -- function to evaluate current criterion, callable (mx2 numpy.ndarray -> float),
-                 default 'static 0'
+    criterion -- module to evaluate current criterion,
+                 module with compute callable (mx2 numpy.ndarray -> float),
+                 default None
     criterion_args -- arguments for the criterion function, dict, default {}
-    interpolator -- function to interpolate points, callable (mx2 numpy.ndarray -> qx2 numpy.ndarray),
-                 default 'return the same'
+    interpolator -- module to interpolate points,
+                    module with interpolate callable (mx2 numpy.ndarray -> qx2 numpy.ndarray),
+                    default None
     interpolator_args -- arguments for the interpolation function, dict, default {}
-    segmentator -- function to segmentate points, callable (nx2 numpy.ndarray -> m-list of rx2 numpy.ndarray),
-                   default 'each segment span over the whole track'
+    segmentator -- module to segmentate points,
+                   module with segmentate callable (nx2 numpy.ndarray -> m-list of rx2 numpy.ndarray),
+                   default None
     segmentator_args -- arguments for the segmentation function, dict, default {}
-    selector -- function to select points as group centers,
-                callable (nx2 numpy.ndarray + m -> m-list of rx2 numpy.ndarray),
-                default 'first m points are selected'
+    selector -- module to select points as group centers,
+                module with select callable (nx2 numpy.ndarray + m -> m-list of rx2 numpy.ndarray),
+                default None
     selector_args -- arguments for the selector function, dict, default {}
+    penalizer -- module to evaluate penalty criterion,
+                 module with penalize callable (nx(>=2) numpy.ndarray + mx2 numpy.ndarray -> float),
+                 default None
+    penalizer_init -- arguments for the init part of the penalizer function, dict, default {}
+    penalizer_args -- arguments for the penalizer function, dict, default {}
     logfile -- file descriptor for logging, TextIO, default sys.stdout
     logging_verbosity -- index for verbosity of logger, int, default 2
     hold_matryoshka -- whether the Matryoshka should be created only once, bool, default False
@@ -127,7 +145,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     **kwargs -- arguments not caught by previous parts
     """
     global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE, PLOT
-    global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS
+    global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER, PENALIZER_INIT, PENALIZER_ARGS
 
     # Local to global variables
     CRITERION = criterion
@@ -138,6 +156,9 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     SEGMENTATOR_ARGS = segmentator_args
     SELECTOR = selector
     SELECTOR_ARGS = selector_args
+    PENALIZER = penalizer
+    PENALIZER_INIT = penalizer_init
+    PENALIZER_ARGS = penalizer_args
     LOGFILE = logfile
     VERBOSITY = logging_verbosity
     _holdmatryoshka = hold_matryoshka
@@ -153,13 +174,26 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         #       ng_trajectory.interpolators.utils.trajectorySort, but it sometimes rotated the
         #       already sorted centerline; interestingly, the result was counterclockwise at all
         #       times (or at least very very often).
-        group_centers = SELECTOR(**{**{"points": group_centerline, "remain": groups}, **SELECTOR_ARGS})
+        group_centers = SELECTOR.select(**{**{"points": group_centerline, "remain": groups}, **SELECTOR_ARGS})
 
         if plot:
             ngplot.indicesPlot(group_centers)
 
         # Matryoshka construction
-        _groups = SEGMENTATOR(points=points, group_centers=group_centers, **{**SEGMENTATOR_ARGS})
+        _groups = SEGMENTATOR.segmentate(points=points, group_centers=group_centers, **{**SEGMENTATOR_ARGS})
+
+        # Call the init function of penalizer
+        PENALIZER.init(
+            valid_points = VALID_POINTS,
+            start_points = group_centerline,
+            map = SEGMENTATOR.main.MAP,
+            map_origin = SEGMENTATOR.main.MAP_ORIGIN,
+            map_grid = SEGMENTATOR.main.MAP_GRID,
+            map_last = SEGMENTATOR.main.MAP_LAST,
+            group_centers = group_centers,
+            **{**PENALIZER_INIT}
+        )
+
         grouplayers = transform.groupsBorderObtain(_groups)
         grouplayers = transform.groupsBorderBeautify(grouplayers, 400)
 
@@ -171,6 +205,13 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
 
         MATRYOSHKA = [ transform.matryoshkaCreate(grouplayers[_i], layers_center[_i], layers_count[_i]) for _i in range(len(_groups)) ]
+
+        if plot and P.getValue("plot_mapping"):
+            xx, yy = numpy.meshgrid(numpy.linspace(0, 1, 110), numpy.linspace(0, 1, 110))
+            gridpoints = numpy.hstack((xx.flatten()[:, numpy.newaxis], yy.flatten()[:, numpy.newaxis]))
+
+            for _g in range(len(_groups)):
+                ngplot.pointsScatter(transform.matryoshkaMap(MATRYOSHKA[_g], gridpoints), marker="x", s=0.1)
 
         print ("Matryoshka mapping constructed.")
 
@@ -210,7 +251,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
 
     # Interpolate received points
     # It is expected that they are unique and sorted.
-    _points = INTERPOLATOR(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
+    _points = INTERPOLATOR.interpolate(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
 
     # Check if all interpolated points are valid
     # Note: This is required for low number of groups.
@@ -231,7 +272,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
             print ("solution:%s" % str(numpy.asarray(points).tolist()), file=LOGFILE)
             print ("final:%f" % final, file=LOGFILE)
 
-    return final, numpy.asarray(points), numpy.asarray(recommendation.args[0]), INTERPOLATOR(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
+    return final, numpy.asarray(points), numpy.asarray(recommendation.args[0]), INTERPOLATOR.interpolate(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
 
 
 def _opt(points: numpy.ndarray) -> float:
@@ -252,34 +293,30 @@ def _opt(points: numpy.ndarray) -> float:
 
     Note: This function is called after all necessary data is received.
     """
-    global VALID_POINTS, CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
+    global VALID_POINTS, CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, PENALIZER, PENALIZER_ARGS
+    global MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
 
     # Transform points
     points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p])[0] for i, p in enumerate(points) ]
 
     # Interpolate received points
     # It is expected that they are unique and sorted.
-    _points = INTERPOLATOR(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
+    _points = INTERPOLATOR.interpolate(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
 
-    # Check if all interpolated points are valid
-    # Note: This is required for low number of groups.
-    invalid = 0
+    # Check the correctness of the points and compute penalty
+    penalty = PENALIZER.penalize(**{**{"points": _points, "valid_points": VALID_POINTS, "grid": GRID, "penalty": PENALTY, "candidate": points}, **PENALIZER_ARGS})
 
-    for _p in _points:
-        if not numpy.any(numpy.all(numpy.abs( numpy.subtract(VALID_POINTS, _p[:2]) ) < GRID, axis = 1)):
-            invalid += 1
-
-    if ( invalid > 0 ):
+    if ( penalty != 0 ):
         with FILELOCK:
             if VERBOSITY > 2:
                 print ("pointsA:%s" % str(points), file=LOGFILE)
                 print ("pointsT:%s" % str(_points.tolist()), file=LOGFILE)
             if VERBOSITY > 1:
-                print ("invalid:%f" % invalid, file=LOGFILE)
+                print ("penalty:%f" % penalty, file=LOGFILE)
             LOGFILE.flush()
-        return PENALTY * invalid
+        return penalty
 
-    _c = CRITERION(**{**{'points': _points}, **CRITERION_ARGS})
+    _c = CRITERION.compute(**{**{'points': _points}, **CRITERION_ARGS})
     with FILELOCK:
         if VERBOSITY > 2:
             print ("pointsA:%s" % str(points), file=LOGFILE)
