@@ -73,6 +73,7 @@ P.createAdd("logging_verbosity", 2, int, "Index for verbosity of the logger.", "
 P.createAdd("hold_matryoshka", False, bool, "Whether the transformation should be created only once.", "init (Matryoshka)")
 P.createAdd("plot", False, bool, "Whether a graphical representation should be created.", "init (viz.)")
 P.createAdd("grid", "computed by default", list, "X-size and y-size of the grid used for points discretization.", "init (Matryoshka)")
+P.createAdd("plot_mapping", False, bool, "Whether a grid should be mapped onto the track (to show the mapping).", "init (viz.)")
 
 
 ######################
@@ -204,6 +205,13 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
 
         MATRYOSHKA = [ transform.matryoshkaCreate(grouplayers[_i], layers_center[_i], layers_count[_i]) for _i in range(len(_groups)) ]
+
+        if plot and P.getValue("plot_mapping"):
+            xx, yy = numpy.meshgrid(numpy.linspace(0, 1, 110), numpy.linspace(0, 1, 110))
+            gridpoints = numpy.hstack((xx.flatten()[:, numpy.newaxis], yy.flatten()[:, numpy.newaxis]))
+
+            for _g in range(len(_groups)):
+                ngplot.pointsScatter(transform.matryoshkaMap(MATRYOSHKA[_g], gridpoints), marker="x", s=0.1)
 
         print ("Matryoshka mapping constructed.")
 
