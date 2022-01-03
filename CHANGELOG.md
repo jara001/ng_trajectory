@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.5.0 - 2022-01-03
 ### Added
 - Interpolators
     - Function `pointsDistance()` for computing distances between points in a set.
