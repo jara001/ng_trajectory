@@ -279,7 +279,7 @@ def select(
     **overflown -- arguments not caught by previous parts
 
     Returns:
-    rpoints -- list of points, remainx2 numpy.ndarray
+    rpoints -- list of points, mx2 numpy.ndarray
 
     Note: Similarly to 'Curvature' selector, 'remain' does not set the number of points.
     """
