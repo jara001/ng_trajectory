@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Parameter `reserve_selected` with list of segments that should use the reservation method. When unset, all are used.
         - Parameter `reserve_distance` that sets the distance from the wall-segment connector that is reserved for the segment.
         - ~~Parameter `create_borderlines` that creates a nested dict of borderlines between segments.~~
+        - Parameter `plot_flood` to plot the flooded areas into the figure. (Only for demonstration.)
 - Selectors
     - _Curvature_
         - Parameter `downsample_factor` that controls downsampling prior to the interpolation.

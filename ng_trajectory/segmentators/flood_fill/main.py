@@ -30,6 +30,7 @@ P.createAdd("range_limit", 0, float, "Maximum distance from the center of the se
 P.createAdd("reserve_width", False, bool, "When true, the segments are reserved a path towards both walls.", "")
 P.createAdd("reserve_selected", [], list, "IDs of segments that should use the reservation method, when empty, use all.", "")
 P.createAdd("reserve_distance", 2.0, float, "Distance from the line segment that is reserved to the segment.", "")
+P.createAdd("plot_flood", False, bool, "Whether the flooded areas should be plotted.", "")
 
 
 ######################
@@ -320,6 +321,19 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
     # FIXME: Is it really the correct way to do it?
     # FIXME: Implement any solution and remove the condition from sections below.
     groups = [ numpy.asarray( g ) for g in _groups ]
+
+    if P.getValue("plot_flood"):
+        import ng_trajectory.plot as ngplot
+        fig = ngplot.figureCreate()
+        ngplot.axisEqual()
+
+        for g in range(len(groups)):
+            if len(groups[g]) > 0:
+                ngplot.pointsScatter(groups[g])
+
+        ngplot.figureShow()
+
+        ngplot.figureCreate()
 
     if P.getValue("range_limit") <= 0:
         return [ g for g in groups if len(g) > 0 ]
