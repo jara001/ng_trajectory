@@ -335,7 +335,7 @@ def select(
     peaksN = numpy.unique(
         numpy.sort(
             numpy.concatenate(
-                ([i - P.getValue("peaks_bounds") for i in peaks], [i + P.getValue("peaks_bounds") for i in peaks]),
+                ([max(0, i - P.getValue("peaks_bounds")) for i in peaks], [min(i + P.getValue("peaks_bounds"), len(arr_s)-1) for i in peaks]),
                 axis = 0
             )
         )
