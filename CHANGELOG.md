@@ -52,6 +52,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Script 'ng_curvature_gui' for testing the Curvature selector parameters.
 - Function `figureClose()` for closing the figures. It should be called after saving the figure to free used memory.
 - Parameter `--gendoc` for 'ng_help' to generate the README in the repository.
+- Script 'release.sh' as a guideline for successful creating of a new release.
 
 ### Changed
 - Segmentators
