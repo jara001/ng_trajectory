@@ -524,6 +524,8 @@ if __name__ == "__main__":
         if opt not in ("-" + PARAMETERS["yaml"].get("short").replace(":", "")):
             continue
         else:
+            # Index used to preserve the order of the arguments
+            index = opts.index((opt, arg))
             opts.remove((opt, arg))
 
         filename = PARAMETERS["yaml"].get("type")(arg)
@@ -545,7 +547,7 @@ if __name__ == "__main__":
         # Add parameters to the arguments
         # Image
         if "image" in yaml_data:
-            opts.insert(0,
+            opts.insert(index,
                 (
                     "-" + PARAMETERS["file"].get("short").replace(":", ""),
                     yaml_data.get("image") if os.path.isabs(yaml_data.get("image")) or os.path.exists(yaml_data.get("image")) else os.path.dirname(filename) + os.sep + yaml_data.get("image")
@@ -554,7 +556,7 @@ if __name__ == "__main__":
 
         # Resolution
         if "resolution" in yaml_data:
-            opts.insert(0,
+            opts.insert(index,
                 (
                     "--" + PARAMETERS["resolution"].get("long").replace("=", ""),
                     PARAMETERS["resolution"].get("type")(yaml_data.get("resolution"))
@@ -563,13 +565,13 @@ if __name__ == "__main__":
 
         # Origin
         if "origin" in yaml_data:
-            opts.insert(0,
+            opts.insert(index,
                 (
                     "--" + PARAMETERS["originx"].get("long").replace("=", ""),
                     PARAMETERS["originx"].get("type")(yaml_data.get("origin")[0])
                 )
             )
-            opts.insert(0,
+            opts.insert(index,
                 (
                     "--" + PARAMETERS["originy"].get("long").replace("=", ""),
                     PARAMETERS["originy"].get("type")(yaml_data.get("origin")[1])
