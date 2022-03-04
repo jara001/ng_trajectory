@@ -18,7 +18,8 @@ sed -z "s/## Unreleased/## Unreleased\n## $1 - `date +%Y-%m-%d`/" -i CHANGELOG.m
 
 
 # 3) Re-generate README
-./bin/ng_help --gendoc > README.md
+mkdir -p doc
+./bin/ng_help --gendoc > doc/README.md
 
 
 # 3b) Update citation
