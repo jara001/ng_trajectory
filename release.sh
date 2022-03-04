@@ -23,7 +23,7 @@ mkdir -p doc
 
 
 # 3b) Update citation
-sed -i "s/^version: .*/version: $VERSION/g" CITATION.cff
+sed -i "s/^version: .*/version: $1/g" CITATION.cff
 sed -i "s/^date-released: .*/date-released: `date +%Y-%m-%d`/g" CITATION.cff
 
 
