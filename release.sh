@@ -18,11 +18,17 @@ sed -z "s/## Unreleased/## Unreleased\n## $1 - `date +%Y-%m-%d`/" -i CHANGELOG.m
 
 
 # 3) Re-generate README
-./bin/ng_help --gendoc > README.md
+mkdir -p doc
+./bin/ng_help --gendoc > doc/README.md
+
+
+# 3b) Update citation
+sed -i "s/^version: .*/version: $1/g" CITATION.cff
+sed -i "s/^date-released: .*/date-released: `date +%Y-%m-%d`/g" CITATION.cff
 
 
 # 4) Add changes
-git add CHANGELOG.md README.md
+git add CHANGELOG.md README.md CITATION.cff
 
 
 # 5) Commit changes

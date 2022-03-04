@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.5.1 - 2022-03-04
+### Added
+- Argument `-y` for 'ng_generate_data' to obtain map information from a YAML file (used in ROS maps).
+- Citation (cff) file.
+- Reference to the original paper.
+- License file.
+
 ## 1.5.0 - 2022-01-03
 ### Added
 - Interpolators

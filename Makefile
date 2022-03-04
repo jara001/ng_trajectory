@@ -10,7 +10,7 @@ help: ## Show this help message.
 	@echo
 	@echo "Targets:"
 	@grep --color=auto -F "## " $(MAKEFILE_LIST) | grep --color=auto -F -v grep | sed -e "s/\\$$//" | sed -e "s/##//" | column -c2 -t -s :
-	@grep "##@[^ \"]*" $(MAKEFILE_LIST) | grep --color=auto -F -v grep | sed -e "s/^.*##@\\([a-z][a-z]*\\).*\$$/\1/" | sed "/^\\$$/d" | sort | uniq | xargs -n 1 -I'{}' bash -c "echo; echo {} targets:; grep '##@{}' Makefile | sed -e 's/##@{}//' | column -c2 -t -s :"
+	@grep "##@[^ \"]*" $(MAKEFILE_LIST) | grep --color=auto -F -v grep | sed -e "s/^.*##@\\([a-zA-Z][a-zA-Z]*\\).*\$$/\1/" | sed "/^\\$$/d" | sort | uniq | xargs -I'{}' -n 1 bash -c "echo; echo {} targets:; grep '##@{}' $(MAKEFILE_LIST) | sed -e 's/##@{}//' | column -c2 -t -s :"
 
 
 build: ##@Build Build a Python3 wheel.

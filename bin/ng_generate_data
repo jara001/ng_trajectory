@@ -17,6 +17,10 @@ from PIL import ImageDraw as PDraw
 
 import numpy
 
+# Yaml support
+import yaml
+
+
 # Typing
 from typing import List, Generator
 
@@ -63,6 +67,12 @@ PARAMETERS = {
             "long": "oy=",
             "value": 0.0,
         },
+    "yaml":
+        {
+            "help": "Input YAML file",
+            "type": str,
+            "short": "y:",
+        }
 }
 
 HELP = """python3 ng_generate_data [ARGUMENTS] [INPUT_FILE]
@@ -507,6 +517,66 @@ if __name__ == "__main__":
     except getopt.GetoptError as e:
         print ("Unable to process arguments: %s" % e, file = sys.stderr)
         exit(2)
+
+    _opts = opts
+    # Check whether yaml is set
+    for opt, arg in reversed(_opts):
+        if opt not in ("-" + PARAMETERS["yaml"].get("short").replace(":", "")):
+            continue
+        else:
+            # Index used to preserve the order of the arguments
+            index = opts.index((opt, arg))
+            opts.remove((opt, arg))
+
+        filename = PARAMETERS["yaml"].get("type")(arg)
+
+        # Check that file exists
+        if not os.path.exists(filename):
+            print ("File %s does not exist." % filename, file=sys.stderr)
+            exit (21)
+
+        # Load yaml
+        yaml_data = None
+        with open(filename, "r") as file:
+            try:
+                yaml_data = yaml.safe_load(file)
+            except Exception as e:
+                print ("Unable to parse YAML file: %s" % e, file=sys.stderr)
+                exit (22)
+
+        # Add parameters to the arguments
+        # Image
+        if "image" in yaml_data:
+            opts.insert(index,
+                (
+                    "-" + PARAMETERS["file"].get("short").replace(":", ""),
+                    yaml_data.get("image") if os.path.isabs(yaml_data.get("image")) or os.path.exists(yaml_data.get("image")) else os.path.dirname(filename) + os.sep + yaml_data.get("image")
+                )
+            )
+
+        # Resolution
+        if "resolution" in yaml_data:
+            opts.insert(index,
+                (
+                    "--" + PARAMETERS["resolution"].get("long").replace("=", ""),
+                    PARAMETERS["resolution"].get("type")(yaml_data.get("resolution"))
+                )
+            )
+
+        # Origin
+        if "origin" in yaml_data:
+            opts.insert(index,
+                (
+                    "--" + PARAMETERS["originx"].get("long").replace("=", ""),
+                    PARAMETERS["originx"].get("type")(yaml_data.get("origin")[0])
+                )
+            )
+            opts.insert(index,
+                (
+                    "--" + PARAMETERS["originy"].get("long").replace("=", ""),
+                    PARAMETERS["originy"].get("type")(yaml_data.get("origin")[1])
+                )
+            )
 
 
     for opt, arg in opts:
