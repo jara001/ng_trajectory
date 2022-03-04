@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "Please cite this software using the metadata from 'preferred-citation'."
+authors:
+- family-names: "Klapálek"
+  given-names: "Jaroslav"
+  orcid: "https://orcid.org/0000-0001-8816-2773"
+title: "ng_trajectory"
+version: 1.5.0
+date-released: 2022-01-03
+url: "https://github.com/jara001/ng_trajectory"
+license: GPL-3.0
+preferred-citation:
+  type: proceedings
+  authors:
+  - family-names: "Klapálek"
+    given-names: "Jaroslav"
+    orcid: "https://orcid.org/0000-0001-8816-2773"
+  - family-names: "Novák"
+    given-names: "Antonín"
+    orcid: "https://orcid.org/0000-0003-2203-4554"
+  - family-names: "Sojka"
+    given-names: "Michal"
+    orcid: "https://orcid.org/0000-0002-8738-075X"
+  - family-names: "Hanzálek"
+    given-names: "Zdeněk"
+    orcid: "https://orcid.org/0000-0002-8135-1296"
+  doi: "10.1109/IROS51168.2021.9636503"
+  journal: "2021 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)"
+  month: 9
+  start: 601
+  end: 607
+  title: "Car Racing Line Optimization with Genetic Algorithm using Approximate Homeomorphism"
+  year: 2021
