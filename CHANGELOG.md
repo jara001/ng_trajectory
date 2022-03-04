@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ## Unreleased
 ### Added
 - Argument `-y` for 'ng_generate_data' to obtain map information from a YAML file (used in ROS maps).
+- Citation (cff) file.
+- Reference to the original paper.
+- License file.
 
 ## 1.5.0 - 2022-01-03
 ### Added
