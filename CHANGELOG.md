@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Fixed
+- Citation file should now contain correct fields and values to be properly parsed by GitHub.
+
 ## 1.5.1 - 2022-03-04
 ### Added
 - Argument `-y` for 'ng_generate_data' to obtain map information from a YAML file (used in ROS maps).
