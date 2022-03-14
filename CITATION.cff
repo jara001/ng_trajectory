@@ -10,7 +10,7 @@ date-released: 2022-03-04
 url: "https://github.com/jara001/ng_trajectory"
 license: GPL-3.0
 preferred-citation:
-  type: proceedings
+  type: conference-paper
   authors:
   - family-names: "Klapálek"
     given-names: "Jaroslav"
@@ -25,7 +25,7 @@ preferred-citation:
     given-names: "Zdeněk"
     orcid: "https://orcid.org/0000-0002-8135-1296"
   doi: "10.1109/IROS51168.2021.9636503"
-  journal: "2021 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)"
+  collection-title: "2021 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)"
   month: 9
   start: 601
   end: 607
