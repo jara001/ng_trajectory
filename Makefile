@@ -12,9 +12,15 @@ help: ## Show this help message.
 	@grep --color=auto -F "## " $(MAKEFILE_LIST) | grep --color=auto -F -v grep | sed -e "s/\\$$//" | sed -e "s/##//" | column -c2 -t -s :
 	@grep "##@[^ \"]*" $(MAKEFILE_LIST) | grep --color=auto -F -v grep | sed -e "s/^.*##@\\([a-zA-Z][a-zA-Z]*\\).*\$$/\1/" | sed "/^\\$$/d" | sort | uniq | xargs -I'{}' -n 1 bash -c "echo; echo {} targets:; grep '##@{}' $(MAKEFILE_LIST) | sed -e 's/##@{}//' | column -c2 -t -s :"
 
+build: ##@Build Build all.
+build: build-wheel build-wagon
 
-build: ##@Build Build a Python3 wheel.
+build-wheel: ##@Build Build a Python3 wheel.
 	python3 setup.py build bdist_wheel --python-tag py3
+
+build-wagon: ##@Build Build selected Python wagons.
+	python3 -m wagon create . -o dist --pyver 3 --supported-platform manylinux2014_x86_64
+	python3 -m wagon create . -o dist --pyver 3 --supported-platform manylinux2014_aarch64
 
 develop: ##@Developer Install the package as link to this repository.
 	python3 setup.py develop --user
