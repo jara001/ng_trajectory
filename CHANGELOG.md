@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Target `build-wagon` for creating wagons for 'x86_64' and 'aarch64'.
+
+### Changed
+- Target `uninstall` is generic.
+- Renamed original `build` to `build-wheel`.
+- Target `build` now runs `build-wheel` and `build-wagon`.
+
+### Fixed
+- Sorting bug while obtaining borders of the segments.
+
 ## 1.5.2 - 2022-03-14
 ### Fixed
 - Citation file should now contain correct fields and values to be properly parsed by GitHub.
