@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.5.2 - 2022-03-14
 ### Fixed
 - Citation file should now contain correct fields and values to be properly parsed by GitHub.
 
