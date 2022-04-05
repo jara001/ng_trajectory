@@ -23,7 +23,7 @@ install: ##@Install Install the package for current user.
 	python3 setup.py install --user
 
 uninstall: ##@Install Uninstall the package.
-	python3 -m pip uninstall ng_trajectory
+	python3 -m pip uninstall '$(notdir $(CURDIR))'
 
 reinstall: ##@Install Reinstall the package
 reinstall: uninstall install
