@@ -182,9 +182,9 @@ def groupsBorderObtain(groups: List[numpy.ndarray], grid: float = None) -> List[
                 _v = _g[numpy.where(_g[:, _d] == _u), :][0]
                 _v = numpy.delete(_v, _d, axis = 1) # Select other dimensions
 
-                # Sort them (just in case)
-                # TODO: Find out whether is is necessary
-                _v = numpy.sort(_v)
+                # Sort them
+                # Enforce the axis as otherwise it is not sorted in ascending order everytime.
+                _v = numpy.sort(_v, axis = 0)
 
                 # Find distances between concurrent points
                 _dists = numpy.subtract(
@@ -210,20 +210,15 @@ def groupsBorderObtain(groups: List[numpy.ndarray], grid: float = None) -> List[
                 #    )
                 # ^^ Intersect would restrict dimensions.
 
-                _w = numpy.where(_g[:, _d] == _u)[0]
-                _v = _g[numpy.where(_g[:, _d] == _u), _d][0]
-
+                # Reuse '_v' array as it is sorted. At this point, using 'where(_g...)' is
+                # NOT USABLE AT ALL because the indices are not the same!
                 for _b in _bords:
                     _border.append(
-                        _g[
-                            _w[_b]
-                        ].tolist()
+                        ([ _u ] + _v[_b].tolist()) if _d == 0 else (_v[_b].tolist() + [ _u ])
                     )
 
                     _border.append(
-                        _g[
-                            _w[_b+1]
-                        ].tolist()
+                        ([ _u ] + _v[_b+1].tolist()) if _d == 0 else (_v[_b+1].tolist() + [ _u ])
                     )
 
 
