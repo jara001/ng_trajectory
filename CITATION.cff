@@ -5,8 +5,8 @@ authors:
   given-names: "Jaroslav"
   orcid: "https://orcid.org/0000-0001-8816-2773"
 title: "ng_trajectory"
-version: 1.5.2
-date-released: 2022-03-14
+version: 1.5.3
+date-released: 2022-04-05
 url: "https://github.com/jara001/ng_trajectory"
 license: GPL-3.0
 preferred-citation:
