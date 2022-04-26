@@ -12,7 +12,13 @@ import sys, os, argparse
 # Global variables
 PARSER = argparse.ArgumentParser(
     prog = "ng_graph",
-    description = "Script for generating graphs from ng_trajectory files.",
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description = """
+Script for generating graphs from ng_trajectory files.
+
+Note: Currently, this works only with '.json' configuration files.
+We expect that the logs are in the same location.
+    """,
 )
 
 # Arguments
