@@ -13,6 +13,8 @@ import sys, os, argparse
 #import ng_trajectory
 import json
 
+import statistics
+
 from typing import List, Dict, Generator
 
 
@@ -39,6 +41,80 @@ PARSER.add_argument("-v",
     help = "Give more output.",
     action = "store_true",
 )
+
+
+######################
+# Log class
+######################
+
+class Log(object):
+
+    def __init__(self, filename: str):
+        super(Log, self).__init__()
+
+        self.__filename = filename
+        self.__parts = {}
+        self.__others = []
+
+        with open(filename, "r") as f:
+            for _li, line in enumerate(f):
+
+                # Configuration
+                if _li == 0:
+                    if line[0] == "{":
+                        self.__configuration = line
+
+                # Important parts
+                if ":" in line:
+                    part = line.split(":")[0]
+
+                    if part not in self.__parts:
+                        self.__parts[part] = []
+
+                    self.__parts[part].append(line[(line.index(":")+1):-1])
+
+                # The rest
+                else:
+                    self.__others.append(line)
+
+
+        # And now for the preprocessing
+        self.__penalty = [ float(_p) for _p in self.__parts.get("penalty", []) ]
+        self.__correct = [ float(_c) for _c in self.__parts.get("correct", []) ]
+
+        # Best solution is repeated once again at the end
+        if len(self.__correct) > 0:
+            self.__correct = self.__correct[:-1]
+        else:
+            self.__penalty = self.__penalty[:-1]
+
+
+    def __str__(self):
+        s = ""
+
+        # Filename
+        s += "Log: %s\n" % self.__filename
+
+        # Others
+        s += "Others: %s\n" % "\n".join(self.__others)
+
+        # Success rate
+        s += "Success rate: %f%% (%d out of %d)\n" % (
+            100.0 * len(self.__correct) / (len(self.__penalty) + len(self.__correct)),
+            len(self.__correct),
+            len(self.__correct) + len(self.__penalty)
+        )
+
+        # Statistics
+        if len(self.__correct) > 0:
+            s += "Solution statistics:\n\t" + "\n\t".join([
+                "Min: %f" % min(self.__correct),
+                "Avg: %f" % statistics.mean(self.__correct),
+                "Max: %f" % max(self.__correct),
+                "Std: %f" % statistics.stdev(self.__correct),
+            ]) + "\n"
+
+        return (s)
 
 
 ######################
