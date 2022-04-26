@@ -74,7 +74,11 @@ class Graph(object):
 
 
     def plot_log(self, log, variate = 0):
-        matplotlib.pyplot.bar(variate, log.mean, yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure)
+
+        matplotlib.pyplot.scatter(variate, log.mean, color = "blue", s = 50,
+            **{"facecolors": "none"} if log.failed else {} )
+        #matplotlib.pyplot.bar(variate, log.mean, yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure, color = "lightblue")
+        matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure, color = "blue", capsize = 5)
 
 
 ######################
