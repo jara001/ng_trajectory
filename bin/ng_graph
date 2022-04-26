@@ -6,12 +6,19 @@
 # Imports & Globals
 ######################
 
-import sys, os, getopt
+import sys, os, argparse
 
 
 # Global variables
-HELP = """Usage: python3 ng_graph [INPUT_FILE] [-h|--help]
-Utility for creating graphs from ng_trajectory files."""
+PARSER = argparse.ArgumentParser(
+    prog = "ng_graph",
+    description = "Script for generating graphs from ng_trajectory files.",
+)
+
+# Arguments
+PARSER.add_argument("input_file",
+    help = "Path to the ng_trajectory file."
+)
 
 
 ######################
@@ -21,28 +28,6 @@ Utility for creating graphs from ng_trajectory files."""
 if __name__ == "__main__":
 
     # Obtain arguments
-    try:
-        opts, args = getopt.getopt(
-            sys.argv[1:],
-            "h",
-            "help"
-        )
-    except getopt.GetoptError as e:
-        print ("Unable to process arguments: %s" % e, file = sys.stderr)
-        exit (2)
-
-
-    # Process arguments
-    for opt, arg in opts:
-        if opt in ("-h", "--help"):
-            print (HELP)
-            exit (0)
-
-
-    # Find file among rest of the arguments
-    if len(args) < 1:
-        print ("Expected argument with path to the file.", file = sys.stderr)
-        exit (10)
-
+    PARSER.parse_args()
 
     pass
