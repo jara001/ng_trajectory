@@ -1,0 +1,6 @@
+#!/usr/bin/env python3.6
+# ng_graph.py
+"""Script for generating graphs from ng_trajectory files.
+"""
+
+pass
