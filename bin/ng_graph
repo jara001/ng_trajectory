@@ -2,5 +2,47 @@
 # ng_graph.py
 """Script for generating graphs from ng_trajectory files.
 """
+######################
+# Imports & Globals
+######################
 
-pass
+import sys, os, getopt
+
+
+# Global variables
+HELP = """Usage: python3 ng_graph [INPUT_FILE] [-h|--help]
+Utility for creating graphs from ng_trajectory files."""
+
+
+######################
+# Main
+######################
+
+if __name__ == "__main__":
+
+    # Obtain arguments
+    try:
+        opts, args = getopt.getopt(
+            sys.argv[1:],
+            "h",
+            "help"
+        )
+    except getopt.GetoptError as e:
+        print ("Unable to process arguments: %s" % e, file = sys.stderr)
+        exit (2)
+
+
+    # Process arguments
+    for opt, arg in opts:
+        if opt in ("-h", "--help"):
+            print (HELP)
+            exit (0)
+
+
+    # Find file among rest of the arguments
+    if len(args) < 1:
+        print ("Expected argument with path to the file.", file = sys.stderr)
+        exit (10)
+
+
+    pass
