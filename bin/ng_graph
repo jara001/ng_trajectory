@@ -8,6 +8,13 @@
 
 import sys, os, argparse
 
+# It is possible to do it using the library, but we skip on this now
+# to actually do not require all dependencies + speed up the process.
+#import ng_trajectory
+import json
+
+from typing import List, Dict, Generator
+
 
 # Global variables
 PARSER = argparse.ArgumentParser(
@@ -35,6 +42,95 @@ PARSER.add_argument("-v",
 
 
 ######################
+# Log files
+######################
+
+def construct_log_names(
+    configuration: Dict[str, any]
+    ) -> Dict[str, any]:
+    """Construct all names of the logs according to the configuration.
+
+    The dictionary is created as:
+    - variate (if applicable)
+      - loops
+        - cascade steps
+          - name of the log
+
+    Note: Yes, it is quite ugly, but this is currently the best (and simplest?)
+          way to do it.
+    """
+
+    ## a) Check for prefix
+    if "prefix" not in configuration:
+        print ("Selected configuration does not create logs. Add 'prefix' parameter to create them.", file = sys.stderr)
+        exit (4)
+
+    _prefix = configuration.get("prefix")
+
+    ## b) Check for variate
+    _variate = configuration.get(configuration.get("variate")) if "variate" in configuration else []
+
+    ## c) Get loops
+    _loops = configuration.get("loops")
+
+    ## d) Get cascade
+    _cascade = configuration.get("cascade")
+
+
+    lognames = {}
+    filename = "%s" % _prefix
+
+    if _variate == []:
+        lognames[""] = construct_log_names_variate(
+            filename,
+            _loops,
+            _cascade,
+            configuration.get("algorithm", "")
+        )
+    else:
+        if all([ isinstance(_value, int) for _value in _variate ]):
+            variate_suffix = "%%0%dd" % len(str(max(_variate)))
+        else:
+            variate_suffix = "%s"
+
+        for value in _variate:
+            lognames[variate_suffix % value] = construct_log_names_variate(
+                filename + "-" + variate_suffix % value,
+                _loops,
+                _cascade,
+                value if configuration.get("variate") == "algorithm" else configuration.get("algorithm", "")
+            )
+
+    return lognames
+
+
+def construct_log_names_variate(
+        filename: str,
+        loops: int,
+        cascade: List[Dict[str, any]],
+        algorithm: str = "",
+    ) -> Dict[str, any]:
+
+    lognames = {}
+
+    loops_suffix = "%%0%dd" % len(str(loops))
+
+    for loop in range(loops):
+        current_loop = loops_suffix % (loop + 1)
+
+        lognames[current_loop] = {}
+
+        cascade_suffix = "%%0%dd" % len(str(len(cascade)))
+
+        for _i, step in enumerate(cascade):
+            current_step = cascade_suffix % (_i + 1)
+
+            lognames[current_loop][current_step] = filename + "-" + current_loop + "-" + current_step + "-%s.log" % step.get("algorithm", algorithm)
+
+    return lognames
+
+
+######################
 # Main
 ######################
 
@@ -42,5 +138,11 @@ if __name__ == "__main__":
 
     # Obtain arguments
     args = PARSER.parse_args()
+
+    # Load configuration
+    configuration = json.loads(args.input_file.read())
+
+    # Construct names of all expected files
+    log_names = construct_log_names(configuration)
 
     pass
