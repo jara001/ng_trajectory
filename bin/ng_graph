@@ -23,7 +23,8 @@ We expect that the logs are in the same location.
 
 # Arguments
 PARSER.add_argument("input_file",
-    help = "Path to the ng_trajectory file."
+    help = "Path to the ng_trajectory file.",
+    type = argparse.FileType("r"),
 )
 
 
