@@ -79,6 +79,7 @@ class Log(object):
         self.__filename = filename
         self.__parts = {}
         self.__others = []
+        self.__failed = False
 
         if filename != "":
             with open(filename, "r") as f:
@@ -96,6 +97,7 @@ class Log(object):
             self.__correct = self.__correct[:-1]
         else:
             self.__penalty = self.__penalty[:-1]
+            self.__failed = True
 
 
     def load_data(self, f: TextIO):
@@ -126,6 +128,9 @@ class Log(object):
         self.__correct += other.__correct
         self.__penalty += other.__penalty
 
+        if len(other.__correct) == 0:
+            self.__failed = True
+
 
     # Statistics
     @property
@@ -151,6 +156,10 @@ class Log(object):
     @property
     def length(self):
         return len(self.__correct) + len(self.__penalty)
+
+    @property
+    def failed(self):
+        return self.__failed
 
 
     def __str__(self):
