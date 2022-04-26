@@ -380,11 +380,3 @@ if __name__ == "__main__":
     else:
         l = Log(filestream = args.input_file)
         print(l)
-
-        g = Graph()
-
-        g.plot_log(l)
-
-        matplotlib.pyplot.show()
-
-    pass
