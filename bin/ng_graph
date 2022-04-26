@@ -309,7 +309,37 @@ if __name__ == "__main__":
         # Construct names of all expected files
         log_names = construct_log_names(configuration)
 
+
+        g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]")
+
+
+        for x in log_names.keys():
+
+            logs = {}
+
+            for _li, loop in enumerate(log_names[x]):
+                for _i, step in enumerate(log_names[x][loop]):
+                    if not os.path.exists(log_names[x][loop][step]):
+                        continue
+
+                    if _i not in logs:
+                        logs[_i] = Log(log_names[x][loop][step])
+                    else:
+                        _log = Log(log_names[x][loop][step])
+                        logs[_i].add(_log)
+
+            # FIXME: Here we are only taking the 0 step
+            if 0 in logs:
+                g.plot_log(logs[0], variate = x)
+
+        matplotlib.pyplot.show()
     else:
-        print( Log(filestream = args.input_file) )
+        l = Log(filestream = args.input_file)
+
+        g = Graph()
+
+        g.plot_log(l)
+
+        matplotlib.pyplot.show()
 
     pass
