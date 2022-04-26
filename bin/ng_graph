@@ -27,6 +27,12 @@ PARSER.add_argument("input_file",
     type = argparse.FileType("r"),
 )
 
+PARSER.add_argument("-v",
+    dest = "verbose",
+    help = "Give more output.",
+    action = "store_true",
+)
+
 
 ######################
 # Main
@@ -35,6 +41,6 @@ PARSER.add_argument("input_file",
 if __name__ == "__main__":
 
     # Obtain arguments
-    PARSER.parse_args()
+    args = PARSER.parse_args()
 
     pass
