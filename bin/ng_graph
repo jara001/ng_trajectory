@@ -175,6 +175,14 @@ class Log(object):
     def failed(self):
         return self.__failed
 
+    @property
+    def quantile10(self):
+        return quantiles(self.__correct, n = 10)[0]
+
+    @property
+    def quantile90(self):
+        return quantiles(self.__correct, n = 10)[-1]
+
 
     def __str__(self):
         s = ""
@@ -196,7 +204,9 @@ class Log(object):
         if len(self.__correct) > 0:
             s += "Solution statistics:\n\t" + "\n\t".join([
                 "Min: %f" % self.min,
+                "Q10: %f" % self.quantile10,
                 "Avg: %f" % self.mean,
+                "Q90: %f" % self.quantile90,
                 "Max: %f" % self.max,
                 "Std: %f" % self.std,
             ]) + "\n"
