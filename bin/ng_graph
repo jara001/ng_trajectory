@@ -102,6 +102,13 @@ class Log(object):
                 self.__others.append(line)
 
 
+    def add(self, other):
+        """Merge two logs by adding data from the other to self."""
+
+        self.__correct += other.__correct
+        self.__penalty += other.__penalty
+
+
     def __str__(self):
         s = ""
 
