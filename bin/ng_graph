@@ -15,7 +15,7 @@ import json
 
 import statistics
 
-from typing import List, Dict, Generator
+from typing import List, Dict, Generator, TextIO
 
 
 # Global variables
@@ -25,8 +25,8 @@ PARSER = argparse.ArgumentParser(
     description = """
 Script for generating graphs from ng_trajectory files.
 
-Note: Currently, this works only with '.json' configuration files.
-We expect that the logs are in the same location.
+When using a '.json' configuration file we expect that the logs
+are in the same location.
     """,
 )
 
@@ -42,6 +42,12 @@ PARSER.add_argument("-v",
     action = "store_true",
 )
 
+PARSER.add_argument("-l",
+    dest = "logfile",
+    help = "Treat the input file as a log file.",
+    action = "store_true",
+)
+
 
 ######################
 # Log class
@@ -49,33 +55,18 @@ PARSER.add_argument("-v",
 
 class Log(object):
 
-    def __init__(self, filename: str):
+    def __init__(self, filename: str = "", filestream: TextIO = None):
         super(Log, self).__init__()
 
         self.__filename = filename
         self.__parts = {}
         self.__others = []
 
-        with open(filename, "r") as f:
-            for _li, line in enumerate(f):
-
-                # Configuration
-                if _li == 0:
-                    if line[0] == "{":
-                        self.__configuration = line
-
-                # Important parts
-                if ":" in line:
-                    part = line.split(":")[0]
-
-                    if part not in self.__parts:
-                        self.__parts[part] = []
-
-                    self.__parts[part].append(line[(line.index(":")+1):-1])
-
-                # The rest
-                else:
-                    self.__others.append(line)
+        if filename != "":
+            with open(filename, "r") as f:
+                self.load_data(f)
+        else:
+            self.load_data(filestream)
 
 
         # And now for the preprocessing
@@ -87,6 +78,28 @@ class Log(object):
             self.__correct = self.__correct[:-1]
         else:
             self.__penalty = self.__penalty[:-1]
+
+
+    def load_data(self, f: TextIO):
+        for _li, line in enumerate(f):
+
+            # Configuration
+            if _li == 0:
+                if line[0] == "{":
+                    self.__configuration = line
+
+            # Important parts
+            if ":" in line:
+                part = line.split(":")[0]
+
+                if part not in self.__parts:
+                    self.__parts[part] = []
+
+                self.__parts[part].append(line[(line.index(":")+1):-1])
+
+            # The rest
+            else:
+                self.__others.append(line)
 
 
     def __str__(self):
@@ -215,10 +228,14 @@ if __name__ == "__main__":
     # Obtain arguments
     args = PARSER.parse_args()
 
-    # Load configuration
-    configuration = json.loads(args.input_file.read())
+    if not args.logfile:
+        # Load configuration
+        configuration = json.loads(args.input_file.read())
 
-    # Construct names of all expected files
-    log_names = construct_log_names(configuration)
+        # Construct names of all expected files
+        log_names = construct_log_names(configuration)
+
+    else:
+        print( Log(filestream = args.input_file) )
 
     pass
