@@ -57,10 +57,20 @@ PARSER.add_argument("-l",
 
 class Graph(object):
 
-    def __init__(self):
+    def __init__(self, xlabel = "", ylabel = "", grid = True):
         super(Graph, self).__init__()
 
         self.__figure = matplotlib.pyplot.figure()
+        self.__axes = self.__figure.add_subplot(111)
+
+        if xlabel != "":
+            self.__axes.set_xlabel(xlabel)
+
+        if ylabel != "":
+            self.__axes.set_ylabel(ylabel)
+
+        if grid:
+            self.__axes.grid(color = "lightgray", dashes = (5, 5))
 
 
     def plot_log(self, log, variate = 0):
