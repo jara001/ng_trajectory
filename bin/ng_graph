@@ -78,6 +78,8 @@ class Graph(object):
         matplotlib.pyplot.scatter(variate, log.mean, color = "blue", s = 50,
             **{"facecolors": "none"} if log.failed else {} )
         #matplotlib.pyplot.bar(variate, log.mean, yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure, color = "lightblue")
+        matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.quantile10], [log.quantile90 - log.mean]], figure = self.__figure, color = "lightblue", capsize = 5)
+        matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.quantile05], [log.quantile95 - log.mean]], figure = self.__figure, color = "deepskyblue", capsize = 5)
         matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure, color = "blue", capsize = 5)
 
 
@@ -176,12 +178,20 @@ class Log(object):
         return self.__failed
 
     @property
+    def quantile05(self):
+        return quantiles(self.__correct, n = 100)[4]
+
+    @property
     def quantile10(self):
         return quantiles(self.__correct, n = 10)[0]
 
     @property
     def quantile90(self):
         return quantiles(self.__correct, n = 10)[-1]
+
+    @property
+    def quantile95(self):
+        return quantiles(self.__correct, n = 100)[-5]
 
 
     def __str__(self):
@@ -204,9 +214,11 @@ class Log(object):
         if len(self.__correct) > 0:
             s += "Solution statistics:\n\t" + "\n\t".join([
                 "Min: %f" % self.min,
+                "Q05: %f" % self.quantile05,
                 "Q10: %f" % self.quantile10,
                 "Avg: %f" % self.mean,
                 "Q90: %f" % self.quantile90,
+                "Q95: %f" % self.quantile95,
                 "Max: %f" % self.max,
                 "Std: %f" % self.std,
             ]) + "\n"
@@ -367,6 +379,7 @@ if __name__ == "__main__":
         matplotlib.pyplot.show()
     else:
         l = Log(filestream = args.input_file)
+        print(l)
 
         g = Graph()
 
