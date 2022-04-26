@@ -15,6 +15,8 @@ import json
 
 import statistics
 
+import matplotlib.pyplot
+
 from typing import List, Dict, Generator, TextIO
 
 
@@ -47,6 +49,22 @@ PARSER.add_argument("-l",
     help = "Treat the input file as a log file.",
     action = "store_true",
 )
+
+
+######################
+# Graph class
+######################
+
+class Graph(object):
+
+    def __init__(self):
+        super(Graph, self).__init__()
+
+        self.__figure = matplotlib.pyplot.figure()
+
+
+    def plot_log(self, log, variate = 0):
+        matplotlib.pyplot.bar(variate, log.mean, yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure)
 
 
 ######################
