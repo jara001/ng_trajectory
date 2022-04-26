@@ -105,7 +105,7 @@ class Log(object):
 
 
         # And now for the preprocessing
-        self.__penalty = [ float(_p) for _p in self.__parts.get("penalty", []) ]
+        self.__penalty = [ float(_p) for _p in self.__parts.get("penalty", []) ] + [ float(_p) for _p in self.__parts.get("invalid", []) ]
         self.__correct = [ float(_c) for _c in self.__parts.get("correct", []) ]
 
         # Best solution is repeated once again at the end
