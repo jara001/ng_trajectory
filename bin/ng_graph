@@ -110,7 +110,7 @@ class Graph(object):
         #matplotlib.pyplot.bar(variate, log.mean, yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure, color = "lightblue")
         matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.quantile10], [log.quantile90 - log.mean]], figure = self.__figure, color = self.__colors_lighter2[dataset], capsize = 5)
         matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.quantile05], [log.quantile95 - log.mean]], figure = self.__figure, color = self.__colors_lighter[dataset], capsize = 5)
-        matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure, color = "blue", capsize = 5)
+        matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure, color = self.__colors[dataset], capsize = 5)
 
 
 ######################
