@@ -146,6 +146,9 @@ class Log(object):
             self.__penalty = self.__penalty[:-1]
             self.__failed = True
 
+        # Marker that some this have to be reevaluated
+        self.__is_dirty = True
+
 
     def load_data(self, f: TextIO):
         for _li, line in enumerate(f):
@@ -178,8 +181,14 @@ class Log(object):
         if len(other.__correct) == 0:
             self.__failed = True
 
+        self.__is_dirty = True
+
 
     # Statistics
+    def recompute_statistics(self):
+        self.__quantiles = quantiles(self.__correct, n = 100)
+        self.__is_dirty = False
+
     @property
     def min(self):
         return min(self.__correct)
@@ -208,21 +217,29 @@ class Log(object):
     def failed(self):
         return self.__failed
 
+
+    def quantile(self, q: int):
+        """Count 'q'-quantile."""
+        if self.__is_dirty:
+            self.recompute_statistics()
+
+        return self.__quantiles[(q-1) % 100]
+
     @property
     def quantile05(self):
-        return quantiles(self.__correct, n = 100)[4]
+        return self.quantile(5)
 
     @property
     def quantile10(self):
-        return quantiles(self.__correct, n = 10)[0]
+        return self.quantile(10)
 
     @property
     def quantile90(self):
-        return quantiles(self.__correct, n = 10)[-1]
+        return self.quantile(90)
 
     @property
     def quantile95(self):
-        return quantiles(self.__correct, n = 100)[-5]
+        return self.quantile(95)
 
 
     def __str__(self):
