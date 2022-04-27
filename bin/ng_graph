@@ -17,6 +17,7 @@ import statistics
 
 import matplotlib.colors
 import matplotlib.pyplot
+import matplotlib.ticker
 
 # Darkening and lightening the colors
 import colorsys
@@ -181,6 +182,18 @@ class Graph(object):
 
             caplines[0].set_marker("_")
             caplines[0].set_markersize(10)
+
+
+    def reduce_xticks(self):
+        """Call this before saving / showing the figure as it reduces the number of ticks on the x axis.
+
+        Otherwise there is a tick for every x value.
+
+        Source:
+        https://stackoverflow.com/questions/6682784/reducing-number-of-plot-ticks
+        """
+        self.__axes.xaxis.set_major_locator(matplotlib.ticker.AutoLocator())
+        self.__axes.xaxis.set_minor_locator(matplotlib.ticker.AutoMinorLocator())
 
 
 ######################
@@ -580,6 +593,8 @@ if __name__ == "__main__":
                 # FIXME: Here we are only taking the 0 step
                 if 0 in logs:
                     g.plot_log(logs[0], variate = x, dataset = _if)
+
+        g.reduce_xticks()
 
         if not args.save:
             matplotlib.pyplot.show()
