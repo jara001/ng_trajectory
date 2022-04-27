@@ -38,6 +38,7 @@ are in the same location.
 
 # Arguments
 PARSER.add_argument("input_file",
+    nargs = "+",
     help = "Path to the ng_trajectory file.",
     type = argparse.FileType("r"),
 )
@@ -443,37 +444,37 @@ if __name__ == "__main__":
     args = PARSER.parse_args()
 
     if not args.logfile:
-        # Load configuration
-        configuration = json.loads(args.input_file.read())
-
-        # Construct names of all expected files
-        if "_version" in configuration and configuration.get("_version") > 1:
-            log_names = construct_log_names(configuration)
-        else:
-            log_names = construct_log_names_legacy(configuration)
-
-
         g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]")
 
+        for _if, input_file in enumerate(args.input_file):
+            # Load configuration
+            configuration = json.loads(input_file.read())
 
-        for x in log_names.keys():
+            # Construct names of all expected files
+            if "_version" in configuration and configuration.get("_version") > 1:
+                log_names = construct_log_names(configuration)
+            else:
+                log_names = construct_log_names_legacy(configuration)
 
-            logs = {}
 
-            for _li, loop in enumerate(log_names[x]):
-                for _i, step in enumerate(log_names[x][loop]):
-                    if not os.path.exists(log_names[x][loop][step]):
-                        continue
+            for x in log_names.keys():
 
-                    if _i not in logs:
-                        logs[_i] = Log(log_names[x][loop][step])
-                    else:
-                        _log = Log(log_names[x][loop][step])
-                        logs[_i].add(_log)
+                logs = {}
 
-            # FIXME: Here we are only taking the 0 step
-            if 0 in logs:
-                g.plot_log(logs[0], variate = x)
+                for _li, loop in enumerate(log_names[x]):
+                    for _i, step in enumerate(log_names[x][loop]):
+                        if not os.path.exists(log_names[x][loop][step]):
+                            continue
+
+                        if _i not in logs:
+                            logs[_i] = Log(log_names[x][loop][step])
+                        else:
+                            _log = Log(log_names[x][loop][step])
+                            logs[_i].add(_log)
+
+                # FIXME: Here we are only taking the 0 step
+                if 0 in logs:
+                    g.plot_log(logs[0], variate = x, dataset = _if)
 
         if not args.save:
             matplotlib.pyplot.show()
