@@ -112,6 +112,13 @@ class Graph(object):
         ]
 
 
+    def lighten_color(self, dataset: int = 0, scale: float = 1.0):
+        return scale_lightness(
+            matplotlib.colors.ColorConverter.to_rgb(self.__colors[dataset]),
+            scale
+        )
+
+
     def plot_log(self, log, variate = 0, dataset = 0):
 
         matplotlib.pyplot.scatter(variate, log.mean, color = self.__colors[dataset], s = 50,
