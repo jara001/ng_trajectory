@@ -61,6 +61,14 @@ PARSER.add_argument("-s",
     action = "store_true",
 )
 
+PARSER.add_argument("-Q",
+    dest = "quantiles",
+    help = "Quantiles / Percentiles to compute and show.",
+    action = "append",
+    default = [],
+    type = int,
+)
+
 
 ######################
 # Graph class
@@ -120,7 +128,7 @@ class Graph(object):
 
 class Log(object):
 
-    def __init__(self, filename: str = "", filestream: TextIO = None):
+    def __init__(self, filename: str = "", filestream: TextIO = None, show_quantiles: List[int] = []):
         super(Log, self).__init__()
 
         self.__filename = filename
@@ -148,6 +156,9 @@ class Log(object):
 
         # Marker that some this have to be reevaluated
         self.__is_dirty = True
+
+        # Quantiles to compute
+        self.__show_quantiles = show_quantiles
 
 
     def load_data(self, f: TextIO):
@@ -260,16 +271,28 @@ class Log(object):
 
         # Statistics
         if len(self.__correct) > 0:
-            s += "Solution statistics:\n\t" + "\n\t".join([
-                "Min: %f" % self.min,
-                "Q05: %f" % self.quantile05,
-                "Q10: %f" % self.quantile10,
-                "Avg: %f" % self.mean,
-                "Q90: %f" % self.quantile90,
-                "Q95: %f" % self.quantile95,
+            s += "Solution statistics:\n\t"
+            s += "Min: %f\n\t" % self.min
+
+            Q =  "\n\t".join(
+                    [ "Q%02d: %f" % (_q, self.quantile(_q)) for _q in self.__show_quantiles if _q < 50 ]
+                )
+            if Q != "":
+                s += Q + "\n\t"
+
+            s += "Avg: %f\n\t" % self.mean
+
+            Q =  "\n\t".join(
+                    [ "Q%02d: %f" % (_q, self.quantile(_q)) for _q in self.__show_quantiles if _q > 50 ]
+                )
+            if Q != "":
+                s += Q + "\n\t"
+
+            s += "\n\t".join([
                 "Max: %f" % self.max,
                 "Std: %f" % self.std,
             ]) + "\n"
+
 
         return (s)
 
@@ -484,9 +507,9 @@ if __name__ == "__main__":
                             continue
 
                         if _i not in logs:
-                            logs[_i] = Log(log_names[x][loop][step])
+                            logs[_i] = Log(log_names[x][loop][step], show_quantiles = args.quantiles)
                         else:
-                            _log = Log(log_names[x][loop][step])
+                            _log = Log(log_names[x][loop][step], show_quantiles = args.quantiles)
                             logs[_i].add(_log)
 
                 # FIXME: Here we are only taking the 0 step
@@ -507,5 +530,5 @@ if __name__ == "__main__":
             matplotlib.pyplot.savefig(outfile + ".pdf", format = "pdf")
             matplotlib.pyplot.savefig(outfile + ".png", format = "png")
     else:
-        l = Log(filestream = args.input_file)
+        l = Log(filestream = args.input_file[0], show_quantiles = args.quantiles)
         print(l)
