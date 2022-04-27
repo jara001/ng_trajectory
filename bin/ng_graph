@@ -259,6 +259,10 @@ class Log(object):
     def quantile95(self):
         return self.quantile(95)
 
+    @property
+    def quantile_show_list(self):
+        return self.__show_quantiles
+
 
     def __str__(self):
         s = ""
