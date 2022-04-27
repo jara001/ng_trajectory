@@ -84,6 +84,18 @@ PARSER.add_argument("--dpi",
     type = int,
 )
 
+PARSER.add_argument("--hide-min",
+    dest = "show_min",
+    help = "Hide minimum value cap in the figure.",
+    action = "store_false",
+)
+
+PARSER.add_argument("--hide-max",
+    dest = "show_max",
+    help = "Hide maximum value cap in the figure.",
+    action = "store_false",
+)
+
 ######################
 # Graph class
 ######################
@@ -537,7 +549,7 @@ if __name__ == "__main__":
     args = PARSER.parse_args()
 
     if not args.logfile:
-        g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]")
+        g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max)
 
         for _if, input_file in enumerate(args.input_file):
             # Load configuration
