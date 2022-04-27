@@ -123,9 +123,13 @@ class Graph(object):
 
         matplotlib.pyplot.scatter(variate, log.mean, color = self.__colors[dataset], s = 50,
             **{"facecolors": "none"} if log.failed else {} )
-        #matplotlib.pyplot.bar(variate, log.mean, yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure, color = "lightblue")
-        matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.quantile10], [log.quantile90 - log.mean]], figure = self.__figure, color = self.__colors_lighter2[dataset], capsize = 5)
-        matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.quantile05], [log.quantile95 - log.mean]], figure = self.__figure, color = self.__colors_lighter[dataset], capsize = 5)
+
+        for _q in log.quantile_show_list:
+            if _q < 50:
+                matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.quantile(_q)], [0]], figure = self.__figure, color = self.lighten_color(dataset, 1.0 + (_q / 50)), capsize = 5)
+            elif _q > 50:
+                matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[0], [log.quantile(_q) - log.mean]], figure = self.__figure, color = self.lighten_color(dataset, 2.0 - ((_q - 50) / 50)), capsize = 5)
+
         matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure, color = self.__colors[dataset], capsize = 5)
 
 
