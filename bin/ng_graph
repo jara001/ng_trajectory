@@ -15,9 +15,13 @@ import json
 
 import statistics
 
+import matplotlib.colors
 import matplotlib.pyplot
 
-from typing import List, Dict, Generator, TextIO
+# Darkening and lightening the colors
+import colorsys
+
+from typing import List, Tuple, Dict, Generator, TextIO
 
 
 # Global variables
@@ -78,14 +82,34 @@ class Graph(object):
         if grid:
             self.__axes.grid(color = "lightgray", dashes = (5, 5))
 
+        # Category10 Tableau colors
+        # https://matplotlib.org/3.5.0/users/prev_whats_new/dflt_style_changes.html
+        self.__colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 
-    def plot_log(self, log, variate = 0):
+        # Changing the brightness
+        # https://stackoverflow.com/questions/37765197/darken-or-lighten-a-color-in-matplotlib
+        self.__colors_lighter = [
+            scale_lightness(
+                matplotlib.colors.ColorConverter.to_rgb(_color),
+                1.3
+            ) for _color in self.__colors
+        ]
 
-        matplotlib.pyplot.scatter(variate, log.mean, color = "blue", s = 50,
+        self.__colors_lighter2 = [
+            scale_lightness(
+                matplotlib.colors.ColorConverter.to_rgb(_color),
+                2.0
+            ) for _color in self.__colors
+        ]
+
+
+    def plot_log(self, log, variate = 0, dataset = 0):
+
+        matplotlib.pyplot.scatter(variate, log.mean, color = self.__colors[dataset], s = 50,
             **{"facecolors": "none"} if log.failed else {} )
         #matplotlib.pyplot.bar(variate, log.mean, yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure, color = "lightblue")
-        matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.quantile10], [log.quantile90 - log.mean]], figure = self.__figure, color = "lightblue", capsize = 5)
-        matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.quantile05], [log.quantile95 - log.mean]], figure = self.__figure, color = "deepskyblue", capsize = 5)
+        matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.quantile10], [log.quantile90 - log.mean]], figure = self.__figure, color = self.__colors_lighter2[dataset], capsize = 5)
+        matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.quantile05], [log.quantile95 - log.mean]], figure = self.__figure, color = self.__colors_lighter[dataset], capsize = 5)
         matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure, color = "blue", capsize = 5)
 
 
@@ -252,6 +276,18 @@ def quantiles(data, n = 10):
         interpolated = (data[j - 1] * (n - delta) + data[j] * delta) / n
         result.append(interpolated)
     return result
+
+
+def scale_lightness(rgb: Tuple[float], scale_l: float):
+    """Scale the lightness of a color.
+
+    Source:
+    https://stackoverflow.com/questions/37765197/darken-or-lighten-a-color-in-matplotlib
+    """
+    # convert rgb to hls
+    h, l, s = colorsys.rgb_to_hls(*rgb)
+    # manipulate h, l, s values and return as rgb
+    return colorsys.hls_to_rgb(h, min(1, l * scale_l), s = s)
 
 
 ######################
