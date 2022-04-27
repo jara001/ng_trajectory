@@ -337,6 +337,60 @@ def construct_log_names_variate(
     return lognames
 
 
+def construct_log_names_legacy(
+    configuration: Dict[str, any]
+    ) -> Dict[str, any]:
+    """Construct all names of the logs according to the legacy configuration.
+
+    The dictionary is created as:
+    - groups_list
+      - loops
+        - cascade steps
+          - name of the log
+
+    Note: Yes, this is even worse. But I have some old logs that could be processed.
+    """
+
+    ## a) Check for prefix
+    if "prefix" not in configuration:
+        print ("Selected configuration does not create logs. Add 'prefix' parameter to create them.", file = sys.stderr)
+        exit (4)
+
+    _prefix = configuration.get("prefix")
+
+    ## b) Check for variate
+    _variate = configuration.get("groups_list", [ configuration.get("groups") ])
+
+    ## c) Get loops
+    _loops = configuration.get("loops")
+
+    ## d) Get cascade
+    _cascade = configuration.get("cascade")
+
+
+    lognames = {}
+    filename = "%s" % _prefix
+
+    variate_suffix = "%03d"
+
+    for value in _variate:
+        current_variate = variate_suffix % value
+        lognames[current_variate] = {}
+
+        loops_suffix = "%03d"
+
+        for loop in range(_loops):
+            current_loop = loops_suffix % (loop + 1)
+
+            lognames[current_variate][current_loop] = {}
+
+            current_step = "1"
+
+            lognames[current_variate][current_loop][current_step] = filename + current_variate + "-" + current_loop + ".log"
+
+    return lognames
+
+
 ######################
 # Main
 ######################
@@ -351,7 +405,10 @@ if __name__ == "__main__":
         configuration = json.loads(args.input_file.read())
 
         # Construct names of all expected files
-        log_names = construct_log_names(configuration)
+        if "_version" in configuration and configuration.get("_version") > 1:
+            log_names = construct_log_names(configuration)
+        else:
+            log_names = construct_log_names_legacy(configuration)
 
 
         g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]")
