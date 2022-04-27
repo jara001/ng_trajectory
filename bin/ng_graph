@@ -56,7 +56,7 @@ PARSER.add_argument("-l",
 
 PARSER.add_argument("-s",
     dest = "save",
-    help = "Hide the graph and save it into %s.pdf and %s.png.",
+    help = "Hide the graph and save it into %%s.pdf and %%s.png.",
     action = "store_true",
 )
 
