@@ -50,6 +50,12 @@ PARSER.add_argument("-l",
     action = "store_true",
 )
 
+PARSER.add_argument("-s",
+    dest = "save",
+    help = "Hide the graph and save it into %s.pdf and %s.png.",
+    action = "store_true",
+)
+
 
 ######################
 # Graph class
@@ -433,7 +439,16 @@ if __name__ == "__main__":
             if 0 in logs:
                 g.plot_log(logs[0], variate = x)
 
-        matplotlib.pyplot.show()
+        if not args.save:
+            matplotlib.pyplot.show()
+        else:
+            outfile = args.input_file.name
+
+            if outfile.endswith(".json"):
+                outfile = outfile[:-5]
+
+            matplotlib.pyplot.savefig(outfile + ".pdf", format = "pdf")
+            matplotlib.pyplot.savefig(outfile + ".png", format = "png")
     else:
         l = Log(filestream = args.input_file)
         print(l)
