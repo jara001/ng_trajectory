@@ -133,9 +133,18 @@ class Graph(object):
 
         for _q in log.quantile_show_list:
             if _q < 50:
-                matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.quantile(_q)], [0]], figure = self.__figure, color = self.lighten_color(dataset, 1.0 + (_q / 50)), capsize = 5)
+                _, caplines, _ = matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [log.mean - log.quantile(_q)], figure = self.__figure, color = self.lighten_color(dataset, 1.0 + (_q / 50)), capsize = 0, uplims = True)
+
+                caplines[0].set_marker("_")
+                caplines[0].set_markersize(10)
             elif _q > 50:
-                matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[0], [log.quantile(_q) - log.mean]], figure = self.__figure, color = self.lighten_color(dataset, 2.0 - ((_q - 50) / 50)), capsize = 5)
+                # Show only one limit and change carets to caps
+                # https://stackoverflow.com/questions/45752981/removing-the-bottom-error-caps-only-on-matplotlib
+
+                _, caplines, _ = matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [log.quantile(_q) - log.mean], figure = self.__figure, color = self.lighten_color(dataset, 2.0 - ((_q - 50) / 50)), capsize = 0, lolims = True)
+
+                caplines[0].set_marker("_")
+                caplines[0].set_markersize(10)
 
         matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure, color = self.__colors[dataset], capsize = 5)
 
