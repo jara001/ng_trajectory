@@ -479,10 +479,13 @@ if __name__ == "__main__":
         if not args.save:
             matplotlib.pyplot.show()
         else:
-            outfile = args.input_file.name
+            outfile = args.input_file[0].name
 
             if outfile.endswith(".json"):
                 outfile = outfile[:-5]
+
+            if len(args.input_file) > 1:
+                outfile += "-multiple%d" % len(args.input_file)
 
             matplotlib.pyplot.savefig(outfile + ".pdf", format = "pdf")
             matplotlib.pyplot.savefig(outfile + ".png", format = "png")
