@@ -69,6 +69,13 @@ PARSER.add_argument("-Q",
     type = int,
 )
 
+PARSER.add_argument("-O",
+    dest = "outfile",
+    help = "Set the output file name to be used instead of %%s.",
+    default = None,
+    type = str,
+)
+
 
 ######################
 # Graph class
@@ -534,13 +541,16 @@ if __name__ == "__main__":
         if not args.save:
             matplotlib.pyplot.show()
         else:
-            outfile = args.input_file[0].name
+            if not args.outfile:
+                outfile = args.input_file[0].name
 
-            if outfile.endswith(".json"):
-                outfile = outfile[:-5]
+                if outfile.endswith(".json"):
+                    outfile = outfile[:-5]
 
-            if len(args.input_file) > 1:
-                outfile += "-multiple%d" % len(args.input_file)
+                if len(args.input_file) > 1:
+                    outfile += "-multiple%d" % len(args.input_file)
+            else:
+                outfile = args.outfile
 
             matplotlib.pyplot.savefig(outfile + ".pdf", format = "pdf")
             matplotlib.pyplot.savefig(outfile + ".png", format = "png")
