@@ -76,6 +76,13 @@ PARSER.add_argument("-O",
     type = str,
 )
 
+PARSER.add_argument("--dpi",
+    nargs = "?",
+    dest = "dpi",
+    help = "DPI value used for exporting the figures.",
+    default = 300,
+    type = int,
+)
 
 ######################
 # Graph class
@@ -561,8 +568,8 @@ if __name__ == "__main__":
             else:
                 outfile = args.outfile
 
-            matplotlib.pyplot.savefig(outfile + ".pdf", format = "pdf")
-            matplotlib.pyplot.savefig(outfile + ".png", format = "png")
+            matplotlib.pyplot.savefig(outfile + ".pdf", format = "pdf", dpi = args.dpi)
+            matplotlib.pyplot.savefig(outfile + ".png", format = "png", dpi = args.dpi)
     else:
         l = Log(filestream = args.input_file[0], show_quantiles = args.quantiles)
         print(l)
