@@ -195,33 +195,45 @@ class Graph(object):
 
         for _q in log.quantile_show_list:
             if _q < 50:
-                _, caplines, _ = matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [log.mean - log.quantile(_q)], figure = self.__figure, color = self.lighten_color(dataset, 1.0 + (_q / 50)), capsize = 0, uplims = True)
+                if self.__show_bar:
+                    _, caplines, _ = matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [log.mean - log.quantile(_q)], figure = self.__figure, color = self.lighten_color(dataset, 1.0 + (_q / 50)), capsize = 0, uplims = True)
 
-                caplines[0].set_marker("_")
-                caplines[0].set_markersize(10)
+                    caplines[0].set_marker("_")
+                    caplines[0].set_markersize(10)
+                else:
+                    matplotlib.pyplot.plot(variate, log.mean - log.quantile(_q), figure = self.__figure, color = self.lighten_color(dataset, 1.0 + (_q / 50)), marker = "_", markersize = 10)
             elif _q > 50:
-                # Show only one limit and change carets to caps
-                # https://stackoverflow.com/questions/45752981/removing-the-bottom-error-caps-only-on-matplotlib
+                if self.__show_bar:
+                    # Show only one limit and change carets to caps
+                    # https://stackoverflow.com/questions/45752981/removing-the-bottom-error-caps-only-on-matplotlib
 
-                _, caplines, _ = matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [log.quantile(_q) - log.mean], figure = self.__figure, color = self.lighten_color(dataset, 2.0 - ((_q - 50) / 50)), capsize = 0, lolims = True)
+                    _, caplines, _ = matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [log.quantile(_q) - log.mean], figure = self.__figure, color = self.lighten_color(dataset, 2.0 - ((_q - 50) / 50)), capsize = 0, lolims = True)
 
-                caplines[0].set_marker("_")
-                caplines[0].set_markersize(10)
+                    caplines[0].set_marker("_")
+                    caplines[0].set_markersize(10)
+                else:
+                    matplotlib.pyplot.plot(variate, log.quantile(_q) - log.mean, figure = self.__figure, color = self.lighten_color(dataset, 2.0 - ((_q - 50) / 50)), marker = "_", markersize = 10)
 
         if self.__show_bar:
             matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure, color = self.__colors[dataset], capsize = 0)
 
         if self.__show_min:
-            _, caplines, _ = matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [log.mean - log.min], figure = self.__figure, color = self.__colors[dataset], capsize = 0, uplims = True)
+            if self.__show_bar:
+                _, caplines, _ = matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [log.mean - log.min], figure = self.__figure, color = self.__colors[dataset], capsize = 0, uplims = True)
 
-            caplines[0].set_marker("_")
-            caplines[0].set_markersize(10)
+                caplines[0].set_marker("_")
+                caplines[0].set_markersize(10)
+            else:
+                matplotlib.pyplot.plot(variate, log.mean - log.min, figure = self.__figure, color = self.__colors[dataset], marker = "_", markersize = 10)
 
         if self.__show_max:
-            _, caplines, _ = matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [log.max - log.mean], figure = self.__figure, color = self.__colors[dataset], capsize = 0, lolims = True)
+            if self.__show_bar:
+                _, caplines, _ = matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [log.max - log.mean], figure = self.__figure, color = self.__colors[dataset], capsize = 0, lolims = True)
 
-            caplines[0].set_marker("_")
-            caplines[0].set_markersize(10)
+                caplines[0].set_marker("_")
+                caplines[0].set_markersize(10)
+            else:
+                matplotlib.pyplot.plot(variate, log.max - log.mean, figure = self.__figure, color = self.__colors[dataset], marker = "_", markersize = 10)
 
 
     def reduce_xticks(self):
