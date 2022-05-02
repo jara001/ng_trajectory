@@ -151,6 +151,10 @@ class Graph(object):
 
     def plot_log(self, log, variate = 0, dataset = 0):
 
+        # Skip when all failed
+        if log.mean is None:
+            return
+
         matplotlib.pyplot.scatter(variate, log.mean, color = self.__colors[dataset], s = 50,
             **{"facecolors": "none"} if log.failed else {} )
 
@@ -276,19 +280,31 @@ class Log(object):
 
     @property
     def min(self):
-        return min(self.__correct)
+        if len(self.observed_list) == 0:
+            return None
+
+        return min(self.observed_list)
 
     @property
     def max(self):
-        return max(self.__correct)
+        if len(self.observed_list) == 0:
+            return None
+
+        return max(self.observed_list)
 
     @property
     def mean(self):
-        return statistics.mean(self.__correct)
+        if len(self.observed_list) == 0:
+            return None
+
+        return statistics.mean(self.observed_list)
 
     @property
     def std(self):
-        return statistics.stdev(self.__correct)
+        if len(self.observed_list) == 0:
+            return None
+
+        return statistics.stdev(self.observed_list)
 
     @property
     def rate(self):
