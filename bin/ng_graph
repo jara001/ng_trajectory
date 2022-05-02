@@ -103,6 +103,20 @@ PARSER.add_argument("--merged-min",
     action = "store_true",
 )
 
+PARSER.add_argument("--ymin",
+    nargs = "?",
+    dest = "ymin",
+    help = "Minimum value on y-axis to be shown in the figure.",
+    type = float,
+)
+
+PARSER.add_argument("--ymax",
+    nargs = "?",
+    dest = "ymax",
+    help = "Maximum value on y-axis to be shown in the figure.",
+    type = float,
+)
+
 ######################
 # Graph class
 ######################
@@ -204,6 +218,11 @@ class Graph(object):
         """
         self.__axes.xaxis.set_major_locator(matplotlib.ticker.AutoLocator())
         self.__axes.xaxis.set_minor_locator(matplotlib.ticker.AutoMinorLocator())
+
+
+    def set_ylim(self, ymin = None, ymax = None):
+        """Set ymin and ymax in the figure."""
+        self.__axes.set_ylim(ymin = ymin, ymax = ymax)
 
 
 ######################
@@ -627,6 +646,7 @@ if __name__ == "__main__":
                     g.plot_log(logs[0], variate = x, dataset = _if)
 
         g.reduce_xticks()
+        g.set_ylim(ymin = args.ymin, ymax = args.ymax)
 
         if not args.save:
             matplotlib.pyplot.show()
