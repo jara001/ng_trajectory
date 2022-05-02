@@ -97,6 +97,18 @@ PARSER.add_argument("--hide-max",
     action = "store_false",
 )
 
+PARSER.add_argument("--hide-avg",
+    dest = "show_avg",
+    help = "Hide average value marker in the figure.",
+    action = "store_false",
+)
+
+PARSER.add_argument("--hide-bar",
+    dest = "show_bar",
+    help = "Hide error bar in the figure.",
+    action = "store_false",
+)
+
 PARSER.add_argument("--merged-min",
     dest = "merged_min",
     help = "Merge the minimum of loops and draw a graph of that. (IROS-like graph.)",
@@ -123,7 +135,7 @@ PARSER.add_argument("--ymax",
 
 class Graph(object):
 
-    def __init__(self, xlabel = "", ylabel = "", grid = True, show_min: bool = True, show_max: bool = True):
+    def __init__(self, xlabel = "", ylabel = "", grid = True, show_min: bool = True, show_max: bool = True, show_avg: bool = True, show_bar: bool = True):
         super(Graph, self).__init__()
 
         self.__figure = matplotlib.pyplot.figure()
@@ -140,6 +152,8 @@ class Graph(object):
 
         self.__show_min = show_min
         self.__show_max = show_max
+        self.__show_avg = show_avg
+        self.__show_bar = show_bar
 
         # Category10 Tableau colors
         # https://matplotlib.org/3.5.0/users/prev_whats_new/dflt_style_changes.html
@@ -175,8 +189,9 @@ class Graph(object):
         if log.mean is None:
             return
 
-        matplotlib.pyplot.scatter(variate, log.mean, color = self.__colors[dataset], s = 50,
-            **{"facecolors": "none"} if log.failed else {} )
+        if self.__show_avg:
+            matplotlib.pyplot.scatter(variate, log.mean, color = self.__colors[dataset], s = 50,
+                **{"facecolors": "none"} if log.failed else {} )
 
         for _q in log.quantile_show_list:
             if _q < 50:
@@ -193,7 +208,8 @@ class Graph(object):
                 caplines[0].set_marker("_")
                 caplines[0].set_markersize(10)
 
-        matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure, color = self.__colors[dataset], capsize = 0)
+        if self.__show_bar:
+            matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure, color = self.__colors[dataset], capsize = 0)
 
         if self.__show_min:
             _, caplines, _ = matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [log.mean - log.min], figure = self.__figure, color = self.__colors[dataset], capsize = 0, uplims = True)
@@ -613,7 +629,7 @@ if __name__ == "__main__":
     args = PARSER.parse_args()
 
     if not args.logfile:
-        g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max)
+        g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar)
 
         for _if, input_file in enumerate(args.input_file):
             # Load configuration
