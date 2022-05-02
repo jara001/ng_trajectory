@@ -97,6 +97,12 @@ PARSER.add_argument("--hide-max",
     action = "store_false",
 )
 
+PARSER.add_argument("--merged-min",
+    dest = "merged_min",
+    help = "Merge the minimum of loops and draw a graph of that. (IROS-like graph.)",
+    action = "store_true",
+)
+
 ######################
 # Graph class
 ######################
@@ -206,13 +212,14 @@ class Graph(object):
 
 class Log(object):
 
-    def __init__(self, filename: str = "", filestream: TextIO = None, show_quantiles: List[int] = []):
+    def __init__(self, filename: str = "", filestream: TextIO = None, show_quantiles: List[int] = [], merged_min: bool = False):
         super(Log, self).__init__()
 
         self.__filename = filename
         self.__parts = {}
         self.__others = []
         self.__failed = False
+        self.__merged_min = merged_min
 
         if filename != "":
             with open(filename, "r") as f:
@@ -237,6 +244,9 @@ class Log(object):
 
         # Quantiles to compute
         self.__show_quantiles = show_quantiles
+
+        # And minimum stack
+        self.__mins = [] if len(self.__correct) == 0 else [min(self.__correct)]
 
 
     def load_data(self, f: TextIO):
@@ -269,14 +279,20 @@ class Log(object):
 
         if len(other.__correct) == 0:
             self.__failed = True
+        else:
+            self.__mins.append(other.min)
 
         self.__is_dirty = True
 
 
     # Statistics
     def recompute_statistics(self):
-        self.__quantiles = quantiles(self.__correct, n = 100)
+        self.__quantiles = quantiles(self.observed_list, n = 100)
         self.__is_dirty = False
+
+    @property
+    def observed_list(self):
+        return self.__correct if not self.__merged_min else self.__mins
 
     @property
     def min(self):
@@ -601,9 +617,9 @@ if __name__ == "__main__":
                             continue
 
                         if _i not in logs:
-                            logs[_i] = Log(log_names[x][loop][step], show_quantiles = args.quantiles)
+                            logs[_i] = Log(log_names[x][loop][step], show_quantiles = args.quantiles, merged_min = args.merged_min)
                         else:
-                            _log = Log(log_names[x][loop][step], show_quantiles = args.quantiles)
+                            _log = Log(log_names[x][loop][step], show_quantiles = args.quantiles, merged_min = args.merged_min)
                             logs[_i].add(_log)
 
                 # FIXME: Here we are only taking the 0 step
