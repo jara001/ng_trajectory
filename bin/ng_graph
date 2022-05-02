@@ -201,7 +201,7 @@ class Graph(object):
                     caplines[0].set_marker("_")
                     caplines[0].set_markersize(10)
                 else:
-                    matplotlib.pyplot.plot(variate, log.mean - log.quantile(_q), figure = self.__figure, color = self.lighten_color(dataset, 1.0 + (_q / 50)), marker = "_", markersize = 10)
+                    matplotlib.pyplot.plot(variate, log.quantile(_q), figure = self.__figure, color = self.lighten_color(dataset, 1.0 + (_q / 50)), marker = "_", markersize = 10)
             elif _q > 50:
                 if self.__show_bar:
                     # Show only one limit and change carets to caps
@@ -212,7 +212,7 @@ class Graph(object):
                     caplines[0].set_marker("_")
                     caplines[0].set_markersize(10)
                 else:
-                    matplotlib.pyplot.plot(variate, log.quantile(_q) - log.mean, figure = self.__figure, color = self.lighten_color(dataset, 2.0 - ((_q - 50) / 50)), marker = "_", markersize = 10)
+                    matplotlib.pyplot.plot(variate, log.quantile(_q), figure = self.__figure, color = self.lighten_color(dataset, 2.0 - ((_q - 50) / 50)), marker = "_", markersize = 10)
 
         if self.__show_bar:
             matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure, color = self.__colors[dataset], capsize = 0)
@@ -224,7 +224,7 @@ class Graph(object):
                 caplines[0].set_marker("_")
                 caplines[0].set_markersize(10)
             else:
-                matplotlib.pyplot.plot(variate, log.mean - log.min, figure = self.__figure, color = self.__colors[dataset], marker = "_", markersize = 10)
+                matplotlib.pyplot.plot(variate, log.min, figure = self.__figure, color = self.__colors[dataset], marker = "_", markersize = 10)
 
         if self.__show_max:
             if self.__show_bar:
@@ -233,7 +233,7 @@ class Graph(object):
                 caplines[0].set_marker("_")
                 caplines[0].set_markersize(10)
             else:
-                matplotlib.pyplot.plot(variate, log.max - log.mean, figure = self.__figure, color = self.__colors[dataset], marker = "_", markersize = 10)
+                matplotlib.pyplot.plot(variate, log.max, figure = self.__figure, color = self.__colors[dataset], marker = "_", markersize = 10)
 
 
     def reduce_xticks(self):
