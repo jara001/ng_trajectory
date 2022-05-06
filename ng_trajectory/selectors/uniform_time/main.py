@@ -28,7 +28,7 @@ def init(rotate: float = 0,
         **kwargs) -> None:
     """Initialize selector."""
 
-    P.updateAll(**kwargs)
+    P.updateAll(kwargs)
 
     profiler.parametersSet(**{param.name: param.value for _, param in P.iterate()})
 
