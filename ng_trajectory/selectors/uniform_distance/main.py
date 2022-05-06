@@ -24,7 +24,7 @@ INTERPOLATOR = cubic_spline
 # Parameters
 from ng_trajectory.parameter import *
 P = ParameterList()
-P.createAdd("sampling_distance", 1.0, float, "[m] Distance of super-sampling before the interpolation, skipped when 0.", "")
+P.createAdd("sampling_distance", 1.0, float, "[m] Distance of super-sampling before the interpolation, skipped when 0.", "init")
 P.createAdd("distance", 0, float, "[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.", "init")
 
 
