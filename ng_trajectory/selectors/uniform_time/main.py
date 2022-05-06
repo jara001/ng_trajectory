@@ -99,7 +99,7 @@ def select(points: numpy.ndarray, remain: int, **overflown) -> numpy.ndarray:
     """
 
     # Resample the trajectory (even with the super sampling!)
-    resampled_trajectory = trajectoryResample(points, 1000)
+    resampled_trajectory = trajectoryResample(points, -1)
 
     # Compute the profile
     _, _, _t = profiler.profileCompute(resampled_trajectory, P.getValue("overlap"))
