@@ -27,7 +27,10 @@ for _, param in P_profile.iterate():
 def init(rotate: float = 0,
         **kwargs) -> None:
     """Initialize selector."""
-    pass
+
+    P.updateAll(**kwargs)
+
+    profiler.parametersSet(**{param.name: param.value for _, param in P.iterate()})
 
 
 def select(points: numpy.ndarray, remain: int, **overflown) -> numpy.ndarray:
