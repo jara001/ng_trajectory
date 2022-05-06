@@ -8,15 +8,28 @@
 
 import numpy
 
+# Cubic spline interpolation
+from ng_trajectory.interpolators import cubic_spline
+
+# Uniform distance selector for resampling
+from ng_trajectory.selectors.uniform_distance.main import P as P_select
+from ng_trajectory.selectors.uniform_distance.main import trajectoryResample
+
 # Profile criterion
 from ng_trajectory.criterions.profile.main import P as P_profile
 from ng_trajectory.criterions.profile import profiler
+
+
+# Global variables
+INTERPOLATOR = cubic_spline
 
 
 # Parameters
 from ng_trajectory.parameter import *
 P = ParameterList()
 for _, param in P_profile.iterate():
+    P.add(param)
+for _, param in P_select.iterate():
     P.add(param)
 
 
