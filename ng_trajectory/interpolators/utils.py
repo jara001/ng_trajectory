@@ -174,3 +174,19 @@ def trajectoryReduce(points: numpy.ndarray, remain: int) -> numpy.ndarray:
     rpoints -- list of points, remainx2 numpy.ndarray
     """
     return points[numpy.linspace(0, len(points)-1, remain, dtype=numpy.int, endpoint=False), :]
+
+
+def trajectoryClosest(points: numpy.ndarray, reference: numpy.ndarray) -> numpy.ndarray:
+    """Finds the closest point on the trajectory to the 'reference'.
+
+    Arguments:
+    points -- list of points, nx(>=2) numpy.ndarray
+    reference -- point closest to the trajectory, 1x(>=2) numpy.ndarray
+
+    Returns:
+    closest -- point on the trajectory closest to the reference, 1x(>=2) numpy.ndarray
+    """
+
+    _distances = numpy.subtract(points[:, :2], reference[:2])
+
+    return points[numpy.hypot(_distances[:, 0], _distances[:, 1]).argmin(), :]
