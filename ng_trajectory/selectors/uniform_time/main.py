@@ -8,6 +8,16 @@
 
 import numpy
 
+# Profile criterion
+from ng_trajectory.criterions.profile.main import P as P_profile
+
+
+# Parameters
+from ng_trajectory.parameter import *
+P = ParameterList()
+for _, param in P_profile.iterate():
+    P.add(param)
+
 
 ######################
 # Functions
