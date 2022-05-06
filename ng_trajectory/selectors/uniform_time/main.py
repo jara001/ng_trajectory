@@ -95,7 +95,7 @@ def select(points: numpy.ndarray, remain: int, **overflown) -> numpy.ndarray:
     Returns:
     rpoints -- list of points, remainx2 numpy.ndarray
 
-    Note: When 'remain' is negative the functions raises an Exception.
+    Note: When 'remain' is negative the function raises an Exception.
     """
 
     # Resample the trajectory (even with the super sampling!)
@@ -107,21 +107,9 @@ def select(points: numpy.ndarray, remain: int, **overflown) -> numpy.ndarray:
     # Sample the trajectory equidistantly (time)
     equidistant_trajectory = timeSample(resampled_trajectory, _t, remain)
 
-    # Sample the trajectory
-    result = []
-
-    for resampled_point in equidistant_trajectory:
-
-        pindex = 0
-        pdist = 1000000
-
-        for _i, p in enumerate(points):
-            _dist = utils.pointDistance(resampled_point, p)
-            if _dist < pdist:
-                pindex = _i
-                pdist = _dist
-
-        result.append(points[pindex, :])
-
-
-    return numpy.asarray(result)
+    return numpy.asarray(
+        [
+            utils.trajectoryClosest(points, resampled_point)
+            for resampled_point in equidistant_trajectory
+        ]
+    )
