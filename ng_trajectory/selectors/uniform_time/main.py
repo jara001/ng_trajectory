@@ -10,6 +10,7 @@ import numpy
 
 # Profile criterion
 from ng_trajectory.criterions.profile.main import P as P_profile
+from ng_trajectory.criterions.profile import profiler
 
 
 # Parameters
