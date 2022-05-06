@@ -10,6 +10,7 @@ import numpy
 
 # Cubic spline interpolation
 from ng_trajectory.interpolators import cubic_spline
+from ng_trajectory.interpolators import utils
 
 # Uniform distance selector for resampling
 from ng_trajectory.selectors.uniform_distance.main import P as P_select
@@ -59,4 +60,41 @@ def select(points: numpy.ndarray, remain: int, **overflown) -> numpy.ndarray:
 
     Note: When 'remain' is negative the functions raises an Exception.
     """
-    pass
+
+    # Resample the trajectory (even with the super sampling!)
+    resampled_trajectory = trajectoryResample(points, 1000)
+
+    # Compute the profile
+    _, _, _t = profiler.profileCompute(resampled_trajectory, P.getValue("overlap"))
+
+    # Create a time-linspace
+    space = numpy.linspace(0.0, _t[-1], remain, endpoint = False)
+
+    # Sample the trajectory
+    result = []
+
+    for point in space:
+        index = 0
+        dist = 1000000
+
+        for _i, p in enumerate(resampled_trajectory):
+            _dist = abs(_t[_i] - point)
+            if _dist < dist:
+                index = _i
+                dist = _dist
+
+        resampled_point = resampled_trajectory[index, :2]
+
+        pindex = 0
+        pdist = 1000000
+
+        for _i, p in enumerate(points):
+            _dist = utils.pointDistance(resampled_point, p)
+            if _dist < pdist:
+                pindex = _i
+                pdist = _dist
+
+        result.append(points[pindex, :])
+
+
+    return numpy.asarray(result)
