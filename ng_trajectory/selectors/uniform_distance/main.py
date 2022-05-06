@@ -44,6 +44,11 @@ def trajectoryResample(points, remain):
                mx2 numpy.ndarray when remain < 0
                remainx2 numpy.ndarray otherwise
     """
+
+    # Throw away repeated point
+    if points[0, :1] == points[-1, :1]:
+        points = points[:-1, :]
+
     
     # Resample if requested
     if P.getValue("sampling_distance") != 0.0:
