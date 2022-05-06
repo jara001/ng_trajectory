@@ -20,6 +20,9 @@ from ng_trajectory.selectors.uniform_distance.main import trajectoryResample
 from ng_trajectory.criterions.profile.main import P as P_profile
 from ng_trajectory.criterions.profile import profiler
 
+# Typing
+from typing import List
+
 
 # Global variables
 INTERPOLATOR = cubic_spline
@@ -32,6 +35,40 @@ for _, param in P_profile.iterate():
     P.add(param)
 for _, param in P_select.iterate():
     P.add(param)
+
+
+######################
+# Utilities
+######################
+
+def timeSample(resampled_points: numpy.ndarray, time_vector: List[float], remain: int) -> numpy.ndarray:
+    """Sample the trajectory equidistantly using time.
+
+    Arguments:
+    resampled_points -- list of resampled points, nx(>=2) numpy.ndarray
+    time_vector -- list of time frames for every point, n-list of floats
+    remain -- number of points in the result, int
+
+    Returns:
+    equidistant_points -- list of time-equidistantly spaced points, remainx(>=2) numpy.ndarray
+    """
+
+    result = []
+
+    # TODO: This can be faster when continuing from the last selection.
+    for time in numpy.linspace(0.0, time_vector[-1], remain, endpoint = False):
+        index = 0
+        dist = 1000000
+
+        for _i, p in enumerate(resampled_points):
+            _dist = abs(time_vector[_i] - time)
+            if _dist < dist:
+                index = _i
+                dist = _dist
+
+        result.append(resampled_points[index, :])
+
+    return numpy.asarray(result)
 
 
 ######################
@@ -67,23 +104,13 @@ def select(points: numpy.ndarray, remain: int, **overflown) -> numpy.ndarray:
     # Compute the profile
     _, _, _t = profiler.profileCompute(resampled_trajectory, P.getValue("overlap"))
 
-    # Create a time-linspace
-    space = numpy.linspace(0.0, _t[-1], remain, endpoint = False)
+    # Sample the trajectory equidistantly (time)
+    equidistant_trajectory = timeSample(resampled_trajectory, _t, remain)
 
     # Sample the trajectory
     result = []
 
-    for point in space:
-        index = 0
-        dist = 1000000
-
-        for _i, p in enumerate(resampled_trajectory):
-            _dist = abs(_t[_i] - point)
-            if _dist < dist:
-                index = _i
-                dist = _dist
-
-        resampled_point = resampled_trajectory[index, :2]
+    for resampled_point in equidistant_trajectory:
 
         pindex = 0
         pdist = 1000000
