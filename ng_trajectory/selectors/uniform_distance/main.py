@@ -24,7 +24,7 @@ INTERPOLATOR = cubic_spline
 # Parameters
 from ng_trajectory.parameter import *
 P = ParameterList()
-P.createAdd("sampling_distance", 1.0, float, "[m] Distance of super-sampling before the interpolation, skipped when 0.", "")
+P.createAdd("sampling_distance", 1.0, float, "[m] Distance of super-sampling before the interpolation, skipped when 0.", "init")
 P.createAdd("distance", 0, float, "[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.", "init")
 
 
@@ -44,6 +44,11 @@ def trajectoryResample(points, remain):
                mx2 numpy.ndarray when remain < 0
                remainx2 numpy.ndarray otherwise
     """
+
+    # Throw away repeated point
+    if points[0, :1] == points[-1, :1]:
+        points = points[:-1, :]
+
     
     # Resample if requested
     if P.getValue("sampling_distance") != 0.0:
