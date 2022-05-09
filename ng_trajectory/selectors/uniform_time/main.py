@@ -6,7 +6,7 @@
 # Imports & Globals
 ######################
 
-import numpy
+import sys, numpy
 
 # Cubic spline interpolation
 from ng_trajectory.interpolators import cubic_spline
@@ -104,6 +104,14 @@ def select(points: numpy.ndarray, remain: int, **overflown) -> numpy.ndarray:
 
     Note: When 'remain' is negative the function raises an Exception.
     """
+
+    if P.getValue("distance") <= 0:
+        # Raise an exception, as we cannot proceed without further information.
+        raise ValueError("Selector 'uniform_time' requires 'distance' parameter to be set '>0.0'.")
+
+    if P.getValue("overlap") <= 0:
+        # This is not a hard error, but it affects the result a lot.
+        print ("Warning: Consider setting 'overlap' parameter, as otherwise, the initial conditions affect the results.", file = sys.stderr)
 
     # Resample the trajectory (even with the super sampling!)
     resampled_trajectory = trajectoryResample(points, -1)
