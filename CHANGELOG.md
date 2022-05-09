@@ -5,9 +5,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
+- Interpolators
+    - Function `trajectoryRotate()` for rotating the trajectory points along the line. Used by selectors.
 - Selectors
     - [**NEW**] _Uniform_time_
         - Selector 'Uniform_time' equidistantly samples the path with respect to the time estimated by 'profile' criterion.
+
+### Changed
+- Selectors
+    - _Uniform_
+        - Use `trajectoryRotate()` instead of the current implementation.
 
 ## 1.5.3 - 2022-04-05
 ### Added
