@@ -52,23 +52,19 @@ def timeSample(resampled_points: numpy.ndarray, time_vector: List[float], remain
     Returns:
     equidistant_points -- list of time-equidistantly spaced points, remainx(>=2) numpy.ndarray
     """
-
-    result = []
-
-    # TODO: This can be faster when continuing from the last selection.
-    for time in numpy.linspace(0.0, time_vector[-1], remain, endpoint = False):
-        index = 0
-        dist = 1000000
-
-        for _i, p in enumerate(resampled_points):
-            _dist = abs(time_vector[_i] - time)
-            if _dist < dist:
-                index = _i
-                dist = _dist
-
-        result.append(resampled_points[index, :])
-
-    return numpy.asarray(result)
+    return numpy.asarray(
+        [
+            resampled_points[
+                numpy.abs(
+                    numpy.subtract(
+                        time_vector,
+                        time
+                    )
+                ).argmin(),
+            :]
+            for time in numpy.linspace(0.0, time_vector[-1], remain, endpoint = False)
+        ]
+    )
 
 
 ######################
