@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Selectors
+    - [**NEW**] _Uniform_time_
+        - Selector 'Uniform_time' equidistantly samples the path with respect to the time estimated by 'profile' criterion.
+
 ## 1.5.3 - 2022-04-05
 ### Added
 - Target `build-wagon` for creating wagons for 'x86_64' and 'aarch64'.
