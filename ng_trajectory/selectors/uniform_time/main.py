@@ -31,6 +31,7 @@ INTERPOLATOR = cubic_spline
 # Parameters
 from ng_trajectory.parameter import *
 P = ParameterList()
+P.createAdd("rotate", 0, float, "Parameter for rotating the subset selection. 0 is not rotated. <0, 1)", "init")
 for _, param in P_profile.iterate():
     P.add(param)
 for _, param in P_select.iterate():
@@ -52,9 +53,20 @@ def timeSample(resampled_points: numpy.ndarray, time_vector: List[float], remain
     Returns:
     equidistant_points -- list of time-equidistantly spaced points, remainx(>=2) numpy.ndarray
     """
+    rotated_points = utils.trajectoryRotate(
+        resampled_points,
+        numpy.abs(
+            numpy.subtract(
+                time_vector,
+                time_vector[-1] / remain
+            )
+        ).argmin(),
+        P.getValue("rotate")
+    )
+
     return numpy.asarray(
         [
-            resampled_points[
+            rotated_points[
                 numpy.abs(
                     numpy.subtract(
                         time_vector,
@@ -71,8 +83,7 @@ def timeSample(resampled_points: numpy.ndarray, time_vector: List[float], remain
 # Functions
 ######################
 
-def init(rotate: float = 0,
-        **kwargs) -> None:
+def init(**kwargs) -> None:
     """Initialize selector."""
 
     P.updateAll(kwargs)

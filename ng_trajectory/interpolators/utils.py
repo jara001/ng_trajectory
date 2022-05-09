@@ -190,3 +190,29 @@ def trajectoryClosest(points: numpy.ndarray, reference: numpy.ndarray) -> numpy.
     _distances = numpy.subtract(points[:, :2], reference[:2])
 
     return points[numpy.hypot(_distances[:, 0], _distances[:, 1]).argmin(), :]
+
+
+def trajectoryRotate(points: numpy.ndarray, next_point_index: int, rotation: float = 0.0) -> numpy.ndarray:
+    """Rotates the closed trajectory, moving the first point along it.
+
+    Basically, we have the trajectory 'points', point A (index 0) and
+    point B (index 'next_point_index'). This function moves point A
+    along the trajectory towards point B.
+
+    Rotation 0.0 keeps A on its position, leaving the trajectory intact.
+    In theory, rotation 1.0 would take point A and rotate the trajectory
+    in such a way, that A=B.
+
+    Arguments:
+    points -- list of points, nx(>=2) numpy.ndarray
+    next_point_index -- index of the second point in the trajectory, int
+    rotation -- factor to rotate the trajectory, 0.0<=rotation<1.0, float
+
+    Returns:
+    rotated_points -- rotated list of points, nx(>=2) numpy.ndarray
+    """
+    return numpy.roll(
+        points,
+        -int(next_point_index * rotation),
+        axis = 0
+    )

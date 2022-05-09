@@ -10,6 +10,9 @@ Note: It is just selector from `trajectoryReduce`.
 
 import numpy, sys
 
+# Support for rotating the trajectory
+from ng_trajectory.interpolators.utils import trajectoryRotate
+
 
 # Global variables
 ROTATE = 0
@@ -56,6 +59,10 @@ def trajectoryReduce(points: numpy.ndarray, remain: int) -> numpy.ndarray:
         return points[numpy.linspace(0, len(points)-1, remain, dtype=numpy.int, endpoint=False), :]
 
     ls = numpy.linspace(0, len(points)-1, remain, dtype=numpy.int, endpoint=False)
+
+    return trajectoryRotate(points, ls[1], ROTATE)[ls, :]
+
+    # Old rotate (without utils)
     ls2 = numpy.linspace((ls[1] - ls[0])*ROTATE, len(points)-1+(ls[1] - ls[0])*ROTATE, remain, dtype=numpy.int, endpoint=False)
 
     # Wrap up the array
