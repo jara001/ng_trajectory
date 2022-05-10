@@ -147,6 +147,14 @@ PARSER.add_argument("--markersize",
     type = float,
 )
 
+PARSER.add_argument("--step",
+    nargs = 1,
+    dest = "step",
+    help = "Zero-based index of cascade step to used.",
+    default = [0],
+    type = int,
+)
+
 
 ######################
 # Graph class
@@ -691,9 +699,8 @@ if __name__ == "__main__":
                             _log = Log(log_names[x][loop][step], show_quantiles = args.quantiles, merged_min = args.merged_min)
                             logs[_i].add(_log)
 
-                # FIXME: Here we are only taking the 0 step
-                if 0 in logs:
-                    g.plot_log(logs[0], variate = x, dataset = _if)
+                if args.step[0] in logs:
+                    g.plot_log(logs[args.step[0]], variate = x, dataset = _if)
 
         g.reduce_xticks()
         g.set_ylim(ymin = args.ymin, ymax = args.ymax)
