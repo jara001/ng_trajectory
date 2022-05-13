@@ -20,7 +20,7 @@ CENTERLINE = None
 # Parameters
 from ng_trajectory.parameter import *
 P = ParameterList()
-P.createAdd("method", "min", str, "Optimization method for final penalty -- min / max.", "Init.")
+P.createAdd("method", "min", str, "Optimization method for final penalty -- min / max / sum / avg.", "Init.")
 
 
 ######################
@@ -37,7 +37,17 @@ METHODS = {
         "function": lambda old, new: max(old, new),
         "initial": 0,
         "after": lambda result, invalid_count: result,
-    }
+    },
+    "sum": {
+        "function": lambda old, new: old + new,
+        "initial": 0,
+        "after": lambda result, invalid_count: result,
+    },
+    "avg": {
+        "function": lambda old, new: old + new,
+        "initial": 0,
+        "after": lambda result, invalid_count: result / invalid_count if invalid_count > 0 else result,
+    },
 }
 
 METHOD = METHODS["min"]["function"]
