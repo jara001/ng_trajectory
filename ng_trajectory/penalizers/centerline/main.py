@@ -29,11 +29,11 @@ P.createAdd("method", "min", str, "Optimization method for final penalty -- min 
 
 METHODS = {
     "min": {
-        "function": lambda x, y: min(x, y),
+        "function": lambda old, new: min(old, new),
         "initial": 1000,
     },
     "max": {
-        "function": lambda x, y: max(x, y),
+        "function": lambda old, new: max(old, new),
         "initial": 0,
     }
 }
