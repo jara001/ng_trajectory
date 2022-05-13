@@ -21,6 +21,8 @@ CENTERLINE = None
 from ng_trajectory.parameter import *
 P = ParameterList()
 P.createAdd("method", "min", str, "Optimization method for final penalty -- min / max / sum / avg.", "Init.")
+P.createAdd("huber_loss", False, bool, "Whether to use Huber loss for computing the fitness.", "Init.")
+P.createAdd("huber_delta", 1.0, float, "(Requires 'huber_loss'). Delta used for computing the fitness.", "Init.")
 
 
 ######################
@@ -53,6 +55,8 @@ METHODS = {
 METHOD = METHODS["min"]["function"]
 INITIAL = METHODS["min"]["initial"]
 AFTER = METHODS["min"]["after"]
+HUBER_LOSS = False
+HUBER_DELTA = 0.0
 
 
 ######################
@@ -72,7 +76,7 @@ def init(start_points: numpy.ndarray, **kwargs) -> None:
     Arguments:
     start_points -- initial line on the track, should be a centerline, nx2 numpy.ndarray
     """
-    global CENTERLINE, METHOD, INITIAL, AFTER
+    global CENTERLINE, METHOD, INITIAL, AFTER, HUBER_LOSS, HUBER_DELTA
 
 
     # Update parameters
@@ -84,6 +88,10 @@ def init(start_points: numpy.ndarray, **kwargs) -> None:
         METHOD = METHODS[P.getValue("method")]["function"]
         INITIAL = METHODS[P.getValue("method")]["initial"]
         AFTER = METHODS[P.getValue("method")]["after"]
+
+
+    HUBER_LOSS = P.getValue("huber_loss")
+    HUBER_DELTA = P.getValue("huber_delta")
 
 
     if CENTERLINE is None:
@@ -180,6 +188,15 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
                         )
                     )
                 )
+
+
+            if HUBER_LOSS:
+                # '_invalid' is always positive
+                if _invalid <= HUBER_DELTA:
+                    _invalid = 0.5 * pow(_invalid, 2)
+                else:
+                    _invalid = HUBER_DELTA * (_invalid - 0.5 * HUBER_DELTA)
+
 
             invalid = METHOD(invalid, _invalid)
 
