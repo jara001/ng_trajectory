@@ -31,15 +31,18 @@ METHODS = {
     "min": {
         "function": lambda old, new: min(old, new),
         "initial": 1000,
+        "after": lambda result, invalid_count: result,
     },
     "max": {
         "function": lambda old, new: max(old, new),
         "initial": 0,
+        "after": lambda result, invalid_count: result,
     }
 }
 
 METHOD = METHODS["min"]["function"]
 INITIAL = METHODS["min"]["initial"]
+AFTER = METHODS["min"]["after"]
 
 
 ######################
@@ -59,7 +62,7 @@ def init(start_points: numpy.ndarray, **kwargs) -> None:
     Arguments:
     start_points -- initial line on the track, should be a centerline, nx2 numpy.ndarray
     """
-    global CENTERLINE, METHOD, INITIAL
+    global CENTERLINE, METHOD, INITIAL, AFTER
 
 
     # Update parameters
@@ -70,6 +73,7 @@ def init(start_points: numpy.ndarray, **kwargs) -> None:
     if P.getValue("method") in METHODS:
         METHOD = METHODS[P.getValue("method")]["function"]
         INITIAL = METHODS[P.getValue("method")]["initial"]
+        AFTER = METHODS[P.getValue("method")]["after"]
 
 
     if CENTERLINE is None:
@@ -121,8 +125,12 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     invalid = INITIAL
     any_invalid = False
 
+    invalid_points = 0
+
     for _ip, _p in enumerate(points):
         if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
+
+            invalid_points += 1
 
             # Note: Trying borderlines here, it works the same, just the meaning of 'invalid' is different.
             # Note: We used to have '<' here, however that failed with invalid index 0.
@@ -165,6 +173,8 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
 
             invalid = METHOD(invalid, _invalid)
 
+
+    invalid = AFTER(invalid, invalid_points)
 
     return invalid * penalty if invalid != INITIAL else 0
 
