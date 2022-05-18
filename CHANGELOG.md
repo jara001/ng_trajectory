@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 - Interpolators
     - Function `trajectoryRotate()` for rotating the trajectory points along the line. Used by selectors.
+    - Function `trajectoryClosestIndex()` to receive index of the closest point.
 - Penalizers
     - _Centerline_
         - Methods `sum` and `avg` for computing the resulting penalty.

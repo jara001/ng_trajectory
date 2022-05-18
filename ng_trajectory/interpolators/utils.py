@@ -186,10 +186,23 @@ def trajectoryClosest(points: numpy.ndarray, reference: numpy.ndarray) -> numpy.
     Returns:
     closest -- point on the trajectory closest to the reference, 1x(>=2) numpy.ndarray
     """
+    return points[trajectoryClosestIndex(points, reference), :]
+
+
+def trajectoryClosestIndex(points: numpy.ndarray, reference: numpy.ndarray) -> int:
+    """Finds the index of the closest point on the trajectory to the 'reference'.
+
+    Arguments:
+    points -- list of points, nx(>=2) numpy.ndarray
+    reference -- point closest to the trajectory, 1x(>=2) numpy.ndarray
+
+    Returns:
+    index -- index of the point on the trajectory closest to the reference, int
+    """
 
     _distances = numpy.subtract(points[:, :2], reference[:2])
 
-    return points[numpy.hypot(_distances[:, 0], _distances[:, 1]).argmin(), :]
+    return numpy.hypot(_distances[:, 0], _distances[:, 1]).argmin()
 
 
 def trajectoryRotate(points: numpy.ndarray, next_point_index: int, rotation: float = 0.0) -> numpy.ndarray:
