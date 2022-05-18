@@ -8,18 +8,22 @@
 
 import numpy
 
-from ng_trajectory.interpolators.utils import pointDistance, trajectoryClosest
+import ng_trajectory.plot as ngplot
+
+from ng_trajectory.interpolators.utils import pointDistance, trajectoryClosest, trajectoryClosestIndex
 from ng_trajectory.segmentators.utils import *
 
 from typing import List
 
 
 # Global variables
+DEBUG = False
 
 
 # Parameters
 from ng_trajectory.parameter import *
 P = ParameterList()
+P.createAdd("debug", False, bool, "Whether debug plot is ought to be shown.", "Init.")
 
 
 ######################
@@ -32,9 +36,14 @@ def init(start_points: numpy.ndarray, **kwargs) -> None:
     Arguments:
     start_points -- initial line on the track, should be a centerline, nx2 numpy.ndarray
     """
+    global DEBUG
+
 
     # Update parameters
     P.updateAll(kwargs)
+
+
+    DEBUG = P.getValue("debug")
 
 
 def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points: numpy.ndarray, grid: float, penalty: float = 100, **overflown) -> float:
@@ -59,14 +68,16 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
 
     for _ip, _p in enumerate(points):
         if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
+            _closest = trajectoryClosest(valid_points, _p)
+
             _dists.append(
                 pointDistance(
-                    trajectoryClosest(
-                        valid_points,
-                        _p
-                    ),
+                    _closest,
                     _p
                 )
             )
+
+            if DEBUG:
+                ngplot.pointsPlot(numpy.vstack((_closest[:2], _p[:2])))
 
     return penalty * max([0] + _dists)
