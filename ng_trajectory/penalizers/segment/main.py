@@ -66,8 +66,12 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
 
     _dists = []
 
+    _invalid_ids = []
+
     for _ip, _p in enumerate(points):
         if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
+            _invalid_ids.append(_ip)
+
             _closest = trajectoryClosest(valid_points, _p)
 
             _dists.append(
@@ -79,5 +83,26 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
 
             if DEBUG:
                 ngplot.pointsPlot(numpy.vstack((_closest[:2], _p[:2])))
+
+
+    _edges = []
+
+    for _invalid_id in _invalid_ids:
+        _a = (_invalid_id - 1) % len(points)
+        _b = (_invalid_id + 1) % len(points)
+
+        if _a not in _invalid_ids:
+            _edges.append(
+                trajectoryClosest(valid_points, points[_a])
+            )
+
+        if _b not in _invalid_ids:
+            _edges.append(
+                trajectoryClosest(valid_points, points[_b])
+            )
+
+
+    if DEBUG:
+        ngplot.pointsScatter(numpy.asarray(_edges), color="green", marker="o")
 
     return penalty * max([0] + _dists)
