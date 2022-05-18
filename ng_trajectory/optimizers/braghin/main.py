@@ -195,7 +195,14 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
             map_grid = SEGMENTATOR.main.MAP_GRID,
             map_last = SEGMENTATOR.main.MAP_LAST,
             group_centers = group_centers,
-            **{**PENALIZER_INIT}
+            **{
+                **{
+                    key: value for key, value in kwargs.items() if key not in [
+                        "valid_points", "start_points", "map", "map_origin", "map_grid", "map_last", "group_centers"
+                    ]
+                },
+                **PENALIZER_INIT
+            }
         )
 
         if plot:

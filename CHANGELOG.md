@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Selectors
     - _Uniform_
         - Use `trajectoryRotate()` instead of the current implementation.
+- Penalizer `init()` now receives the full combined keywords dictionary. Therefore, e.g., `method` for `centerline` penalizer can be varied.
 
 ## 1.5.3 - 2022-04-05
 ### Added
