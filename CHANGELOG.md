@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 - Interpolators
     - Function `trajectoryRotate()` for rotating the trajectory points along the line. Used by selectors.
+- Penalizers
+    - _Centerline_
+        - Methods `sum` and `avg` for computing the resulting penalty.
+        - Parameters `huber_loss` and `huber_delta` for using a Huber loss function when computing the penalty.
 - Selectors
     - [**NEW**] _Uniform_time_
         - Selector 'Uniform_time' equidistantly samples the path with respect to the time estimated by 'profile' criterion.
