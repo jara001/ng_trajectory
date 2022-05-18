@@ -8,9 +8,10 @@
 
 import numpy
 
+from ng_trajectory.interpolators.utils import pointDistance, trajectoryClosest
 from ng_trajectory.segmentators.utils import *
 
-from typing import List, Dict
+from typing import List
 
 
 # Global variables
@@ -50,4 +51,22 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     Returns:
     rpenalty -- value of the penalty, 0 means no penalty, float
     """
-    pass
+
+    # Use the grid or compute it
+    _grid = grid if grid else gridCompute(points)
+
+    _dists = []
+
+    for _ip, _p in enumerate(points):
+        if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
+            _dists.append(
+                pointDistance(
+                    trajectoryClosest(
+                        valid_points,
+                        _p
+                    ),
+                    _p
+                )
+            )
+
+    return penalty * max([0] + _dists)
