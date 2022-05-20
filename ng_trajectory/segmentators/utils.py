@@ -171,3 +171,22 @@ def hood8Obtain(cpoint: numpy.ndarray) -> numpy.ndarray:
         &
         ( _hood[:, 1] < MAP.shape[1] )
     ]
+
+
+def borderCheck(cpoint: numpy.ndarray) -> bool:
+    """Check whether the map point is on border.
+
+    Arguments:
+    cpoint -- cell coordinates of the point, 1x2 numpy.ndarray
+
+    Returns:
+    on_border -- True when border point, else False, bool
+
+    Note: This is not the same as Matryoshka's pointFilter as
+    we are not using only the edge but rather the whole segment/area.
+    """
+    global MAP
+
+    _hood = hood4Obtain(cpoint)
+
+    return len(_hood) != sum(MAP[_hood[:, 0], _hood[:, 1])

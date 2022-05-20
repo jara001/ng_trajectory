@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Parameters `huber_loss` and `huber_delta` for using a Huber loss function when computing the penalty.
 - Segmentators
     - Functions `hood4Obtain()` and `hood8Obtain()` for obtaining the neighbour cells in the grid map.
+    - Function `borderCheck()` to check whether cell point is on valid area border.
 - Selectors
     - [**NEW**] _Uniform_time_
         - Selector 'Uniform_time' equidistantly samples the path with respect to the time estimated by 'profile' criterion.
