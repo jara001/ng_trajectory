@@ -10,7 +10,7 @@ import numpy
 
 import ng_trajectory.plot as ngplot
 
-from ng_trajectory.interpolators.utils import pointDistance, trajectoryClosest, trajectoryClosestIndex
+from ng_trajectory.interpolators.utils import pointDistance, trajectoryClosest, trajectoryClosestIndex, trajectoryFarthest
 from ng_trajectory.segmentators.utils import *
 
 from typing import List
@@ -201,6 +201,30 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
         _edges.append(
             _close_point
         )
+
+        # ~d. Find the farthest centerline point~
+        #if DEBUG:
+        #   ngplot.pointsPlot(numpy.asarray([_close_point[:2], trajectoryFarthest(arraySlice(CENTERLINE, _candidate_centerline_mapping[space_id], _candidate_centerline_mapping[(space_id+1)%len(candidate)]), points[out])]))
+
+        # d. Actually, find the distance (and also direction) to corresponding centerline point
+        _id1 = _candidate_points_mapping[space_id]
+        _id2 = _candidate_points_mapping[(space_id+1)%len(candidate)]
+
+        space_length = (len(points) - _id1 + _id2 if _id2 < _id1 else _id2 - _id1)
+
+        # Procentual index of the invalid point
+        relative_index = (out - _id1) / space_length
+
+        # And now get the centerline point
+        _id1 = _candidate_centerline_mapping[space_id]
+        _id2 = _candidate_centerline_mapping[(space_id+1)%len(candidate)]
+
+        space_center_length = (len(CENTERLINE) - _id1 + _id2 if _id2 < _id1 else _id2 - _id1)
+
+        center_index = int(space_center_length * relative_index) + _id1
+
+        if DEBUG:
+            ngplot.pointsPlot(numpy.asarray([_close_point[:2], CENTERLINE[center_index, :2]]))
 
 
     if DEBUG:
