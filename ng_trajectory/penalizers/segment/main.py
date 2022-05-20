@@ -93,22 +93,22 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
                 ngplot.pointsPlot(numpy.vstack((_closest[:2], _p[:2])))
 
 
-    _edges = []
-    _edges_area = []
+    if DEBUG:
+        _edges = []
+        _edges_area = []
 
-    for _invalid_id in _invalid_ids:
-        _a = (_invalid_id - 1) % len(points)
-        _b = (_invalid_id + 1) % len(points)
+        for _invalid_id in _invalid_ids:
+            _a = (_invalid_id - 1) % len(points)
+            _b = (_invalid_id + 1) % len(points)
 
-        if _a not in _invalid_ids:
-            _close_index = trajectoryClosestIndex(valid_points, points[_a])
-            _close_point = valid_points[_close_index, :]
+            if _a not in _invalid_ids:
+                _close_index = trajectoryClosestIndex(valid_points, points[_a])
+                _close_point = valid_points[_close_index, :]
 
-            _edges.append(
-                _close_point
-            )
+                _edges.append(
+                    _close_point
+                )
 
-            if DEBUG:
                 _distances = numpy.subtract(valid_points[:, :2], _close_point[:2])
 
                 for _area_index in numpy.argwhere(
@@ -122,15 +122,14 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
                     )
 
 
-        if _b not in _invalid_ids:
-            _close_index = trajectoryClosestIndex(valid_points, points[_b])
-            _close_point = valid_points[_close_index, :]
+            if _b not in _invalid_ids:
+                _close_index = trajectoryClosestIndex(valid_points, points[_b])
+                _close_point = valid_points[_close_index, :]
 
-            _edges.append(
-                _close_point
-            )
+                _edges.append(
+                    _close_point
+                )
 
-            if DEBUG:
                 _distances = numpy.subtract(valid_points[:, :2], _close_point[:2])
 
                 for _area_index in numpy.argwhere(
