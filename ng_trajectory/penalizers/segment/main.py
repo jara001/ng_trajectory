@@ -77,6 +77,7 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
 
     _invalid_ids = []
 
+    # 1. Find invalid points
     for _ip, _p in enumerate(points):
         # Check whether the point is invalid (i.e., there is not a single valid point next to it).
         if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
@@ -95,66 +96,63 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
                 ngplot.pointsPlot(numpy.vstack((_closest[:2], _p[:2])))
 
 
-    if DEBUG:
-        _edges = []
-        _edges_area = []
-        _is_border = []
+    # 2. Find edges of the track area
+    _edge_pairs = []
 
-        # Every invalid point is processed...
-        for _invalid_id in _invalid_ids:
-            # ... neighbours are observed...
-            _a = (_invalid_id - 1) % len(points)
-            _b = (_invalid_id + 1) % len(points)
-
-            # ... and used only when they are valid to show the 'valid area edge'.
-            if _a not in _invalid_ids:
-                _close_index = trajectoryClosestIndex(valid_points, points[_a])
-                _close_point = valid_points[_close_index, :]
-
-                _edges.append(
-                    _close_point
-                )
-
-                _distances = numpy.subtract(valid_points[:, :2], _close_point[:2])
-
-                for _area_index in numpy.argwhere(
-                    numpy.hypot(_distances[:, 0], _distances[:, 1]) <= numpy.hypot(_grid[0], _grid[1])
-                ):
-                    if _area_index[0] == _close_index:
-                        continue
-
-                    _edges_area.append(
-                        valid_points[_area_index[0], :2]
-                    )
-
-                    _is_border.append(borderCheck(pointToMap(valid_points[_area_index[0], :2])))
+    for invalid_id in _invalid_ids:
+        for _i in [-1, 1]:
+            if (invalid_id + _i) % len(points) not in _invalid_ids:
+                _edge_pairs.append((invalid_id, (invalid_id + _i) % len(points)))
 
 
-            if _b not in _invalid_ids:
-                _close_index = trajectoryClosestIndex(valid_points, points[_b])
-                _close_point = valid_points[_close_index, :]
+    # 3. Find closest valid point on each edge
+    _edges = []
+    _discovered = []
 
-                _edges.append(
-                    _close_point
-                )
+    for out, inside in _edge_pairs:
+        # a. Compute center point on the edge
+        _center_point = (points[out] + points[inside]) / 2
 
-                _distances = numpy.subtract(valid_points[:, :2], _close_point[:2])
+        # b. Find closest valid point
+        _close_index = trajectoryClosestIndex(valid_points, _center_point)
+        _close_point = valid_points[_close_index, :]
 
-                for _area_index in numpy.argwhere(
-                    numpy.hypot(_distances[:, 0], _distances[:, 1]) <= numpy.hypot(_grid[0], _grid[1])
-                ):
-                    if _area_index[0] == _close_index:
-                        continue
 
-                    _edges_area.append(
-                        valid_points[_area_index[0], :2]
-                    )
+        # c. Find closest border
+        while not borderCheck(pointToMap(_close_point)):
 
-                    _is_border.append(borderCheck(pointToMap(valid_points[_area_index[0], :2])))
+            _distances = numpy.subtract(valid_points[:, :2], _close_point[:2])
+
+            _temp_close_point = None
+
+            for _area_index in sorted(numpy.argwhere(
+                numpy.hypot(_distances[:, 0], _distances[:, 1]) <= numpy.hypot(_grid[0], _grid[1])
+            ), key = lambda x: pointDistance(valid_points[x[0], :2], points[out])):
+                if _area_index[0] == _close_index:
+                    continue
+
+                _is_border_point = borderCheck(pointToMap(valid_points[_area_index[0], :2]))
+
+                if _temp_close_point is None or (not _temp_close_point[0] and _is_border_point):
+                    _temp_close_point = (_is_border_point, valid_points[_area_index[0], :2])
+
+                _discovered.append((
+                    valid_points[_area_index[0], :2],
+                    _is_border_point
+                ))
+
+
+            _close_point = _temp_close_point[1]
+
+
+        _edges.append(
+            _close_point
+        )
 
 
     if DEBUG:
+        if len(_discovered) > 0:
+            ngplot.pointsScatter(numpy.asarray([point for point, border in _discovered]), color=[ ("red" if border else "yellow") for point, border in _discovered ], marker="o")
         ngplot.pointsScatter(numpy.asarray(_edges), color="green", marker="o")
-        ngplot.pointsScatter(numpy.asarray(_edges_area), color=[ ("red" if _border else "yellow") for _border in _is_border ], marker="o")
 
     return penalty * max([0] + _dists)
