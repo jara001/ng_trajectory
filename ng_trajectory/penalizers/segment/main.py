@@ -98,6 +98,7 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     if DEBUG:
         _edges = []
         _edges_area = []
+        _is_border = []
 
         # Every invalid point is processed...
         for _invalid_id in _invalid_ids:
@@ -126,6 +127,8 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
                         valid_points[_area_index[0], :2]
                     )
 
+                    _is_border.append(borderCheck(pointToMap(valid_points[_area_index[0], :2])))
+
 
             if _b not in _invalid_ids:
                 _close_index = trajectoryClosestIndex(valid_points, points[_b])
@@ -147,9 +150,11 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
                         valid_points[_area_index[0], :2]
                     )
 
+                    _is_border.append(borderCheck(pointToMap(valid_points[_area_index[0], :2])))
+
 
     if DEBUG:
         ngplot.pointsScatter(numpy.asarray(_edges), color="green", marker="o")
-        ngplot.pointsScatter(numpy.asarray(_edges_area), color="yellow", marker="o")
+        ngplot.pointsScatter(numpy.asarray(_edges_area), color=[ ("red" if _border else "yellow") for _border in _is_border ], marker="o")
 
     return penalty * max([0] + _dists)
