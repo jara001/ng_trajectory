@@ -79,15 +79,35 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     # Use the grid or compute it
     _grid = grid if grid else gridCompute(points)
 
+
+    # Map candidate onto the centerline
+    _candidate_centerline_mapping = [
+        trajectoryClosestIndex(
+            CENTERLINE,
+            _candidate
+        ) for _candidate in candidate
+    ]
+
+
+    # Map candidate onto the points
+    _candidate_points_mapping = [
+        trajectoryClosestIndex(
+            points,
+            _candidate
+        ) for _candidate in candidate
+    ]
+
     _dists = []
 
-    _invalid_ids = []
+    _invalids = []
 
     # 1. Find invalid points
     for _ip, _p in enumerate(points):
+
         # Check whether the point is invalid (i.e., there is not a single valid point next to it).
         if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
-            _invalid_ids.append(_ip)
+
+            _invalids.append(_ip)
 
             _closest = trajectoryClosest(valid_points, _p)
 
@@ -105,17 +125,19 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     # 2. Find edges of the track area
     _edge_pairs = []
 
-    for invalid_id in _invalid_ids:
+    for _id in _invalids:
         for _i in [-1, 1]:
-            if (invalid_id + _i) % len(points) not in _invalid_ids:
-                _edge_pairs.append((invalid_id, (invalid_id + _i) % len(points)))
+            if (_id + _i) % len(points) not in _invalids:
+                _space_id = (len([ _cpm for _cpm in _candidate_points_mapping if _cpm <= _id ]) - 1) % len(candidate)
+
+                _edge_pairs.append((_id, (_id + _i) % len(points), _space_id))
 
 
     # 3. Find closest valid point on each edge
     _edges = []
     _discovered = []
 
-    for out, inside in _edge_pairs:
+    for out, inside, space_id in _edge_pairs:
         # a. Compute center point on the edge
         _center_point = (points[out] + points[inside]) / 2
 
