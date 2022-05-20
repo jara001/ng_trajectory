@@ -31,6 +31,31 @@ P.createAdd("debug", False, bool, "Whether debug plot is ought to be shown.", "I
 
 
 ######################
+# Utilities
+######################
+
+def arraySlice(points: numpy.ndarray, index1: int, index2: int) -> numpy.ndarray:
+    """Obtain a slice of an array of points.
+
+    Arguments:
+    points -- points array to be sliced, nx(>=2) numpy.ndarray
+    index1 -- start index of the slice, int
+    index2 -- end index of the slice, int
+
+    Returns:
+    slice -- slice of the input array, mx(>=2) numpy.ndarray
+
+    Note: In constrast to standard slice operator (:) we allow wrapping around 0.
+    """
+    if index2 > index1:
+        return points[index1:index2, :]
+    else:
+        return numpy.vstack(
+            (points[index1:], points[:index2])
+        )
+
+
+######################
 # Functions
 ######################
 
