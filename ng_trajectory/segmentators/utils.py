@@ -13,6 +13,7 @@ MAP = None
 MAP_ORIGIN = None
 MAP_GRID = None
 MAP_LAST = None
+HOOD8 = numpy.asarray([[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]])
 
 
 ######################
@@ -119,3 +120,30 @@ def gridCompute(points: numpy.ndarray) -> float:
                     ]
             ]
         )
+
+
+######################
+# Utilities (Grid)
+######################
+
+def hoodObtain(cpoint: numpy.ndarray) -> numpy.ndarray:
+    """Obtain the 8-neighbourhood of a cell.
+
+    Arguments:
+    cpoint -- cell coordinates of the point, 1x2 numpy.ndarray
+
+    Returns:
+    hood -- neighbour cells, (3-8)x2 numpy.ndarray
+
+    Note: Instead of creating each point and finding whether it is
+    inside the boundaries, we do this.
+    """
+    _hood = cpoint + HOOD8
+
+    return _hood[
+        ( ~ numpy.any( _hood < 0, axis = 1 ) )
+        &
+        ( _hood[:, 0] < MAP.shape[0] )
+        &
+        ( _hood[:, 1] < MAP.shape[1] )
+    ]
