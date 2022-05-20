@@ -17,6 +17,7 @@ from typing import List
 
 
 # Global variables
+CENTERLINE = None
 DEBUG = False
 MAP = None
 MAP_ORIGIN = None
@@ -39,7 +40,7 @@ def init(start_points: numpy.ndarray, map: numpy.ndarray, map_origin: numpy.ndar
     Arguments:
     start_points -- initial line on the track, should be a centerline, nx2 numpy.ndarray
     """
-    global DEBUG, MAP, MAP_ORIGIN, MAP_GRID, BORDERLINES
+    global DEBUG, MAP, MAP_ORIGIN, MAP_GRID, CENTERLINE
 
     # Save the grid map for later usage
     MAP = map_last.copy()
@@ -53,6 +54,11 @@ def init(start_points: numpy.ndarray, map: numpy.ndarray, map_origin: numpy.ndar
 
     # Debug is used for showing extra content
     DEBUG = P.getValue("debug")
+
+
+    if CENTERLINE is None:
+        CENTERLINE = start_points
+        print ("Penalizer: Updating the centerline.")
 
 
 def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points: numpy.ndarray, grid: float, penalty: float = 100, **overflown) -> float:
