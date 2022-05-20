@@ -147,7 +147,7 @@ def hood4Obtain(cpoint: numpy.ndarray) -> numpy.ndarray:
         ( _hood[:, 0] < MAP.shape[0] )
         &
         ( _hood[:, 1] < MAP.shape[1] )
-    ]
+    ].astype(numpy.int)
 
 
 def hood8Obtain(cpoint: numpy.ndarray) -> numpy.ndarray:
@@ -170,7 +170,7 @@ def hood8Obtain(cpoint: numpy.ndarray) -> numpy.ndarray:
         ( _hood[:, 0] < MAP.shape[0] )
         &
         ( _hood[:, 1] < MAP.shape[1] )
-    ]
+    ].astype(numpy.int)
 
 
 def borderCheck(cpoint: numpy.ndarray) -> bool:
