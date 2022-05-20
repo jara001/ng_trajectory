@@ -205,6 +205,35 @@ def trajectoryClosestIndex(points: numpy.ndarray, reference: numpy.ndarray) -> i
     return numpy.hypot(_distances[:, 0], _distances[:, 1]).argmin()
 
 
+def trajectoryFarthest(points: numpy.ndarray, reference: numpy.ndarray) -> numpy.ndarray:
+    """Finds the farthest point on the trajectory to the 'reference'.
+
+    Arguments:
+    points -- list of points, nx(>=2) numpy.ndarray
+    reference -- point farthest to the trajectory, 1x(>=2) numpy.ndarray
+
+    Returns:
+    farthest -- point on the trajectory farthest to the reference, 1x(>=2) numpy.ndarray
+    """
+    return points[trajectoryFarthestIndex(points, reference), :]
+
+
+def trajectoryFarthestIndex(points: numpy.ndarray, reference: numpy.ndarray) -> int:
+    """Finds the index of the farthest point on the trajectory to the 'reference'.
+
+    Arguments:
+    points -- list of points, nx(>=2) numpy.ndarray
+    reference -- point farthest to the trajectory, 1x(>=2) numpy.ndarray
+
+    Returns:
+    index -- index of the point on the trajectory farthest to the reference, int
+    """
+
+    _distances = numpy.subtract(points[:, :2], reference[:2])
+
+    return numpy.hypot(_distances[:, 0], _distances[:, 1]).argmax()
+
+
 def trajectoryRotate(points: numpy.ndarray, next_point_index: int, rotation: float = 0.0) -> numpy.ndarray:
     """Rotates the closed trajectory, moving the first point along it.
 
