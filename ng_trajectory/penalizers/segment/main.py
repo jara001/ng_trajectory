@@ -41,7 +41,7 @@ def init(start_points: numpy.ndarray, map: numpy.ndarray, map_origin: numpy.ndar
     """
     global DEBUG, MAP, MAP_ORIGIN, MAP_GRID, BORDERLINES
 
-
+    # Save the grid map for later usage
     MAP = map_last.copy()
     MAP_ORIGIN = map_origin
     MAP_GRID = map_grid
@@ -51,6 +51,7 @@ def init(start_points: numpy.ndarray, map: numpy.ndarray, map_origin: numpy.ndar
     P.updateAll(kwargs)
 
 
+    # Debug is used for showing extra content
     DEBUG = P.getValue("debug")
 
 
@@ -77,6 +78,7 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     _invalid_ids = []
 
     for _ip, _p in enumerate(points):
+        # Check whether the point is invalid (i.e., there is not a single valid point next to it).
         if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
             _invalid_ids.append(_ip)
 
@@ -97,10 +99,13 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
         _edges = []
         _edges_area = []
 
+        # Every invalid point is processed...
         for _invalid_id in _invalid_ids:
+            # ... neighbours are observed...
             _a = (_invalid_id - 1) % len(points)
             _b = (_invalid_id + 1) % len(points)
 
+            # ... and used only when they are valid to show the 'valid area edge'.
             if _a not in _invalid_ids:
                 _close_index = trajectoryClosestIndex(valid_points, points[_a])
                 _close_point = valid_points[_close_index, :]
