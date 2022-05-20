@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Methods `sum` and `avg` for computing the resulting penalty.
         - Parameters `huber_loss` and `huber_delta` for using a Huber loss function when computing the penalty.
 - Segmentators
-    - Function `hoodObtain()` for obtaining the neighbour cells in the grid map.
+    - Functions `hood4Obtain()` and `hood8Obtain()` for obtaining the neighbour cells in the grid map.
 - Selectors
     - [**NEW**] _Uniform_time_
         - Selector 'Uniform_time' equidistantly samples the path with respect to the time estimated by 'profile' criterion.
