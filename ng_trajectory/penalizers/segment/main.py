@@ -18,6 +18,9 @@ from typing import List
 
 # Global variables
 DEBUG = False
+MAP = None
+MAP_ORIGIN = None
+MAP_GRID = None
 
 
 # Parameters
@@ -30,13 +33,18 @@ P.createAdd("debug", False, bool, "Whether debug plot is ought to be shown.", "I
 # Functions
 ######################
 
-def init(start_points: numpy.ndarray, **kwargs) -> None:
+def init(start_points: numpy.ndarray, map: numpy.ndarray, map_origin: numpy.ndarray, map_grid: float, map_last: numpy.ndarray, **kwargs) -> None:
     """Initialize penalizer.
 
     Arguments:
     start_points -- initial line on the track, should be a centerline, nx2 numpy.ndarray
     """
-    global DEBUG
+    global DEBUG, MAP, MAP_ORIGIN, MAP_GRID, BORDERLINES
+
+
+    MAP = map_last.copy()
+    MAP_ORIGIN = map_origin
+    MAP_GRID = map_grid
 
 
     # Update parameters
