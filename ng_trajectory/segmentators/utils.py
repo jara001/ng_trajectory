@@ -217,4 +217,4 @@ def borderCheck(cpoint: numpy.ndarray) -> bool:
 
     _hood = hood4Obtain(cpoint)
 
-    return numpy.any(MAP[_hood[:, 0], _hood[:, 1]] == 0)
+    return numpy.any(MAP[_hood[:, 0], _hood[:, 1]] == 0) or len(_hood) < 4
