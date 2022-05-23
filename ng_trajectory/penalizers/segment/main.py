@@ -161,6 +161,7 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     # 3. Find closest valid point on each edge
     _edges = []
     _discovered = []
+    _center_indices = []
 
     for out, inside, space_id in _edge_pairs:
         # a. Compute center point on the edge
@@ -222,6 +223,7 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
         space_center_length = (len(CENTERLINE) - _id1 + _id2 if _id2 < _id1 else _id2 - _id1)
 
         center_index = int(space_center_length * relative_index) + _id1
+        _center_indices.append(center_index)
 
         if DEBUG:
             ngplot.pointsPlot(numpy.asarray([_close_point[:2], CENTERLINE[center_index, :2]]))
