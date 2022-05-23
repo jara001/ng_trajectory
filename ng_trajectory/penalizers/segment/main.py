@@ -229,6 +229,16 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
             ngplot.pointsPlot(numpy.asarray([_close_point[:2], CENTERLINE[center_index, :2]]))
 
 
+    # 4. Merge the edges etc. to make pairs for linking
+    _merged = []
+
+    _i = 0
+    while _i < len(_edges):
+        # Border A, border B, center index A
+        _merged.append((_edges[_i], _edges[_i + 1], _center_indices[_i]))
+        _i += 2
+
+
     if DEBUG:
         if len(_discovered) > 0:
             ngplot.pointsScatter(numpy.asarray([point for point, border in _discovered]), color=[ ("red" if border else "yellow") for point, border in _discovered ], marker="o")
