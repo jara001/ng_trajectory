@@ -104,6 +104,22 @@ def pointsToMap(points: numpy.ndarray) -> numpy.ndarray:
     return numpy.round( numpy.subtract(points[:, :2], MAP_ORIGIN) / MAP_GRID).astype(numpy.uint64)
 
 
+def pointToWorld(point: list) -> numpy.ndarray:
+    """Converts cell coordinates of a point to real coordinates.
+
+    Arguments:
+    cpoints -- cell coordinates of the point to convert, >=2-list
+
+    Returns:
+    point -- real coordinates of the point, 1x2 numpy.ndarray
+
+    Note: This is not precise at all! It is only approximated!
+    """
+    global MAP_ORIGIN, MAP_GRID
+
+    return numpy.add(numpy.asarray(point)[:2] * MAP_GRID, MAP_ORIGIN)
+
+
 def gridCompute(points: numpy.ndarray) -> float:
     """Computes square grid size from given points.
 
