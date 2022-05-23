@@ -222,7 +222,7 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
 
         space_center_length = (len(CENTERLINE) - _id1 + _id2 if _id2 < _id1 else _id2 - _id1)
 
-        center_index = int(space_center_length * relative_index) + _id1
+        center_index = (int(space_center_length * relative_index) + _id1) % len(CENTERLINE)
         _center_indices.append(center_index)
 
         if DEBUG:
