@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Functions `hood4Obtain()` and `hood8Obtain()` for obtaining the neighbour cells in the grid map.
     - Function `borderCheck()` to check whether cell point is on valid area border.
     - Function `pointToWorld()` as a approximate inverse function of `pointToMap()`.
+    - Function `validCheck()` to find whether cell point is valid.
 - Selectors
     - [**NEW**] _Uniform_time_
         - Selector 'Uniform_time' equidistantly samples the path with respect to the time estimated by 'profile' criterion.
