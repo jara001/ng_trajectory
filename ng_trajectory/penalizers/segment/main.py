@@ -234,9 +234,77 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
 
     _i = 0
     while _i < len(_edges):
-        # Border A, border B, center index A
-        _merged.append((_edges[_i], _edges[_i + 1], _center_indices[_i]))
+        # Border A, border B, index A, index B, center index A
+        _merged.append((_edges[_i], _edges[_i + 1], _edge_pairs[_i][0], _edge_pairs[_i + 1][0], _center_indices[_i]))
         _i += 2
+
+
+    # borderCrawler
+    _dists = []
+
+    for _A, _B, _iA, _iB, _cA in _merged:
+        # We do a slightly nasty thing to speed this up.
+        # We crawl the border on the grid map, finding the farthest point there.
+        # This should be also the farthest point in real world.
+        # ... and then we just find the closest point in real world.
+
+        _start = pointToMap(_A[:2]).tolist()
+        _goal = pointToMap(_B[:2]).tolist()
+        _hint = pointToMap(CENTERLINE[_cA, :2]).tolist()
+
+        _visited = [_start]
+        _observed = [_start]
+        _stack = [(_start, pointDistance(_start, _hint))]
+        _current = _start
+
+        while True:
+            #print (len(_stack), _current)
+
+            # Expand
+            for _hood in hood8Obtain(_current):
+                if _hood.tolist() in _visited or _hood.tolist() in _observed:
+                    continue
+
+                _observed.append(_hood.tolist())
+
+                if validCheck(_hood) and borderCheck(_hood):
+                    _stack.append((_hood.tolist(), pointDistance(_hood, _hint)))
+
+
+            # Sort them
+            _stack = sorted(_stack, key = lambda x: x[1])
+
+
+            # Get point
+            _current, _ = _stack.pop(0)
+            _visited.append(_current)
+
+
+            # Exit if goal
+            if _current == _goal:
+                break
+
+
+        # And now find the farthest point from the invalids
+        __dists = []
+        for _i in range(_iA, _iB + 1):
+            farthest = pointToWorld(trajectoryFarthest(numpy.asarray(_visited), pointToMap(points[_i, :2])))
+
+            __dists.append(
+                pointDistance(
+                    points[_i, :2],
+                    farthest
+                )
+            )
+
+            if DEBUG:
+                ngplot.pointsPlot(numpy.asarray([points[_i, :2], farthest]))
+
+        _dists.append(max(__dists))
+
+        if DEBUG:
+            ngplot.pointsScatter(numpy.asarray([pointToWorld(point) for point in _observed]), color = "purple")
+            ngplot.pointsScatter(numpy.asarray([pointToWorld(point) for point in _visited]), color = "pink")
 
 
     if DEBUG:
