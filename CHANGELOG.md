@@ -15,6 +15,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - _Centerline_
         - Methods `sum` and `avg` for computing the resulting penalty.
         - Parameters `huber_loss` and `huber_delta` for using a Huber loss function when computing the penalty.
+    - [**NEW**] _Segment_
+        - Penalizer 'Segment' operates on the distance of the invalid points from the valid area.
 - Segmentators
     - Functions `hood4Obtain()` and `hood8Obtain()` for obtaining the neighbour cells in the grid map.
     - Function `borderCheck()` to check whether cell point is on valid area border.
