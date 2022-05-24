@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Function `trajectoryClosestIndex()` to receive index of the closest point.
     - Functions `trajectoryFarthest()` and `trajectoryFarthestIndex()` to receive the most distant points.
 - Penalizers
+    - Parameter `optimization` (default to True) that when True indicates that the Penalizer is run during optimization sequence.
     - _Centerline_
         - Methods `sum` and `avg` for computing the resulting penalty.
         - Parameters `huber_loss` and `huber_delta` for using a Huber loss function when computing the penalty.

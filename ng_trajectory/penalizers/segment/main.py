@@ -100,6 +100,10 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     Returns:
     rpenalty -- value of the penalty, 0 means no penalty, float
     """
+    global DEBUG
+
+    if overflown.get("optimization", True):
+        DEBUG = False
 
     # Use the grid or compute it
     _grid = grid if grid else gridCompute(points)
