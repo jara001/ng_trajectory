@@ -32,6 +32,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Use `trajectoryRotate()` instead of the current implementation.
 - Penalizer `init()` now receives the full combined keywords dictionary. Therefore, e.g., `method` for `centerline` penalizer can be varied.
 
+### Fixed
+- Script 'ng_generate_data' now properly handles images with alpha channel and images without unknown area.
+
 ## 1.5.3 - 2022-04-05
 ### Added
 - Target `build-wagon` for creating wagons for 'x86_64' and 'aarch64'.
