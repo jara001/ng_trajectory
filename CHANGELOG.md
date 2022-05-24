@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - _Uniform_
         - Use `trajectoryRotate()` instead of the current implementation.
 - Penalizer `init()` now receives the full combined keywords dictionary. Therefore, e.g., `method` for `centerline` penalizer can be varied.
+- Target `build-wagon` is not run when using `build` target.
 
 ### Fixed
 - Script 'ng_generate_data' now properly handles images with alpha channel and images without unknown area.
