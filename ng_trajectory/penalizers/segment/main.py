@@ -13,6 +13,9 @@ import ng_trajectory.plot as ngplot
 from ng_trajectory.interpolators.utils import pointDistance, trajectoryClosest, trajectoryClosestIndex, trajectoryFarthest
 from ng_trajectory.segmentators.utils import *
 
+# Optimization methods
+from ng_trajectory.penalizers import utils
+
 from typing import List
 
 
@@ -28,6 +31,8 @@ MAP_GRID = None
 from ng_trajectory.parameter import *
 P = ParameterList()
 P.createAdd("debug", False, bool, "Whether debug plot is ought to be shown.", "Init.")
+for _, param in utils.P.iterate():
+    P.add(param)
 
 
 ######################
@@ -75,6 +80,20 @@ def init(start_points: numpy.ndarray, map: numpy.ndarray, map_origin: numpy.ndar
 
     # Update parameters
     P.updateAll(kwargs)
+
+
+    # Update method
+    if P.getValue("method") in utils.METHODS:
+        utils.METHOD = utils.METHODS[P.getValue("method")]["function"]
+        utils.INITIAL = utils.METHODS[P.getValue("method")]["initial"]
+        utils.AFTER = utils.METHODS[P.getValue("method")]["after"]
+        print ("Penalizer: Using method '%s'." % P.getValue("method"))
+
+
+    utils.HUBER_LOSS = P.getValue("huber_loss")
+    utils.HUBER_DELTA = P.getValue("huber_delta")
+    if utils.HUBER_LOSS:
+        print ("Penalizer: Huber loss on with %f delta." % utils.HUBER_DELTA)
 
 
     # Debug is used for showing extra content
@@ -304,7 +323,16 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
             if DEBUG:
                 ngplot.pointsPlot(numpy.asarray([points[_i, :2], farthest]))
 
-        _dists.append(max(__dists))
+        __d = max(__dists)
+
+        if utils.HUBER_LOSS:
+            # '_invalid' is always positive?
+            if __d <= utils.HUBER_DELTA:
+                __d = 0.5 * pow(__d, 2)
+            else:
+                __d = utils.HUBER_DELTA * (__d - 0.5 * utils.HUBER_DELTA)
+
+        _dists.append(__d)
 
         if DEBUG:
             ngplot.pointsScatter(numpy.asarray([pointToWorld(point) for point in _observed]), color = "purple")
@@ -317,4 +345,15 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
         if len(_edges) > 0:
             ngplot.pointsScatter(numpy.asarray(_edges), color="green", marker="o")
 
-    return penalty * max([0] + _dists)
+    if len(_dists) == 0:
+        return 0
+
+    else:
+        _in_dists = _dists[0]
+
+        for _i in range(1, len(_dists)):
+            _in_dists = utils.METHOD(_in_dists, _dists[_i])
+
+        _in_dists = utils.AFTER(_in_dists, len(_dists))
+
+        return penalty * _in_dists
