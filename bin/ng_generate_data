@@ -182,7 +182,10 @@ def processImage(im: Image) -> None:
     nd = numpy.asarray(im, dtype = int)
 
     # Name colors (just in case)
-    WALL, UNKN, FREE = numpy.unique(nd)
+    try:
+        WALL, UNKN, FREE = numpy.unique(nd)
+    except:
+        WALL, FREE = numpy.unique(nd)
 
 
     ## Inflate walls
@@ -256,7 +259,10 @@ def processImage(im: Image) -> None:
     _hood = numpy.unique(_hood[~numpy.any((_hood < 0) | (_hood >= nd.shape), axis = 1), :], axis = 0)
 
     # Find all points of other walls
-    _walls = numpy.argwhere((nd > 1) & (nd < UNKN)).copy()
+    try:
+        _walls = numpy.argwhere((nd > 1) & (nd < UNKN)).copy()
+    except:
+        _walls = numpy.argwhere((nd > 1) & (nd < FREE)).copy()
 
     # Find all free points that are also in the neighbourhood
     border = intersectArrays(_hood, _walls)
@@ -333,7 +339,10 @@ def processImage(im: Image) -> None:
     sys.stdout.write("\rSaving the data...")
 
     nnd = numpy.asarray(im, dtype = numpy.uint8).copy()
-    nnd[border[:, 0], border[:, 1]] = UNKN
+    try:
+        nnd[border[:, 0], border[:, 1]] = UNKN
+    except:
+        pass
 
     nndi = P.fromarray(nnd)
     nndi.convert("L")
