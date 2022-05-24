@@ -310,6 +310,7 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     if DEBUG:
         if len(_discovered) > 0:
             ngplot.pointsScatter(numpy.asarray([point for point, border in _discovered]), color=[ ("red" if border else "yellow") for point, border in _discovered ], marker="o")
-        ngplot.pointsScatter(numpy.asarray(_edges), color="green", marker="o")
+        if len(_edges) > 0:
+            ngplot.pointsScatter(numpy.asarray(_edges), color="green", marker="o")
 
     return penalty * max([0] + _dists)
