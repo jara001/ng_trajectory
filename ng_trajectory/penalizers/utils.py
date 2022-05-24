@@ -9,7 +9,7 @@
 # Parameters
 from ng_trajectory.parameter import *
 P = ParameterList()
-P.createAdd("method", "min", str, "Optimization method for final penalty -- min / max / sum / avg.", "Init.")
+P.createAdd("method", "max", str, "Optimization method for final penalty -- min / max / sum / avg.", "Init.")
 P.createAdd("huber_loss", False, bool, "Whether to use Huber loss for computing the fitness.", "Init.")
 P.createAdd("huber_delta", 1.0, float, "(Requires 'huber_loss'). Delta used for computing the fitness.", "Init.")
 
@@ -41,8 +41,8 @@ METHODS = {
     },
 }
 
-METHOD = METHODS["min"]["function"]
-INITIAL = METHODS["min"]["initial"]
-AFTER = METHODS["min"]["after"]
+METHOD = METHODS["max"]["function"]
+INITIAL = METHODS["max"]["initial"]
+AFTER = METHODS["max"]["after"]
 HUBER_LOSS = False
 HUBER_DELTA = 0.0
