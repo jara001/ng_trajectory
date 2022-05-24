@@ -37,6 +37,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Fixed
 - Script 'ng_generate_data' now properly handles images with alpha channel and images without unknown area.
+- Generated documentation is automatically commited on new release.
 
 ## 1.5.3 - 2022-04-05
 ### Added
