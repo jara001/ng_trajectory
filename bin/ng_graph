@@ -702,6 +702,12 @@ if __name__ == "__main__":
                             logs[_i].add(_log)
 
                 if args.step[0] in logs:
+
+                    try:
+                        x = float(x)
+                    except:
+                        pass
+
                     g.plot_log(logs[args.step[0]], variate = x, dataset = _if)
 
         g.reduce_xticks()
