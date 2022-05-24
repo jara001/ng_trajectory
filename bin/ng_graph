@@ -23,6 +23,9 @@ import matplotlib.markers
 # Darkening and lightening the colors
 import colorsys
 
+# Progress bar
+import tqdm
+
 from typing import List, Tuple, Dict, Generator, TextIO
 
 
@@ -675,7 +678,7 @@ if __name__ == "__main__":
     if not args.logfile:
         g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize[0])
 
-        for _if, input_file in enumerate(args.input_file):
+        for _if, input_file in enumerate(tqdm.tqdm(args.input_file, desc = "JSON")):
             # Load configuration
             configuration = json.loads(input_file.read())
 
@@ -686,7 +689,7 @@ if __name__ == "__main__":
                 log_names = construct_log_names_legacy(configuration)
 
 
-            for x in log_names.keys():
+            for x in tqdm.tqdm(log_names.keys(), desc = "Logs", leave = False):
 
                 logs = {}
 
