@@ -14,6 +14,7 @@ To view the package documentation either run `ng_help`, or see [doc/README.md](.
 - `scipy>=0.18.0`
 - `numpy>=1.12.0`
 - `Pillow>=4.2.0`
+- `tqdm`
 
 
 ### Optional requirements

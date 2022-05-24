@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Selectors
     - [**NEW**] _Uniform_time_
         - Selector 'Uniform_time' equidistantly samples the path with respect to the time estimated by 'profile' criterion.
+- New dependency `tqdm`.
 
 ### Changed
 - Selectors
