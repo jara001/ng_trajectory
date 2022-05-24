@@ -64,10 +64,10 @@ setup(
         "Topic :: Scientific/Engineering",
         "Typing :: Typed",
     ],
-    install_requires=['nevergrad==0.3.0', "scipy>=0.18.0", "numpy>=1.12.0", "Pillow>=4.2.0"],
+    install_requires=['nevergrad==0.3.0', "scipy>=0.18.0", "numpy>=1.12.0", "Pillow>=4.2.0", "tqdm"],
     python_requires='>=3.6',
     extras_require={
         "plot_support": "matplotlib"
     },
-    scripts=['bin/ng_run', 'bin/ng_generate_data', 'bin/ng_help', 'bin/ng_curvature_gui'],
+    scripts=['bin/ng_run', 'bin/ng_generate_data', 'bin/ng_help', 'bin/ng_curvature_gui', 'bin/ng_graph'],
 )
