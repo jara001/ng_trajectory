@@ -1,0 +1,737 @@
+#!/usr/bin/env python3.6
+# ng_graph.py
+"""Script for generating graphs from ng_trajectory files.
+"""
+######################
+# Imports & Globals
+######################
+
+import sys, os, argparse
+
+# It is possible to do it using the library, but we skip on this now
+# to actually do not require all dependencies + speed up the process.
+#import ng_trajectory
+import json
+
+import statistics
+
+import matplotlib.colors
+import matplotlib.pyplot
+import matplotlib.ticker
+import matplotlib.markers
+
+# Darkening and lightening the colors
+import colorsys
+
+# Progress bar
+import tqdm
+
+from typing import List, Tuple, Dict, Generator, TextIO
+
+
+# Global variables
+PARSER = argparse.ArgumentParser(
+    prog = "ng_graph",
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description = """
+Script for generating graphs from ng_trajectory files.
+
+When using a '.json' configuration file we expect that the logs
+are in the same location.
+    """,
+)
+
+# Arguments
+PARSER.add_argument("input_file",
+    nargs = "+",
+    help = "Path to the ng_trajectory file.",
+    type = argparse.FileType("r"),
+)
+
+PARSER.add_argument("-v",
+    dest = "verbose",
+    help = "Give more output.",
+    action = "store_true",
+)
+
+PARSER.add_argument("-l",
+    dest = "logfile",
+    help = "Treat the input file as a log file.",
+    action = "store_true",
+)
+
+PARSER.add_argument("-s",
+    dest = "save",
+    help = "Hide the graph and save it into %%s.pdf and %%s.png.",
+    action = "store_true",
+)
+
+PARSER.add_argument("-Q",
+    dest = "quantiles",
+    help = "Quantiles / Percentiles to compute and show.",
+    action = "append",
+    default = [],
+    type = int,
+)
+
+PARSER.add_argument("-O",
+    dest = "outfile",
+    help = "Set the output file name to be used instead of %%s.",
+    default = None,
+    type = str,
+)
+
+PARSER.add_argument("--dpi",
+    nargs = "?",
+    dest = "dpi",
+    help = "DPI value used for exporting the figures.",
+    default = 300,
+    type = int,
+)
+
+PARSER.add_argument("--hide-min",
+    dest = "show_min",
+    help = "Hide minimum value cap in the figure.",
+    action = "store_false",
+)
+
+PARSER.add_argument("--hide-max",
+    dest = "show_max",
+    help = "Hide maximum value cap in the figure.",
+    action = "store_false",
+)
+
+PARSER.add_argument("--hide-avg",
+    dest = "show_avg",
+    help = "Hide average value marker in the figure.",
+    action = "store_false",
+)
+
+PARSER.add_argument("--hide-bar",
+    dest = "show_bar",
+    help = "Hide error bar in the figure.",
+    action = "store_false",
+)
+
+PARSER.add_argument("--merged-min",
+    dest = "merged_min",
+    help = "Merge the minimum of loops and draw a graph of that. (IROS-like graph.)",
+    action = "store_true",
+)
+
+PARSER.add_argument("--ymin",
+    nargs = "?",
+    dest = "ymin",
+    help = "Minimum value on y-axis to be shown in the figure.",
+    type = float,
+)
+
+PARSER.add_argument("--ymax",
+    nargs = "?",
+    dest = "ymax",
+    help = "Maximum value on y-axis to be shown in the figure.",
+    type = float,
+)
+
+PARSER.add_argument("--marker",
+    nargs = "?",
+    choices = list(matplotlib.markers.MarkerStyle.markers.keys()),
+    dest = "marker",
+    help = "Marker style used in the figure. Same as 'matplotlib.markers'.",
+    default = "_",
+    type = str,
+)
+
+PARSER.add_argument("--markersize",
+    nargs = 1,
+    dest = "markersize",
+    help = "Marker size used in the figure.",
+    default = [10.0],
+    type = float,
+)
+
+PARSER.add_argument("--step",
+    nargs = 1,
+    dest = "step",
+    help = "Zero-based index of cascade step to used.",
+    default = [0],
+    type = int,
+)
+
+
+######################
+# Graph class
+######################
+
+class Graph(object):
+
+    def __init__(self, xlabel = "", ylabel = "", grid = True, show_min: bool = True, show_max: bool = True, show_avg: bool = True, show_bar: bool = True, marker: str = "_", markersize: float = 10.0):
+        super(Graph, self).__init__()
+
+        self.__figure = matplotlib.pyplot.figure()
+        self.__axes = self.__figure.add_subplot(111)
+
+        if xlabel != "":
+            self.__axes.set_xlabel(xlabel)
+
+        if ylabel != "":
+            self.__axes.set_ylabel(ylabel)
+
+        if grid:
+            self.__axes.grid(color = "lightgray", dashes = (5, 5))
+
+        self.__show_min = show_min
+        self.__show_max = show_max
+        self.__show_avg = show_avg
+        self.__show_bar = show_bar
+
+        self.__marker = marker
+        self.__markersize = markersize
+
+        # Category10 Tableau colors
+        # https://matplotlib.org/3.5.0/users/prev_whats_new/dflt_style_changes.html
+        self.__colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+
+        # Changing the brightness
+        # https://stackoverflow.com/questions/37765197/darken-or-lighten-a-color-in-matplotlib
+        self.__colors_lighter = [
+            scale_lightness(
+                matplotlib.colors.ColorConverter.to_rgb(_color),
+                1.3
+            ) for _color in self.__colors
+        ]
+
+        self.__colors_lighter2 = [
+            scale_lightness(
+                matplotlib.colors.ColorConverter.to_rgb(_color),
+                2.0
+            ) for _color in self.__colors
+        ]
+
+
+    def lighten_color(self, dataset: int = 0, scale: float = 1.0):
+        return scale_lightness(
+            matplotlib.colors.ColorConverter.to_rgb(self.__colors[dataset]),
+            scale
+        )
+
+
+    def plot_log(self, log, variate = 0, dataset = 0):
+
+        # Skip when all failed
+        if log.mean is None:
+            return
+
+        dataset = dataset % len(self.__colors)
+
+        if self.__show_avg:
+            matplotlib.pyplot.scatter(variate, log.mean, color = self.__colors[dataset], s = 50,
+                **{"facecolors": "none"} if log.failed else {} )
+
+        for _q in log.quantile_show_list:
+            if _q < 50:
+                if self.__show_bar:
+                    _, caplines, _ = matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [log.mean - log.quantile(_q)], figure = self.__figure, color = self.lighten_color(dataset, 1.0 + (_q / 50)), capsize = 0, uplims = True)
+
+                    caplines[0].set_marker(self.__marker)
+                    caplines[0].set_markersize(self.__markersize)
+                else:
+                    matplotlib.pyplot.plot(variate, log.quantile(_q), figure = self.__figure, color = self.lighten_color(dataset, 1.0 + (_q / 50)), marker = self.__marker, markersize = self.__markersize)
+            elif _q > 50:
+                if self.__show_bar:
+                    # Show only one limit and change carets to caps
+                    # https://stackoverflow.com/questions/45752981/removing-the-bottom-error-caps-only-on-matplotlib
+
+                    _, caplines, _ = matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [log.quantile(_q) - log.mean], figure = self.__figure, color = self.lighten_color(dataset, 2.0 - ((_q - 50) / 50)), capsize = 0, lolims = True)
+
+                    caplines[0].set_marker(self.__marker)
+                    caplines[0].set_markersize(self.__markersize)
+                else:
+                    matplotlib.pyplot.plot(variate, log.quantile(_q), figure = self.__figure, color = self.lighten_color(dataset, 2.0 - ((_q - 50) / 50)), marker = self.__marker, markersize = self.__markersize)
+
+        if self.__show_bar:
+            matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [[log.mean - log.min], [log.max - log.mean]], figure = self.__figure, color = self.__colors[dataset], capsize = 0)
+
+        if self.__show_min:
+            if self.__show_bar:
+                _, caplines, _ = matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [log.mean - log.min], figure = self.__figure, color = self.__colors[dataset], capsize = 0, uplims = True)
+
+                caplines[0].set_marker(self.__marker)
+                caplines[0].set_markersize(self.__markersize)
+            else:
+                matplotlib.pyplot.plot(variate, log.min, figure = self.__figure, color = self.__colors[dataset], marker = self.__marker, markersize = self.__markersize)
+
+        if self.__show_max:
+            if self.__show_bar:
+                _, caplines, _ = matplotlib.pyplot.errorbar([variate], [log.mean], yerr = [log.max - log.mean], figure = self.__figure, color = self.__colors[dataset], capsize = 0, lolims = True)
+
+                caplines[0].set_marker(self.__marker)
+                caplines[0].set_markersize(self.__markersize)
+            else:
+                matplotlib.pyplot.plot(variate, log.max, figure = self.__figure, color = self.__colors[dataset], marker = self.__marker, markersize = self.__markersize)
+
+
+    def reduce_xticks(self):
+        """Call this before saving / showing the figure as it reduces the number of ticks on the x axis.
+
+        Otherwise there is a tick for every x value.
+
+        Source:
+        https://stackoverflow.com/questions/6682784/reducing-number-of-plot-ticks
+        """
+        self.__axes.xaxis.set_major_locator(matplotlib.ticker.AutoLocator())
+        self.__axes.xaxis.set_minor_locator(matplotlib.ticker.AutoMinorLocator())
+
+
+    def set_ylim(self, ymin = None, ymax = None):
+        """Set ymin and ymax in the figure."""
+        self.__axes.set_ylim(ymin = ymin, ymax = ymax)
+
+
+######################
+# Log class
+######################
+
+class Log(object):
+
+    def __init__(self, filename: str = "", filestream: TextIO = None, show_quantiles: List[int] = [], merged_min: bool = False):
+        super(Log, self).__init__()
+
+        self.__filename = filename
+        self.__parts = {}
+        self.__others = []
+        self.__failed = False
+        self.__merged_min = merged_min
+
+        if filename != "":
+            with open(filename, "r") as f:
+                self.load_data(f)
+        else:
+            self.load_data(filestream)
+
+
+        # And now for the preprocessing
+        self.__penalty = [ float(_p) for _p in self.__parts.get("penalty", []) ] + [ float(_p) for _p in self.__parts.get("invalid", []) ]
+        self.__correct = [ float(_c) for _c in self.__parts.get("correct", []) ]
+
+        # Best solution is repeated once again at the end
+        if len(self.__correct) > 0:
+            self.__correct = self.__correct[:-1]
+        else:
+            self.__penalty = self.__penalty[:-1]
+            self.__failed = True
+
+        # Marker that some this have to be reevaluated
+        self.__is_dirty = True
+
+        # Quantiles to compute
+        self.__show_quantiles = show_quantiles
+
+        # And minimum stack
+        self.__mins = [] if len(self.__correct) == 0 else [min(self.__correct)]
+
+
+    def load_data(self, f: TextIO):
+        for _li, line in enumerate(f):
+
+            # Configuration
+            if _li == 0:
+                if line[0] == "{":
+                    self.__configuration = line
+
+            # Important parts
+            if ":" in line:
+                part = line.split(":")[0]
+
+                if part not in self.__parts:
+                    self.__parts[part] = []
+
+                self.__parts[part].append(line[(line.index(":")+1):-1])
+
+            # The rest
+            else:
+                self.__others.append(line)
+
+
+    def add(self, other):
+        """Merge two logs by adding data from the other to self."""
+
+        self.__correct += other.__correct
+        self.__penalty += other.__penalty
+
+        if len(other.__correct) == 0:
+            self.__failed = True
+        else:
+            self.__mins.append(other.min)
+
+        self.__is_dirty = True
+
+
+    # Statistics
+    def recompute_statistics(self):
+        self.__quantiles = quantiles(self.observed_list, n = 100)
+        self.__is_dirty = False
+
+    @property
+    def observed_list(self):
+        return self.__correct if not self.__merged_min else self.__mins
+
+    @property
+    def min(self):
+        if len(self.observed_list) == 0:
+            return None
+
+        return min(self.observed_list)
+
+    @property
+    def max(self):
+        if len(self.observed_list) == 0:
+            return None
+
+        return max(self.observed_list)
+
+    @property
+    def mean(self):
+        if len(self.observed_list) == 0:
+            return None
+
+        return statistics.mean(self.observed_list)
+
+    @property
+    def std(self):
+        if len(self.observed_list) == 0:
+            return None
+
+        return statistics.stdev(self.observed_list)
+
+    @property
+    def rate(self):
+        return len(self.__correct) / (len(self.__penalty) + len(self.__correct))
+
+    @property
+    def length(self):
+        return len(self.__correct) + len(self.__penalty)
+
+    @property
+    def failed(self):
+        return self.__failed
+
+
+    def quantile(self, q: int):
+        """Count 'q'-quantile."""
+        if self.__is_dirty:
+            self.recompute_statistics()
+
+        return self.__quantiles[(q-1) % 100]
+
+    @property
+    def quantile05(self):
+        return self.quantile(5)
+
+    @property
+    def quantile10(self):
+        return self.quantile(10)
+
+    @property
+    def quantile90(self):
+        return self.quantile(90)
+
+    @property
+    def quantile95(self):
+        return self.quantile(95)
+
+    @property
+    def quantile_show_list(self):
+        return self.__show_quantiles
+
+
+    def __str__(self):
+        s = ""
+
+        # Filename
+        s += "Log: %s\n" % self.__filename
+
+        # Others
+        s += "Others: %s\n" % "\n".join(self.__others)
+
+        # Success rate
+        s += "Success rate: %f%% (%d out of %d)\n" % (
+            100.0 * self.rate,
+            len(self.__correct),
+            self.length
+        )
+
+        # Statistics
+        if len(self.__correct) > 0:
+            s += "Solution statistics:\n\t"
+            s += "Min: %f\n\t" % self.min
+
+            Q =  "\n\t".join(
+                    [ "Q%02d: %f" % (_q, self.quantile(_q)) for _q in self.__show_quantiles if _q < 50 ]
+                )
+            if Q != "":
+                s += Q + "\n\t"
+
+            s += "Avg: %f\n\t" % self.mean
+
+            Q =  "\n\t".join(
+                    [ "Q%02d: %f" % (_q, self.quantile(_q)) for _q in self.__show_quantiles if _q > 50 ]
+                )
+            if Q != "":
+                s += Q + "\n\t"
+
+            s += "\n\t".join([
+                "Max: %f" % self.max,
+                "Std: %f" % self.std,
+            ]) + "\n"
+
+
+        return (s)
+
+
+######################
+# Utilities
+######################
+
+def quantiles(data, n = 10):
+    """Ported from Python 3.10.
+
+    https://github.com/python/cpython/blob/3.10/Lib/statistics.py
+    """
+    data = sorted(data)
+    ld = len(data)
+    m = ld + 1
+    result = []
+    for i in range(1, n):
+        j = i * m // n                               # rescale i to m/n
+        j = 1 if j < 1 else ld-1 if j > ld-1 else j  # clamp to 1 .. ld-1
+        delta = i*m - j*n                            # exact integer math
+        interpolated = (data[j - 1] * (n - delta) + data[j] * delta) / n
+        result.append(interpolated)
+    return result
+
+
+def scale_lightness(rgb: Tuple[float], scale_l: float):
+    """Scale the lightness of a color.
+
+    Source:
+    https://stackoverflow.com/questions/37765197/darken-or-lighten-a-color-in-matplotlib
+    """
+    # convert rgb to hls
+    h, l, s = colorsys.rgb_to_hls(*rgb)
+    # manipulate h, l, s values and return as rgb
+    return colorsys.hls_to_rgb(h, min(1, l * scale_l), s = s)
+
+
+######################
+# Log files
+######################
+
+def construct_log_names(
+    configuration: Dict[str, any]
+    ) -> Dict[str, any]:
+    """Construct all names of the logs according to the configuration.
+
+    The dictionary is created as:
+    - variate (if applicable)
+      - loops
+        - cascade steps
+          - name of the log
+
+    Note: Yes, it is quite ugly, but this is currently the best (and simplest?)
+          way to do it.
+    """
+
+    ## a) Check for prefix
+    if "prefix" not in configuration:
+        print ("Selected configuration does not create logs. Add 'prefix' parameter to create them.", file = sys.stderr)
+        exit (4)
+
+    _prefix = configuration.get("prefix")
+
+    ## b) Check for variate
+    _variate = configuration.get(configuration.get("variate")) if "variate" in configuration else []
+
+    ## c) Get loops
+    _loops = configuration.get("loops")
+
+    ## d) Get cascade
+    _cascade = configuration.get("cascade")
+
+
+    lognames = {}
+    filename = "%s" % _prefix
+
+    if _variate == []:
+        lognames[""] = construct_log_names_variate(
+            filename,
+            _loops,
+            _cascade,
+            configuration.get("algorithm", "")
+        )
+    else:
+        if all([ isinstance(_value, int) for _value in _variate ]):
+            variate_suffix = "%%0%dd" % len(str(max(_variate)))
+        else:
+            variate_suffix = "%s"
+
+        for value in _variate:
+            lognames[variate_suffix % value] = construct_log_names_variate(
+                filename + "-" + variate_suffix % value,
+                _loops,
+                _cascade,
+                value if configuration.get("variate") == "algorithm" else configuration.get("algorithm", "")
+            )
+
+    return lognames
+
+
+def construct_log_names_variate(
+        filename: str,
+        loops: int,
+        cascade: List[Dict[str, any]],
+        algorithm: str = "",
+    ) -> Dict[str, any]:
+
+    lognames = {}
+
+    loops_suffix = "%%0%dd" % len(str(loops))
+
+    for loop in range(loops):
+        current_loop = loops_suffix % (loop + 1)
+
+        lognames[current_loop] = {}
+
+        cascade_suffix = "%%0%dd" % len(str(len(cascade)))
+
+        for _i, step in enumerate(cascade):
+            current_step = cascade_suffix % (_i + 1)
+
+            lognames[current_loop][current_step] = filename + "-" + current_loop + "-" + current_step + "-%s.log" % step.get("algorithm", algorithm)
+
+    return lognames
+
+
+def construct_log_names_legacy(
+    configuration: Dict[str, any]
+    ) -> Dict[str, any]:
+    """Construct all names of the logs according to the legacy configuration.
+
+    The dictionary is created as:
+    - groups_list
+      - loops
+        - cascade steps
+          - name of the log
+
+    Note: Yes, this is even worse. But I have some old logs that could be processed.
+    """
+
+    ## a) Check for prefix
+    if "prefix" not in configuration:
+        print ("Selected configuration does not create logs. Add 'prefix' parameter to create them.", file = sys.stderr)
+        exit (4)
+
+    _prefix = configuration.get("prefix")
+
+    ## b) Check for variate
+    _variate = configuration.get("groups_list", [ configuration.get("groups") ])
+
+    ## c) Get loops
+    _loops = configuration.get("loops")
+
+    ## d) Get cascade
+    _cascade = configuration.get("cascade")
+
+
+    lognames = {}
+    filename = "%s" % _prefix
+
+    variate_suffix = "%03d"
+
+    for value in _variate:
+        current_variate = variate_suffix % value
+        lognames[current_variate] = {}
+
+        loops_suffix = "%03d"
+
+        for loop in range(_loops):
+            current_loop = loops_suffix % (loop + 1)
+
+            lognames[current_variate][current_loop] = {}
+
+            current_step = "1"
+
+            lognames[current_variate][current_loop][current_step] = filename + current_variate + "-" + current_loop + ".log"
+
+    return lognames
+
+
+######################
+# Main
+######################
+
+if __name__ == "__main__":
+
+    # Obtain arguments
+    args = PARSER.parse_args()
+
+    if not args.logfile:
+        g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize[0])
+
+        for _if, input_file in enumerate(tqdm.tqdm(args.input_file, desc = "JSON")):
+            # Load configuration
+            configuration = json.loads(input_file.read())
+
+            # Construct names of all expected files
+            if "_version" in configuration and configuration.get("_version") > 1:
+                log_names = construct_log_names(configuration)
+            else:
+                log_names = construct_log_names_legacy(configuration)
+
+
+            for x in tqdm.tqdm(log_names.keys(), desc = "Logs", leave = False):
+
+                logs = {}
+
+                for _li, loop in enumerate(log_names[x]):
+                    for _i, step in enumerate(log_names[x][loop]):
+                        if not os.path.exists(log_names[x][loop][step]):
+                            continue
+
+                        if _i not in logs:
+                            logs[_i] = Log(log_names[x][loop][step], show_quantiles = args.quantiles, merged_min = args.merged_min)
+                        else:
+                            _log = Log(log_names[x][loop][step], show_quantiles = args.quantiles, merged_min = args.merged_min)
+                            logs[_i].add(_log)
+
+                if args.step[0] in logs:
+
+                    try:
+                        x = float(x)
+                    except:
+                        pass
+
+                    g.plot_log(logs[args.step[0]], variate = x, dataset = _if)
+
+        g.reduce_xticks()
+        g.set_ylim(ymin = args.ymin, ymax = args.ymax)
+
+        if not args.save:
+            matplotlib.pyplot.show()
+        else:
+            if not args.outfile:
+                outfile = args.input_file[0].name
+
+                if outfile.endswith(".json"):
+                    outfile = outfile[:-5]
+
+                if len(args.input_file) > 1:
+                    outfile += "-multiple%d" % len(args.input_file)
+            else:
+                outfile = args.outfile
+
+            matplotlib.pyplot.savefig(outfile + ".pdf", format = "pdf", dpi = args.dpi)
+            matplotlib.pyplot.savefig(outfile + ".png", format = "png", dpi = args.dpi)
+    else:
+        l = Log(filestream = args.input_file[0], show_quantiles = args.quantiles)
+        print(l)

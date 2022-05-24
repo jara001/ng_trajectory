@@ -4,6 +4,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.6.0 - 2022-05-24
+### Added
+- Interpolators
+    - Function `trajectoryRotate()` for rotating the trajectory points along the line. Used by selectors.
+    - Function `trajectoryClosestIndex()` to receive index of the closest point.
+    - Functions `trajectoryFarthest()` and `trajectoryFarthestIndex()` to receive the most distant points.
+- Penalizers
+    - Parameter `optimization` (default to True) that when True indicates that the Penalizer is run during optimization sequence.
+    - Penalizer `utils` with optimization methods.
+    - _Centerline_
+        - Methods `sum` and `avg` for computing the resulting penalty.
+        - Parameters `huber_loss` and `huber_delta` for using a Huber loss function when computing the penalty.
+    - [**NEW**] _Segment_
+        - Penalizer 'Segment' operates on the distance of the invalid points from the valid area.
+- Segmentators
+    - Functions `hood4Obtain()` and `hood8Obtain()` for obtaining the neighbour cells in the grid map.
+    - Function `borderCheck()` to check whether cell point is on valid area border.
+    - Function `pointToWorld()` as a approximate inverse function of `pointToMap()`.
+    - Function `validCheck()` to find whether cell point is valid.
+- Selectors
+    - [**NEW**] _Uniform_time_
+        - Selector 'Uniform_time' equidistantly samples the path with respect to the time estimated by 'profile' criterion.
+- New dependency `tqdm`.
+- Script 'ng_graph' for generating graphs from configuration files and log files.
+
+### Changed
+- Selectors
+    - _Uniform_
+        - Use `trajectoryRotate()` instead of the current implementation.
+- Penalizer `init()` now receives the full combined keywords dictionary. Therefore, e.g., `method` for `centerline` penalizer can be varied.
+- Target `build-wagon` is not run when using `build` target.
+
+### Fixed
+- Script 'ng_generate_data' now properly handles images with alpha channel and images without unknown area.
+- Generated documentation is automatically commited on new release.
+
 ## 1.5.3 - 2022-04-05
 ### Added
 - Target `build-wagon` for creating wagons for 'x86_64' and 'aarch64'.

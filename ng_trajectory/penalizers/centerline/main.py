@@ -20,7 +20,9 @@ CENTERLINE = None
 # Parameters
 from ng_trajectory.parameter import *
 P = ParameterList()
-P.createAdd("method", "min", str, "Optimization method for final penalty -- min / max.", "Init.")
+P.createAdd("method", "min", str, "Optimization method for final penalty -- min / max / sum / avg.", "Init.")
+P.createAdd("huber_loss", False, bool, "Whether to use Huber loss for computing the fitness.", "Init.")
+P.createAdd("huber_delta", 1.0, float, "(Requires 'huber_loss'). Delta used for computing the fitness.", "Init.")
 
 
 ######################
@@ -29,17 +31,32 @@ P.createAdd("method", "min", str, "Optimization method for final penalty -- min 
 
 METHODS = {
     "min": {
-        "function": lambda x, y: min(x, y),
+        "function": lambda old, new: min(old, new),
         "initial": 1000,
+        "after": lambda result, invalid_count: result,
     },
     "max": {
-        "function": lambda x, y: max(x, y),
+        "function": lambda old, new: max(old, new),
         "initial": 0,
-    }
+        "after": lambda result, invalid_count: result,
+    },
+    "sum": {
+        "function": lambda old, new: old + new,
+        "initial": 0,
+        "after": lambda result, invalid_count: result,
+    },
+    "avg": {
+        "function": lambda old, new: old + new,
+        "initial": 0,
+        "after": lambda result, invalid_count: result / invalid_count if invalid_count > 0 else result,
+    },
 }
 
 METHOD = METHODS["min"]["function"]
 INITIAL = METHODS["min"]["initial"]
+AFTER = METHODS["min"]["after"]
+HUBER_LOSS = False
+HUBER_DELTA = 0.0
 
 
 ######################
@@ -59,7 +76,7 @@ def init(start_points: numpy.ndarray, **kwargs) -> None:
     Arguments:
     start_points -- initial line on the track, should be a centerline, nx2 numpy.ndarray
     """
-    global CENTERLINE, METHOD, INITIAL
+    global CENTERLINE, METHOD, INITIAL, AFTER, HUBER_LOSS, HUBER_DELTA
 
 
     # Update parameters
@@ -70,6 +87,11 @@ def init(start_points: numpy.ndarray, **kwargs) -> None:
     if P.getValue("method") in METHODS:
         METHOD = METHODS[P.getValue("method")]["function"]
         INITIAL = METHODS[P.getValue("method")]["initial"]
+        AFTER = METHODS[P.getValue("method")]["after"]
+
+
+    HUBER_LOSS = P.getValue("huber_loss")
+    HUBER_DELTA = P.getValue("huber_delta")
 
 
     if CENTERLINE is None:
@@ -121,8 +143,12 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     invalid = INITIAL
     any_invalid = False
 
+    invalid_points = 0
+
     for _ip, _p in enumerate(points):
         if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
+
+            invalid_points += 1
 
             # Note: Trying borderlines here, it works the same, just the meaning of 'invalid' is different.
             # Note: We used to have '<' here, however that failed with invalid index 0.
@@ -163,8 +189,19 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
                     )
                 )
 
+
+            if HUBER_LOSS:
+                # '_invalid' is always positive
+                if _invalid <= HUBER_DELTA:
+                    _invalid = 0.5 * pow(_invalid, 2)
+                else:
+                    _invalid = HUBER_DELTA * (_invalid - 0.5 * HUBER_DELTA)
+
+
             invalid = METHOD(invalid, _invalid)
 
+
+    invalid = AFTER(invalid, invalid_points)
 
     return invalid * penalty if invalid != INITIAL else 0
 

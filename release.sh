@@ -28,7 +28,7 @@ sed -i "s/^date-released: .*/date-released: `date +%Y-%m-%d`/g" CITATION.cff
 
 
 # 4) Add changes
-git add CHANGELOG.md README.md CITATION.cff
+git add CHANGELOG.md README.md CITATION.cff doc/README.md
 
 
 # 5) Commit changes

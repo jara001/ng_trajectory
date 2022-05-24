@@ -195,7 +195,14 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
             map_grid = SEGMENTATOR.main.MAP_GRID,
             map_last = SEGMENTATOR.main.MAP_LAST,
             group_centers = group_centers,
-            **{**PENALIZER_INIT}
+            **{
+                **{
+                    key: value for key, value in kwargs.items() if key not in [
+                        "valid_points", "start_points", "map", "map_origin", "map_grid", "map_last", "group_centers"
+                    ]
+                },
+                **PENALIZER_INIT
+            }
         )
 
         if plot:
@@ -237,13 +244,14 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     tcpoints -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
     trajectory -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
     """
-    global OPTIMIZER, CUTS, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE
+    global OPTIMIZER, CUTS, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PENALIZER_ARGS
 
     with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
         recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
 
     points = transform.transform(recommendation.args[0], CUTS)
 
+    PENALIZER_ARGS["optimization"] = False
     final = _opt(numpy.asarray(recommendation.args[0]))
 
 

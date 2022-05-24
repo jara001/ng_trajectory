@@ -182,7 +182,10 @@ def processImage(im: Image) -> None:
     nd = numpy.asarray(im, dtype = int)
 
     # Name colors (just in case)
-    WALL, UNKN, FREE = numpy.unique(nd)
+    try:
+        WALL, UNKN, FREE = numpy.unique(nd)
+    except:
+        WALL, FREE = numpy.unique(nd)
 
 
     ## Inflate walls
@@ -256,7 +259,10 @@ def processImage(im: Image) -> None:
     _hood = numpy.unique(_hood[~numpy.any((_hood < 0) | (_hood >= nd.shape), axis = 1), :], axis = 0)
 
     # Find all points of other walls
-    _walls = numpy.argwhere((nd > 1) & (nd < UNKN)).copy()
+    try:
+        _walls = numpy.argwhere((nd > 1) & (nd < UNKN)).copy()
+    except:
+        _walls = numpy.argwhere((nd > 1) & (nd < FREE)).copy()
 
     # Find all free points that are also in the neighbourhood
     border = intersectArrays(_hood, _walls)
@@ -333,7 +339,10 @@ def processImage(im: Image) -> None:
     sys.stdout.write("\rSaving the data...")
 
     nnd = numpy.asarray(im, dtype = numpy.uint8).copy()
-    nnd[border[:, 0], border[:, 1]] = UNKN
+    try:
+        nnd[border[:, 0], border[:, 1]] = UNKN
+    except:
+        pass
 
     nndi = P.fromarray(nnd)
     nndi.convert("L")
@@ -401,9 +410,19 @@ def loadImage(filename: str) -> Image:
     im = P.open(filename)
     im = im.resize((int(im.size[0]*PARAMETERS["resize"]["value"]), int(im.size[1]*PARAMETERS["resize"]["value"])), resample = P.BILINEAR)
 
+    has_alpha = False
+
     # Verify used palette
     # Note: Only "L" is now usable.
     if im.mode != "L":
+        # Support also "LA" by removing the alpha channel.
+        # TODO: Check whether RGBA works as well.
+        if im.mode == "LA" or im.mode == "RGBA":
+            # Save alpha channel and convert it into two colors
+            alpha_nd = numpy.asarray(im.split()[-1].quantize(2, method = 1), dtype = int)
+
+            has_alpha = True
+
         im = im.convert("L")
 
         #print ("Unsupported image mode %s, currently only %s is/are supported."
@@ -443,6 +462,13 @@ def loadImage(filename: str) -> Image:
 
     # Convert the image back to grayscale
     im = im.convert("L")
+
+    # Add the removed alpha channel
+    if has_alpha:
+        UNKN = numpy.unique(numpy.asarray(im))[1]
+
+        for r, c in numpy.argwhere(alpha_nd == 0):
+            im.putpixel((int(c), int(r)), int(UNKN))
 
 
     ## Fix missaligned colors

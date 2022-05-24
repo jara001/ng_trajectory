@@ -174,3 +174,87 @@ def trajectoryReduce(points: numpy.ndarray, remain: int) -> numpy.ndarray:
     rpoints -- list of points, remainx2 numpy.ndarray
     """
     return points[numpy.linspace(0, len(points)-1, remain, dtype=numpy.int, endpoint=False), :]
+
+
+def trajectoryClosest(points: numpy.ndarray, reference: numpy.ndarray) -> numpy.ndarray:
+    """Finds the closest point on the trajectory to the 'reference'.
+
+    Arguments:
+    points -- list of points, nx(>=2) numpy.ndarray
+    reference -- point closest to the trajectory, 1x(>=2) numpy.ndarray
+
+    Returns:
+    closest -- point on the trajectory closest to the reference, 1x(>=2) numpy.ndarray
+    """
+    return points[trajectoryClosestIndex(points, reference), :]
+
+
+def trajectoryClosestIndex(points: numpy.ndarray, reference: numpy.ndarray) -> int:
+    """Finds the index of the closest point on the trajectory to the 'reference'.
+
+    Arguments:
+    points -- list of points, nx(>=2) numpy.ndarray
+    reference -- point closest to the trajectory, 1x(>=2) numpy.ndarray
+
+    Returns:
+    index -- index of the point on the trajectory closest to the reference, int
+    """
+
+    _distances = numpy.subtract(points[:, :2], reference[:2])
+
+    return numpy.hypot(_distances[:, 0], _distances[:, 1]).argmin()
+
+
+def trajectoryFarthest(points: numpy.ndarray, reference: numpy.ndarray) -> numpy.ndarray:
+    """Finds the farthest point on the trajectory to the 'reference'.
+
+    Arguments:
+    points -- list of points, nx(>=2) numpy.ndarray
+    reference -- point farthest to the trajectory, 1x(>=2) numpy.ndarray
+
+    Returns:
+    farthest -- point on the trajectory farthest to the reference, 1x(>=2) numpy.ndarray
+    """
+    return points[trajectoryFarthestIndex(points, reference), :]
+
+
+def trajectoryFarthestIndex(points: numpy.ndarray, reference: numpy.ndarray) -> int:
+    """Finds the index of the farthest point on the trajectory to the 'reference'.
+
+    Arguments:
+    points -- list of points, nx(>=2) numpy.ndarray
+    reference -- point farthest to the trajectory, 1x(>=2) numpy.ndarray
+
+    Returns:
+    index -- index of the point on the trajectory farthest to the reference, int
+    """
+
+    _distances = numpy.subtract(points[:, :2], reference[:2])
+
+    return numpy.hypot(_distances[:, 0], _distances[:, 1]).argmax()
+
+
+def trajectoryRotate(points: numpy.ndarray, next_point_index: int, rotation: float = 0.0) -> numpy.ndarray:
+    """Rotates the closed trajectory, moving the first point along it.
+
+    Basically, we have the trajectory 'points', point A (index 0) and
+    point B (index 'next_point_index'). This function moves point A
+    along the trajectory towards point B.
+
+    Rotation 0.0 keeps A on its position, leaving the trajectory intact.
+    In theory, rotation 1.0 would take point A and rotate the trajectory
+    in such a way, that A=B.
+
+    Arguments:
+    points -- list of points, nx(>=2) numpy.ndarray
+    next_point_index -- index of the second point in the trajectory, int
+    rotation -- factor to rotate the trajectory, 0.0<=rotation<1.0, float
+
+    Returns:
+    rotated_points -- rotated list of points, nx(>=2) numpy.ndarray
+    """
+    return numpy.roll(
+        points,
+        -int(next_point_index * rotation),
+        axis = 0
+    )
