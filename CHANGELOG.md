@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - [**NEW**] _Uniform_time_
         - Selector 'Uniform_time' equidistantly samples the path with respect to the time estimated by 'profile' criterion.
 - New dependency `tqdm`.
+- Script 'ng_graph' for generating graphs from configuration files and log files.
 
 ### Changed
 - Selectors
