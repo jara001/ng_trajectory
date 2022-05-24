@@ -298,6 +298,7 @@ _ng_trajectory.selectors.*_
 - _curvature_sample_  Sampling selector based on the curvature.
 - _uniform_distance_  Uniform distance selector.
 - _fixed_             Fixed selector.
+- _uniform_time_      Uniform time selector.
 - _curvature2_        Selector that utilizes the curvature of the path.
 
 
@@ -375,10 +376,8 @@ This selector uniformly samples the input path so that the selected points are e
 
 
 ```html
-Parameters:
-sampling_distance (float) = 1.0 [[m] Distance of super-sampling before the interpolation, skipped when 0.]
-
 Init parameters:
+sampling_distance (float) = 1.0 [[m] Distance of super-sampling before the interpolation, skipped when 0.]
 distance (float) = 0 [[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.]
 ```
 
@@ -394,6 +393,40 @@ This is not a selector as other, but it just imitates one. Fixed selector takes 
 ```html
 Init parameters:
 points (list) =  [Points to be returned upon calling 'select', list of points]
+```
+
+
+#### Uniform Time
+_selectors.uniform_time_
+
+Uniform time selector.
+
+This selector uniformly samples the input path, so that the points are equidistantly spaced in time.
+
+Following algorithms are used:
+- 'profile' criterion for computing the time,
+- 'cubic_spline' interpolator for smoothing the input,
+- 'uniform_distance' selector for resampling the input.
+
+
+```html
+Parameters:
+overlap (int) = 0 [Size of the trajectory overlap. 0 disables this.]
+
+Init parameters:
+rotate (float) = 0 [Parameter for rotating the subset selection. 0 is not rotated. <0, 1)]
+_mu (float) = 0.2 [Friction coeficient]
+_g (float) = 9.81 [Gravity acceleration coeficient]
+_m (float) = 3.68 [Vehicle mass]
+_ro (float) = 1.2 [Air density]
+_A (float) = 0.3 [Frontal reference aerodynamic area]
+_cl (float) = 1 [Drag coeficient]
+v_0 (float) = 0 [Initial speed [m.s^-1]]
+v_lim (float) = 4.5 [Maximum forward speed [m.s^-1]]
+a_acc_max (float) = 0.8 [Maximum longitudal acceleration [m.s^-2]]
+a_break_max (float) = 4.5 [Maximum longitudal decceleration [m.s^-2]]
+sampling_distance (float) = 1.0 [[m] Distance of super-sampling before the interpolation, skipped when 0.]
+distance (float) = 0 [[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.]
 ```
 
 
@@ -441,9 +474,29 @@ Penalizers are used for checking whether the candidate solution is correct. When
 
 _ng_trajectory.penalizers.*_
 
+- _segment_      Segment penalizer.
 - _centerline_   Centerline penalizer.
 - _count_        Count penalizer.
 - _borderlines_  Borderlines penalizer.
+
+
+#### Segment
+_penalizers.segment_
+
+Segment penalizer.
+
+This penalizer detects all misplaced points.
+
+The penalty is calculated as a distance between invalid point and valid points.
+
+
+```html
+Init. parameters:
+debug (bool) = False [Whether debug plot is ought to be shown.]
+method (str) = max [Optimization method for final penalty -- min / max / sum / avg.]
+huber_loss (bool) = False [Whether to use Huber loss for computing the fitness.]
+huber_delta (float) = 1.0 [(Requires 'huber_loss'). Delta used for computing the fitness.]
+```
 
 
 #### Centerline
@@ -459,10 +512,25 @@ Final penalty is the minimum of all of these distances.
 
 Note: Initialization of this is done only once; we expect that the centerline is present there (as it usually is).
 
+Note: Huber loss used for computing the fitness (when 'huber_loss' is True) is defined [1]:
+
+	L(a) = 0.5 * a^2 if abs(a) <= delta else delta * ( abs(a) - 0.5 * delta )
+
+Important: Change the method to 'max', as default 'min' is not performing very well. Experimental evaluation showed that 'min' is 10times less successful than 'max'.
+```json
+	"penalizer_init": {
+		"method": "max"
+	}
+```
+
+[1]: https://en.wikipedia.org/wiki/Huber_loss
+
 
 ```html
 Init. parameters:
-method (str) = min [Optimization method for final penalty -- min / max.]
+method (str) = min [Optimization method for final penalty -- min / max / sum / avg.]
+huber_loss (bool) = False [Whether to use Huber loss for computing the fitness.]
+huber_delta (float) = 1.0 [(Requires 'huber_loss'). Delta used for computing the fitness.]
 ```
 
 
