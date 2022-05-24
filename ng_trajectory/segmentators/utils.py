@@ -13,6 +13,8 @@ MAP = None
 MAP_ORIGIN = None
 MAP_GRID = None
 MAP_LAST = None
+HOOD4 = numpy.asarray([[-1, 0], [0, -1], [1, 0], [0, 1]])
+HOOD8 = numpy.asarray([[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]])
 
 
 ######################
@@ -102,6 +104,22 @@ def pointsToMap(points: numpy.ndarray) -> numpy.ndarray:
     return numpy.round( numpy.subtract(points[:, :2], MAP_ORIGIN) / MAP_GRID).astype(numpy.uint64)
 
 
+def pointToWorld(point: list) -> numpy.ndarray:
+    """Converts cell coordinates of a point to real coordinates.
+
+    Arguments:
+    cpoints -- cell coordinates of the point to convert, >=2-list
+
+    Returns:
+    point -- real coordinates of the point, 1x2 numpy.ndarray
+
+    Note: This is not precise at all! It is only approximated!
+    """
+    global MAP_ORIGIN, MAP_GRID
+
+    return numpy.add(numpy.asarray(point)[:2] * MAP_GRID, MAP_ORIGIN)
+
+
 def gridCompute(points: numpy.ndarray) -> float:
     """Computes square grid size from given points.
 
@@ -119,3 +137,84 @@ def gridCompute(points: numpy.ndarray) -> float:
                     ]
             ]
         )
+
+
+######################
+# Utilities (Grid)
+######################
+
+def hood4Obtain(cpoint: numpy.ndarray) -> numpy.ndarray:
+    """Obtain the 4-neighbourhood of a cell.
+
+    Arguments:
+    cpoint -- cell coordinates of the point, 1x2 numpy.ndarray
+
+    Returns:
+    hood -- neighbour cells, (2-4)x2 numpy.ndarray
+
+    Note: Instead of creating each point and finding whether it is
+    inside the boundaries, we do this.
+    """
+    _hood = cpoint + HOOD4
+
+    return _hood[
+        ( ~ numpy.any( _hood < 0, axis = 1 ) )
+        &
+        ( _hood[:, 0] < MAP.shape[0] )
+        &
+        ( _hood[:, 1] < MAP.shape[1] )
+    ].astype(numpy.int)
+
+
+def hood8Obtain(cpoint: numpy.ndarray) -> numpy.ndarray:
+    """Obtain the 8-neighbourhood of a cell.
+
+    Arguments:
+    cpoint -- cell coordinates of the point, 1x2 numpy.ndarray
+
+    Returns:
+    hood -- neighbour cells, (3-8)x2 numpy.ndarray
+
+    Note: Instead of creating each point and finding whether it is
+    inside the boundaries, we do this.
+    """
+    _hood = cpoint + HOOD8
+
+    return _hood[
+        ( ~ numpy.any( _hood < 0, axis = 1 ) )
+        &
+        ( _hood[:, 0] < MAP.shape[0] )
+        &
+        ( _hood[:, 1] < MAP.shape[1] )
+    ].astype(numpy.int)
+
+
+def validCheck(cpoint: numpy.ndarray) -> bool:
+    """Check whether the map point is on border.
+
+    Arguments:
+    cpoint -- cell coordinates of the point, 1x2 numpy.ndarray
+
+    Returns:
+    valid -- True when valid point, else False, bool
+    """
+    return MAP[cpoint[0], cpoint[1]] != 0
+
+
+def borderCheck(cpoint: numpy.ndarray) -> bool:
+    """Check whether the map point is on border.
+
+    Arguments:
+    cpoint -- cell coordinates of the point, 1x2 numpy.ndarray
+
+    Returns:
+    on_border -- True when border point, else False, bool
+
+    Note: This is not the same as Matryoshka's pointFilter as
+    we are not using only the edge but rather the whole segment/area.
+    """
+    global MAP
+
+    _hood = hood4Obtain(cpoint)
+
+    return numpy.any(MAP[_hood[:, 0], _hood[:, 1]] == 0) or len(_hood) < 4

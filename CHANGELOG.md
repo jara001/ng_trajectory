@@ -7,10 +7,21 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 - Interpolators
     - Function `trajectoryRotate()` for rotating the trajectory points along the line. Used by selectors.
+    - Function `trajectoryClosestIndex()` to receive index of the closest point.
+    - Functions `trajectoryFarthest()` and `trajectoryFarthestIndex()` to receive the most distant points.
 - Penalizers
+    - Parameter `optimization` (default to True) that when True indicates that the Penalizer is run during optimization sequence.
+    - Penalizer `utils` with optimization methods.
     - _Centerline_
         - Methods `sum` and `avg` for computing the resulting penalty.
         - Parameters `huber_loss` and `huber_delta` for using a Huber loss function when computing the penalty.
+    - [**NEW**] _Segment_
+        - Penalizer 'Segment' operates on the distance of the invalid points from the valid area.
+- Segmentators
+    - Functions `hood4Obtain()` and `hood8Obtain()` for obtaining the neighbour cells in the grid map.
+    - Function `borderCheck()` to check whether cell point is on valid area border.
+    - Function `pointToWorld()` as a approximate inverse function of `pointToMap()`.
+    - Function `validCheck()` to find whether cell point is valid.
 - Selectors
     - [**NEW**] _Uniform_time_
         - Selector 'Uniform_time' equidistantly samples the path with respect to the time estimated by 'profile' criterion.
