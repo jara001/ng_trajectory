@@ -219,6 +219,8 @@ class Graph(object):
         if log.mean is None:
             return
 
+        dataset = dataset % len(self.__colors)
+
         if self.__show_avg:
             matplotlib.pyplot.scatter(variate, log.mean, color = self.__colors[dataset], s = 50,
                 **{"facecolors": "none"} if log.failed else {} )
