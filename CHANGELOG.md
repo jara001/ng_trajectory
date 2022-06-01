@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Fixed
+- Properly compute quantiles in 'ng_graph'.
+
 ## 1.6.0 - 2022-05-24
 ### Added
 - Interpolators
