@@ -22,7 +22,10 @@ from PIL import Image
 import tqdm
 
 
-# Global variables
+######################
+# Argparse
+######################
+
 PARSER = argparse.ArgumentParser(
     prog = "ng_plot",
     formatter_class=argparse.RawDescriptionHelpFormatter,
