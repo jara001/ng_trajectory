@@ -22,6 +22,10 @@ from PIL import Image
 import tqdm
 
 
+# Global variables
+VALID_POINTS = None
+
+
 ######################
 # Argparse
 ######################
@@ -74,6 +78,40 @@ PARSER.add_argument("-d",
 
 
 ######################
+# Figure generation
+######################
+
+def figureGenerate(solution, args):
+    """Generates a figure according to the settings.
+
+    Arguments:
+    solution -- waypoints of the solution to be interpolated, numpy.ndarray
+    args -- arguments received from the user
+
+    Returns:
+    img -- image saved to the virtual file, io.BytesIO
+    """
+    global VALID_POINTS
+
+    f = ngplot.figureCreate()
+
+    ngplot.trackPlot(VALID_POINTS)
+    ngplot.axisEqual()
+
+    line = numpy.asarray(solution)
+    ngplot.pointsPlot(cspline.interpolate(line))
+
+    # https://www.tutorialspoint.com/how-to-convert-matplotlib-figure-to-pil-image-object
+    img_buf = io.BytesIO()
+    #matplotlib.pyplot.savefig(img_buf, format='png')
+    ngplot.figureSave(img_buf)
+
+    ngplot.figureClose()
+
+    return img_buf
+
+
+######################
 # Main
 ######################
 
@@ -88,7 +126,7 @@ if __name__ == "__main__":
 
 
     # Obtain map from the file
-    valid_points = numpy.load(args.map_file[0])
+    VALID_POINTS = numpy.load(args.map_file[0])
 
 
     # Obtain solutions from logs
@@ -109,23 +147,9 @@ if __name__ == "__main__":
     images = []
 
     for solution in tqdm.tqdm(solutions, desc = "Plotting", leave = True):
-        f = ngplot.figureCreate()
-
-        ngplot.trackPlot(valid_points)
-        ngplot.axisEqual()
-
-        line = numpy.asarray(solution)
-        ngplot.pointsPlot(cspline.interpolate(line))
-
-        # https://www.tutorialspoint.com/how-to-convert-matplotlib-figure-to-pil-image-object
-        img_buf = io.BytesIO()
-        #matplotlib.pyplot.savefig(img_buf, format='png')
-        ngplot.figureSave(img_buf)
-
-        images.append(img_buf)
-
-        ngplot.figureClose()
-
+        images.append(
+            figureGenerate(solution, args)
+        )
 
     # Load images to Pillow
     # https://stackoverflow.com/questions/753190/programmatically-generate-video-or-animated-gif-in-python
