@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+# ng_plot.py
+"""Script for generating images from ng_trajectory files.
+"""
+######################
+# Imports & Globals
+######################
+
+import sys, os, argparse
+
+import ng_trajectory.interpolators.cubic_spline as cspline
+import ng_trajectory.plot as ngplot
+import matplotlib.pyplot
+
+import numpy, json
+
+# GIFs
+import io#, imageio
+from PIL import Image
+
+# Progress
+import tqdm
+
+
+# Global variables
+PARSER = argparse.ArgumentParser(
+    prog = "ng_plot",
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description = """
+Script for generating images from ng_trajectory files.
+    """,
+)
+
+# Arguments
+PARSER.add_argument("map_file",
+    nargs = 1,
+    help = "Path to the valid_points file.",
+    type = str,
+    #required = True,
+)
+
+PARSER.add_argument("input_file",
+    nargs = "+",
+    help = "Path to the ng_trajectory file.",
+    type = argparse.FileType("r"),
+)
+
+PARSER.add_argument("-O",
+    dest = "outfile",
+    help = "Set the output filename.",
+    type = str,
+    required = True,
+)
+
+PARSER.add_argument("-v",
+    dest = "verbose",
+    help = "Give more output.",
+    action = "store_true",
+)
+
+PARSER.add_argument("-d",
+    dest = "duration",
+    help = "Duration of the GIF sequence.",
+    default = 200,
+    type = int,
+)
+
+
+######################
+# Main
+######################
+
+if __name__ == "__main__":
+
+    # Obtain arguments
+    args = PARSER.parse_args()
+
+    if args.verbose:
+        print ("Received arguments:")
+        print ("\n".join([ "\t%s: %s" % (key, value) for key, value in args._get_kwargs() ]))
+
+
+    # Obtain map from the file
+    valid_points = numpy.load(args.map_file[0])
+
+
+    # Obtain solutions from logs
+    solutions = []
+
+    for log in tqdm.tqdm(args.input_file, desc = "Loading", leave = False):
+        for line in log:
+            if line.startswith("solution:"):
+                solutions.append(
+                    json.loads(line[9:].rstrip())
+                )
+
+    if args.verbose:
+        print ("Found solutions: %d" % len(solutions))
+
+
+    # Plot the data
+    images = []
+
+    for solution in tqdm.tqdm(solutions, desc = "Plotting", leave = True):
+        f = ngplot.figureCreate()
+
+        ngplot.trackPlot(valid_points)
+        ngplot.axisEqual()
+
+        line = numpy.asarray(solution)
+        ngplot.pointsPlot(cspline.interpolate(line))
+
+        # https://www.tutorialspoint.com/how-to-convert-matplotlib-figure-to-pil-image-object
+        img_buf = io.BytesIO()
+        #matplotlib.pyplot.savefig(img_buf, format='png')
+        ngplot.figureSave(img_buf)
+
+        images.append(img_buf)
+
+        ngplot.figureClose()
+
+
+    # Load images to Pillow
+    # https://stackoverflow.com/questions/753190/programmatically-generate-video-or-animated-gif-in-python
+    imgs = [ Image.open(i) for i in images ]
+    img = imgs[0]
+
+    img.save(args.outfile + ".gif", format = "GIF", append_images = imgs[1:], save_all = True, duration = args.duration, loop = 0)
