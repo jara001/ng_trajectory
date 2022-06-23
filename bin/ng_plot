@@ -99,7 +99,8 @@ def figureGenerate(solution, args):
     ngplot.axisEqual()
 
     line = numpy.asarray(solution)
-    ngplot.pointsPlot(cspline.interpolate(line))
+    iline = cspline.interpolate(line)
+    ngplot.pointsPlot(iline)
 
     # https://www.tutorialspoint.com/how-to-convert-matplotlib-figure-to-pil-image-object
     img_buf = io.BytesIO()
