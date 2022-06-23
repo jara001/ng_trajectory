@@ -28,6 +28,10 @@ PARSER = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description = """
 Script for generating images from ng_trajectory files.
+
+Output is generated according to the number of passed files.
+ - 1 file generates 'outfile'.png
+ - >1 files generate 'outfile'.gif
     """,
 )
 
@@ -125,4 +129,7 @@ if __name__ == "__main__":
     imgs = [ Image.open(i) for i in images ]
     img = imgs[0]
 
-    img.save(args.outfile + ".gif", format = "GIF", append_images = imgs[1:], save_all = True, duration = args.duration, loop = 0)
+    if len(imgs) > 1:
+        img.save(args.outfile + ".gif", format = "GIF", append_images = imgs[1:], save_all = True, duration = args.duration, loop = 0)
+    elif len(imgs) == 1:
+        img.save(args.outfile + ".png", format = "PNG")
