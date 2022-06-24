@@ -84,6 +84,15 @@ PARSER.add_argument("--velocity",
     action = "store_true",
 )
 
+PARSER.add_argument("--cmap",
+    nargs = "?",
+    choices = list(matplotlib._cm.datad),
+    dest = "cmap",
+    help = "Colormap used for displaying the velocity. Same as matplotlib colormaps.",
+    default = "gnuplot2",
+    type = str,
+)
+
 
 ######################
 # Figure generation
@@ -116,7 +125,7 @@ def figureGenerate(solution, args):
         # Compute velocity
         _v, _a, _t = profiler.profileCompute(iline, 400)
 
-        _sc = ngplot.pointsScatter(iline, f, s = 1, c = _v, cmap = "gnuplot2", norm = matplotlib.colors.Normalize(vmin = 0.0))
+        _sc = ngplot.pointsScatter(iline, f, s = 1, c = _v, cmap = args.cmap, norm = matplotlib.colors.Normalize(vmin = 0.0))
         f.colorbar(_sc)
 
 
