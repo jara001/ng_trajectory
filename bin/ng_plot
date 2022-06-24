@@ -78,6 +78,12 @@ PARSER.add_argument("-d",
     type = int,
 )
 
+PARSER.add_argument("--velocity",
+    dest = "velocity",
+    help = "Compute and show velocity on the track.",
+    action = "store_true",
+)
+
 
 ######################
 # Figure generation
@@ -102,13 +108,16 @@ def figureGenerate(solution, args):
 
     line = numpy.asarray(solution)
     iline = cspline.interpolate(line)
-    #ngplot.pointsPlot(iline)
 
-    # Compute velocity
-    _v, _a, _t = profiler.profileCompute(iline, 400)
+    if not args.velocity:
+        ngplot.pointsPlot(iline)
 
-    _sc = ngplot.pointsScatter(iline, f, s = 1, c = _v, cmap = "gnuplot2", norm = matplotlib.colors.Normalize(vmin = 0.0))
-    f.colorbar(_sc)
+    else:
+        # Compute velocity
+        _v, _a, _t = profiler.profileCompute(iline, 400)
+
+        _sc = ngplot.pointsScatter(iline, f, s = 1, c = _v, cmap = "gnuplot2", norm = matplotlib.colors.Normalize(vmin = 0.0))
+        f.colorbar(_sc)
 
 
     # https://www.tutorialspoint.com/how-to-convert-matplotlib-figure-to-pil-image-object
