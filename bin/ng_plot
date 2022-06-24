@@ -88,9 +88,11 @@ PARSER.add_argument("--cmap",
     nargs = "?",
     choices = list(matplotlib._cm.datad),
     dest = "cmap",
-    help = "Colormap used for displaying the velocity. Same as matplotlib colormaps.",
+    help = "Colormap used for displaying the velocity. Same as matplotlib colormaps. See https://matplotlib.org/stable/tutorials/colors/colormaps.html",
     default = "gnuplot2",
     type = str,
+    # https://stackoverflow.com/questions/17728109/python-dont-display-choices-with-argparse
+    metavar = "CMAP",
 )
 
 
