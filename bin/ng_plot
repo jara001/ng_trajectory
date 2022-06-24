@@ -9,8 +9,10 @@
 import sys, os, argparse
 
 import ng_trajectory.interpolators.cubic_spline as cspline
+import ng_trajectory.criterions.profile.profiler as profiler
 import ng_trajectory.plot as ngplot
 import matplotlib.pyplot
+import matplotlib.colors
 
 import numpy, json
 
@@ -100,7 +102,14 @@ def figureGenerate(solution, args):
 
     line = numpy.asarray(solution)
     iline = cspline.interpolate(line)
-    ngplot.pointsPlot(iline)
+    #ngplot.pointsPlot(iline)
+
+    # Compute velocity
+    _v, _a, _t = profiler.profileCompute(iline, 400)
+
+    _sc = ngplot.pointsScatter(iline, f, s = 1, c = _v, cmap = "gnuplot2", norm = matplotlib.colors.Normalize(vmin = 0.0))
+    f.colorbar(_sc)
+
 
     # https://www.tutorialspoint.com/how-to-convert-matplotlib-figure-to-pil-image-object
     img_buf = io.BytesIO()
@@ -142,6 +151,15 @@ if __name__ == "__main__":
 
     if args.verbose:
         print ("Found solutions: %d" % len(solutions))
+
+
+    # Prepare criterion
+    profiler.parametersSet(**{
+        "_mu": 0.25,
+        "v_lim": 6.0,
+        "a_acc_max": 0.8,
+        "a_break_max": 6.0
+    })
 
 
     # Plot the data
