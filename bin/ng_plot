@@ -9,6 +9,7 @@
 import sys, os, argparse
 
 import ng_trajectory.interpolators.cubic_spline as cspline
+import ng_trajectory.criterions.profile.main as profile
 import ng_trajectory.criterions.profile.profiler as profiler
 import ng_trajectory.plot as ngplot
 import matplotlib.pyplot
@@ -95,6 +96,28 @@ PARSER.add_argument("--cmap",
     metavar = "CMAP",
 )
 
+# Dynamicaly build up the parameters for profiler
+_PROFILE_SETTINGS = {
+    "_mu": 0.25,
+    "v_lim": 6.0,
+    "a_acc_max": 0.8,
+    "a_break_max": 6.0
+}
+
+PROFILER_GROUP = PARSER.add_argument_group("profiler arguments", "Parameters used for the profiler (with '--velocity').")
+
+for name, parameter in profile.P.parameters.items():
+    PROFILER_GROUP.add_argument("--" + name,
+        dest = name,
+        help = parameter.description + " (%(type)s, default: %(default)s)",
+        default = _PROFILE_SETTINGS.get(name) if name in _PROFILE_SETTINGS else parameter.default,
+        type = parameter.type,
+        metavar = "VALUE",
+    )
+
+    if name not in _PROFILE_SETTINGS:
+        _PROFILE_SETTINGS.setdefault(name, parameter.default)
+
 
 ######################
 # Figure generation
@@ -174,12 +197,15 @@ if __name__ == "__main__":
 
 
     # Prepare criterion
-    profiler.parametersSet(**{
-        "_mu": 0.25,
-        "v_lim": 6.0,
-        "a_acc_max": 0.8,
-        "a_break_max": 6.0
-    })
+    if args.velocity:
+        for param in _PROFILE_SETTINGS.keys():
+            _PROFILE_SETTINGS[param] = getattr(args, param)
+
+        if args.verbose:
+            print ("Setting profiler to:")
+            print (_PROFILE_SETTINGS)
+
+        profile.init(**_PROFILE_SETTINGS)
 
 
     # Plot the data
