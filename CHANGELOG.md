@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ## Unreleased
 ### Added
 - Script 'ng_plot' for generating maps and GIFs from log files.
+- Parameter '-p' for 'ng_graph' to show log statistics in plot-friendly csv format.
 
 ### Fixed
 - Properly compute quantiles in 'ng_graph'.

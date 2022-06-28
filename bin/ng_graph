@@ -158,6 +158,12 @@ PARSER.add_argument("--step",
     type = int,
 )
 
+PARSER.add_argument("-p",
+    dest = "plot_friendly",
+    help = "Output information in plot friendly format.",
+    action = "store_true",
+)
+
 
 ######################
 # Graph class
@@ -754,4 +760,9 @@ if __name__ == "__main__":
             matplotlib.pyplot.savefig(outfile + ".png", format = "png", dpi = args.dpi)
     else:
         l = Log(filestream = args.input_file[0], show_quantiles = args.quantiles)
-        print(l)
+
+        if not args.plot_friendly:
+            print(l)
+        else:
+            print (",".join(["len,rate,min,avg,max,std"] + ["Q%02d" % _q for _q in l.quantile_show_list]))
+            print (",".join(["%s" % s for s in [l.length, l.rate, l.min, l.mean, l.max, l.std] + [l.quantile(_q) for _q in l.quantile_show_list]]))
