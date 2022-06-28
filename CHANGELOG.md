@@ -5,10 +5,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
+- Penalizers
+    - Variable `INVALID_POINTS` to store invalid points so that they are not computed multiple times.
 - Script 'ng_plot' for generating maps and GIFs from log files.
 - Parameter '-p' for 'ng_graph' to show log statistics in plot-friendly csv format.
 
 ### Fixed
+- Optimizers
+    - _Braghin_
+        - Invalid points plotting is hidden behind `plot` parameter.
 - Properly compute quantiles in 'ng_graph'.
 
 ## 1.6.0 - 2022-05-24
