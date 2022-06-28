@@ -14,4 +14,4 @@ and points of the borderline.
 
 Final penalty is the minimum of all of these distances.
 """
-from .main import init, penalize
+from .main import init, penalize, INVALID_POINTS
