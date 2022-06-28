@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Script 'ng_plot' for generating maps and GIFs from log files.
+
 ### Fixed
 - Properly compute quantiles in 'ng_graph'.
 

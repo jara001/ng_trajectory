@@ -69,5 +69,5 @@ setup(
     extras_require={
         "plot_support": "matplotlib"
     },
-    scripts=['bin/ng_run', 'bin/ng_generate_data', 'bin/ng_help', 'bin/ng_curvature_gui', 'bin/ng_graph'],
+    scripts=['bin/ng_run', 'bin/ng_generate_data', 'bin/ng_help', 'bin/ng_curvature_gui', 'bin/ng_graph', 'bin/ng_plot'],
 )
