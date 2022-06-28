@@ -149,7 +149,7 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     _dists = []
 
     _invalids = []
-    _invalid_points = []
+    INVALID_POINTS.clear()
 
     # 1. Find invalid points
     for _ip, _p in enumerate(points):
@@ -160,7 +160,7 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
             _invalids.append(_ip)
 
             # Store invalid point
-            _invalid_points.append(_p)
+            INVALID_POINTS.append(_p)
 
             _closest = trajectoryClosest(valid_points, _p)
 
@@ -173,9 +173,6 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
 
             if DEBUG:
                 ngplot.pointsPlot(numpy.vstack((_closest[:2], _p[:2])))
-
-    # Save all invalid points
-    INVALID_POINTS = numpy.asarray(_invalid_points)
 
 
     # 2. Find edges of the track area

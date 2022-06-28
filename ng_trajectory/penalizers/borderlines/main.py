@@ -152,13 +152,13 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     # Note: This is required for low number of groups.
     invalid = 1000
     any_invalid = False
-    _invalid_points = []
+    INVALID_POINTS.clear()
 
     for _ip, _p in enumerate(points):
         if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
 
             # Store invalid point
-            _invalid_points.append(_p)
+            INVALID_POINTS.append(_p)
 
             # Note: Trying borderlines here, it works the same, just the meaning of 'invalid' is different.
             # Note: We used to have '<' here, however that failed with invalid index 0.
@@ -180,10 +180,6 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
             )
 
             invalid = min(invalid, _invalid)
-
-
-    # Save all invalid points
-    INVALID_POINTS = numpy.asarray(_invalid_points)
 
 
     return invalid * penalty if invalid != 1000 else 0

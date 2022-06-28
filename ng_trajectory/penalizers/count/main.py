@@ -49,18 +49,14 @@ def penalize(points: numpy.ndarray, valid_points: numpy.ndarray, grid: float, pe
     _grid = grid if grid else gridCompute(points)
 
     invalid = 0
-    _invalid_points = []
+    INVALID_POINTS.clear()
 
     for _p in points:
         if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
             invalid += 1
 
             # Store invalid point
-            _invalid_points.append(_p)
-
-
-    # Save all invalid points
-    INVALID_POINTS = numpy.asarray(_invalid_points)
+            INVALID_POINTS.append(_p)
 
 
     return invalid * penalty
