@@ -11,6 +11,10 @@ import numpy
 from ng_trajectory.segmentators.utils import gridCompute
 
 
+# Global variables
+INVALID_POINTS = None
+
+
 # Parameters
 #from ng_trajectory.parameter import *
 #P = ParameterList()
@@ -39,14 +43,24 @@ def penalize(points: numpy.ndarray, valid_points: numpy.ndarray, grid: float, pe
     Returns:
     rpenalty -- value of the penalty, 0 means no penalty, float
     """
+    global INVALID_POINTS
 
     # Use the grid or compute it
     _grid = grid if grid else gridCompute(points)
 
     invalid = 0
+    _invalid_points = []
 
     for _p in points:
         if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
             invalid += 1
+
+            # Store invalid point
+            _invalid_points.append(_p)
+
+
+    # Save all invalid points
+    INVALID_POINTS = numpy.asarray(_invalid_points)
+
 
     return invalid * penalty
