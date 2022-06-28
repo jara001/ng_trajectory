@@ -12,7 +12,7 @@ from ng_trajectory.segmentators.utils import gridCompute
 
 
 # Global variables
-INVALID_POINTS = None
+INVALID_POINTS = []
 
 
 # Parameters

@@ -20,7 +20,7 @@ from typing import List
 
 
 # Global variables
-INVALID_POINTS = None
+INVALID_POINTS = []
 CENTERLINE = None
 DEBUG = False
 MAP = None

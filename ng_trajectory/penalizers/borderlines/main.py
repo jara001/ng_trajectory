@@ -14,7 +14,7 @@ from typing import List, Dict
 
 
 # Global variables
-INVALID_POINTS = None
+INVALID_POINTS = []
 BORDERLINES = None
 
 
