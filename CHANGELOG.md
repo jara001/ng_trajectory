@@ -12,6 +12,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Script 'ng_plot' for generating maps and GIFs from log files.
 - Parameter '-p' for 'ng_graph' to show log statistics in plot-friendly csv format.
 
+### Changed
+- Selectors
+    - _Curvature2_
+        - Parameters of the selector are not reset to default state every `select()`.
+
 ### Fixed
 - Optimizers
     - _Braghin_
