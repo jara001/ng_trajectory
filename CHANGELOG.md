@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 - Penalizers
     - Variable `INVALID_POINTS` to store invalid points so that they are not computed multiple times.
+    - [**NEW**] _Curvature_
+        - Penalizer 'Curvature' operates on the curvature of feasible paths.
 - Script 'ng_plot' for generating maps and GIFs from log files.
 - Parameter '-p' for 'ng_graph' to show log statistics in plot-friendly csv format.
 
