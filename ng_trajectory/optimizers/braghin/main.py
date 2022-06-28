@@ -246,7 +246,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     tcpoints -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
     trajectory -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
     """
-    global OPTIMIZER, CUTS, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER_ARGS
+    global OPTIMIZER, CUTS, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS
 
     with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
         recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
@@ -266,16 +266,9 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     # It is expected that they are unique and sorted.
     _points = INTERPOLATOR.interpolate(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
 
-    # Check if all interpolated points are valid
-    # Note: This is required for low number of groups.
-    invalid = []
-
-    for _p in _points:
-        if not numpy.any(numpy.all(numpy.abs( numpy.subtract(VALID_POINTS, _p[:2]) ) < GRID, axis = 1)):
-            invalid.append(_p)
-
-    if PLOT and len(invalid) > 0:
-        ngplot.pointsScatter(numpy.asarray(invalid), FIGURE, color="red", marker="x")
+    # Display invalid points if found
+    if PLOT and len(PENALIZER.INVALID_POINTS) > 0:
+        ngplot.pointsScatter(numpy.asarray(PENALIZER.INVALID_POINTS), FIGURE, color="red", marker="x")
 
 
     ##
