@@ -16,9 +16,9 @@ INVALID_POINTS = []
 
 
 # Parameters
-#from ng_trajectory.parameter import *
-#P = ParameterList()
-#P.createAdd("int_size", 400, int, "Number of points in the interpolation.", "")
+from ng_trajectory.parameter import *
+P = ParameterList()
+P.createAdd("k_max", 1.5, float, "Maximum allowed curvature in abs [m^-1]", "")
 
 
 ######################
@@ -27,7 +27,9 @@ INVALID_POINTS = []
 
 def init(**kwargs) -> None:
     """Initialize penalizer."""
-    pass
+
+    # Update parameters
+    P.updateAll(kwargs)
 
 
 def penalize(points: numpy.ndarray, valid_points: numpy.ndarray, grid: float, penalty: float = 100, **overflown) -> float:
@@ -45,6 +47,12 @@ def penalize(points: numpy.ndarray, valid_points: numpy.ndarray, grid: float, pe
     """
     global INVALID_POINTS
 
+    # Update parameters
+    P.updateAll(overflown, reset = False)
+
+    _k_max = P.getValue("k_max")
+
+
     # Use the grid or compute it
     _grid = grid if grid else gridCompute(points)
 
@@ -59,16 +67,16 @@ def penalize(points: numpy.ndarray, valid_points: numpy.ndarray, grid: float, pe
     if invalid == 0:
         invalid = numpy.add(
             numpy.sum(
-                points[points[:, 2] > 1.5, 2]
+                points[points[:, 2] > _k_max, 2]
             ),
             -numpy.sum(
-                points[points[:, 2] < -1.5, 2]
+                points[points[:, 2] < -_k_max, 2]
             )
         ) / 100
 
-        INVALID_POINTS += points[(points[:, 2] > 1.5) | (points[:, 2] < -1.5), :].tolist()
-        print (points[(points[:, 2] > 1.5) | (points[:, 2] < -1.5), 2])
+        INVALID_POINTS += points[(points[:, 2] > _k_max) | (points[:, 2] < -_k_max), :].tolist()
+        print (points[(points[:, 2] > _k_max) | (points[:, 2] < -_k_max), 2])
 
-    print(points[(points[:, 2] > 1.5) | (points[:, 2] < -1.5), 2])
+    print(points[(points[:, 2] > _k_max) | (points[:, 2] < -_k_max), 2])
 
     return invalid * penalty * 10
