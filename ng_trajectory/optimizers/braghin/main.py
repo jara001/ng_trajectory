@@ -48,6 +48,7 @@ HOLDMAP = None
 GRID = None
 PENALTY = None
 FIGURE = None
+PLOT = None
 
 
 # Parameters
@@ -175,6 +176,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     _holdtransform = hold_transform
     PENALTY = penalty
     FIGURE = figure
+    PLOT = plot
 
 
     VALID_POINTS = points
@@ -205,7 +207,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
             }
         )
 
-        if plot:
+        if PLOT:
             if plot_cuts:
                 for cut in CUTS:
                     ngplot.pointsPlot(cut, figure=figure, color="indigo")
@@ -244,7 +246,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     tcpoints -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
     trajectory -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
     """
-    global OPTIMIZER, CUTS, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PENALIZER_ARGS
+    global OPTIMIZER, CUTS, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER_ARGS
 
     with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
         recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
@@ -272,7 +274,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
         if not numpy.any(numpy.all(numpy.abs( numpy.subtract(VALID_POINTS, _p[:2]) ) < GRID, axis = 1)):
             invalid.append(_p)
 
-    if len(invalid) > 0:
+    if PLOT and len(invalid) > 0:
         ngplot.pointsScatter(numpy.asarray(invalid), FIGURE, color="red", marker="x")
 
 
