@@ -100,6 +100,7 @@ def trajectoryResample(points, remain):
 
 
     ## Precise rotation using fractions
+    # Note: The precision is set to centimeters for 'remain'.
     # 1) Current distance between individual points
     if remain < 0:
         f_dist = fractions.Fraction(str(P.getValue("distance")))
