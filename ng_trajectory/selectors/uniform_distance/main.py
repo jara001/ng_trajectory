@@ -16,6 +16,9 @@ from ng_trajectory.interpolators import cubic_spline
 # Functions for equidistant resampling and selection
 from ng_trajectory.selectors.curvature2.main import resolutionEstimate, factorCompute, pathPointDistanceAvg, pathLength
 
+# Support for rotating the trajectory
+from ng_trajectory.interpolators.utils import trajectoryRotate
+
 
 # Global variables
 INTERPOLATOR = cubic_spline
@@ -26,6 +29,7 @@ from ng_trajectory.parameter import *
 P = ParameterList()
 P.createAdd("sampling_distance", 1.0, float, "[m] Distance of super-sampling before the interpolation, skipped when 0.", "init")
 P.createAdd("distance", 0, float, "[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.", "init")
+P.createAdd("rotate", 0, float, "Parameter for rotating the input path. 0 is not rotated. <0, 1)", "init")
 
 
 ######################
@@ -69,6 +73,11 @@ def trajectoryResample(points, remain):
 
 def init(**kwargs) -> None:
     """Initialize selector."""
+
+    # Check value for rotate
+    if "rotate" in kwargs and not (0 <= kwargs.get("rotate") < 1):
+        print ("Expected 'rotate' to be 0<=rotate<1, but it is %f. Omitting." % kwargs.get("rotate"), file=sys.stderr)
+        del kwargs["rotate"]
 
     # Update parameters
     P.updateAll(kwargs)
