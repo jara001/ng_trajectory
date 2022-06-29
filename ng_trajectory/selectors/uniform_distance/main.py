@@ -17,7 +17,7 @@ from ng_trajectory.interpolators import cubic_spline
 from ng_trajectory.selectors.curvature2.main import resolutionEstimate, factorCompute, pathPointDistanceAvg, pathLength
 
 # Support for rotating the trajectory
-from ng_trajectory.interpolators.utils import trajectoryRotate
+from ng_trajectory.interpolators.utils import trajectoryRotate, trajectoryClosestIndex
 
 # Resampling for rotation required GCD
 import fractions
@@ -33,6 +33,7 @@ P = ParameterList()
 P.createAdd("sampling_distance", 1.0, float, "[m] Distance of super-sampling before the interpolation, skipped when 0.", "init")
 P.createAdd("distance", 0, float, "[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.", "init")
 P.createAdd("rotate", 0, float, "Parameter for rotating the input path. 0 is not rotated. <0, 1)", "init")
+P.createAdd("fixed_points", [], list, "Points to be used in the selection upon calling 'select'.", "init")
 
 
 ######################
@@ -79,6 +80,15 @@ def trajectoryResample(points, remain):
     # Throw away repeated point
     if points[0, :1] == points[-1, :1]:
         points = points[:-1, :]
+
+
+    # Rotate to get to the first fixed point
+    if len(P.getValue("fixed_points")) > 0:
+        points = numpy.roll(
+            points,
+            -trajectoryClosestIndex(points, P.getValue("fixed_points")[0]),
+            axis = 0
+        )
 
     
     # Resample if requested
@@ -144,6 +154,11 @@ def init(**kwargs) -> None:
     if "rotate" in kwargs and not (0 <= kwargs.get("rotate") < 1):
         print ("Expected 'rotate' to be 0<=rotate<1, but it is %f. Omitting." % kwargs.get("rotate"), file=sys.stderr)
         del kwargs["rotate"]
+
+    # Check fixed points
+    if "fixed_points" in kwargs and len(kwargs.get("fixed_points")) > 1:
+        print ("Passing multiple fixed points is not currently supported. Taking only the first one.", file = sys.stderr)
+        kwargs["fixed_points"] = [kwargs.get("fixed_points")[0]]
 
     # Update parameters
     P.updateAll(kwargs)
