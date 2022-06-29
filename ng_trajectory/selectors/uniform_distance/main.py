@@ -19,6 +19,9 @@ from ng_trajectory.selectors.curvature2.main import resolutionEstimate, factorCo
 # Support for rotating the trajectory
 from ng_trajectory.interpolators.utils import trajectoryRotate
 
+# Resampling for rotation required GCD
+import fractions
+
 
 # Global variables
 INTERPOLATOR = cubic_spline
@@ -61,10 +64,50 @@ def trajectoryResample(points, remain):
 
     # Select points equidistantly
     if remain < 0:
-        return INTERPOLATOR.interpolate(points[:, :2], resolutionEstimate(points, P.getValue("distance")))
+        rpoints = INTERPOLATOR.interpolate(points[:, :2], resolutionEstimate(points, P.getValue("distance")))
     # Select 'remain' points
     else:
-        return INTERPOLATOR.interpolate(points[:, :2], remain)
+        rpoints = INTERPOLATOR.interpolate(points[:, :2], remain)
+
+
+    # Return when no rotation
+    if P.getValue("rotate") == 0.0:
+        return rpoints
+
+
+    ## Precise rotation using fractions
+    # 1) Current distance between individual points
+    if remain < 0:
+        f_dist = fractions.Fraction(str(P.getValue("distance")))
+    else:
+        f_dist = fractions.Fraction("%.2f" % (pathLength(points) / remain))
+
+    # 2) Rotation + distance to the first rotated point
+    f_rot = fractions.Fraction(str(P.getValue("rotate")))
+    f_rot_dist = f_dist * f_rot
+
+    # 3) Greatest common divisor
+    # This tells us how much we have to increase the number of path points
+    # in order to rotate by shifting the indices
+    # WARNING: This is not supported in Python>=3.9!
+    gcd = fractions.gcd(f_dist, f_rot_dist)
+
+    # 4) Interpolate the path by the gcd factor
+    factor = int(f_dist / gcd)
+    fpoints = INTERPOLATOR.interpolate(points[:, :2], factor * len(rpoints))
+
+    # 5) Compute index shift
+    # WARNING: This is not supported in Python>=3.9!
+    shift = int(
+        f_rot / fractions.gcd(fractions.Fraction(1), f_rot)
+    )
+
+    # 6) Return rotated path
+    return numpy.roll(
+        fpoints,
+        -shift,
+        axis = 0
+    )[numpy.linspace(0, len(fpoints), len(rpoints), endpoint = False, dtype = numpy.int), :]
 
 
 ######################
