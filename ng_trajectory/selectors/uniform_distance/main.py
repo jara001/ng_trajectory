@@ -39,6 +39,30 @@ P.createAdd("rotate", 0, float, "Parameter for rotating the input path. 0 is not
 # Utilities
 ######################
 
+def fractions_gcd(a, b):
+    """Computes gcd of two Fractions.
+
+    Arguments:
+    a -- first fraction, Fraction
+    b -- second fraction, Fraction
+
+    Returns:
+    gcd -- gcd of 'a' and 'b', Fraction
+
+    Note:
+    This is a replacement for 'fractions.gcd' as it
+    is removed in Python>=3.9.
+
+    Source:
+    https://github.com/python/cpython/blob/3.6/Lib/fractions.py
+    """
+
+    while b:
+        a, b = b, a % b
+
+    return a
+
+
 def trajectoryResample(points, remain):
     """Resample path described by points.
 
@@ -89,17 +113,15 @@ def trajectoryResample(points, remain):
     # 3) Greatest common divisor
     # This tells us how much we have to increase the number of path points
     # in order to rotate by shifting the indices
-    # WARNING: This is not supported in Python>=3.9!
-    gcd = fractions.gcd(f_dist, f_rot_dist)
+    gcd = fractions_gcd(f_dist, f_rot_dist)
 
     # 4) Interpolate the path by the gcd factor
     factor = int(f_dist / gcd)
     fpoints = INTERPOLATOR.interpolate(points[:, :2], factor * len(rpoints))
 
     # 5) Compute index shift
-    # WARNING: This is not supported in Python>=3.9!
     shift = int(
-        f_rot / fractions.gcd(fractions.Fraction(1), f_rot)
+        f_rot / fractions_gcd(fractions.Fraction(1), f_rot)
     )
 
     # 6) Return rotated path
