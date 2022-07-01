@@ -83,20 +83,23 @@ def trajectoryResample(points, remain):
 
 
     # Keep fixed points local
-    fixed_points = P.getValue("fixed_points")
+    raw_fixed_points = P.getValue("fixed_points")
 
     # Result
     rpoints = []
+    # Intermediate results
+    fixed_points = []
+    upoints = []
 
 
     # Loop at least once (for sure) then with respect to the fixed points.
     while True:
 
         # Rotate to get to the first fixed point
-        if len(fixed_points) > 0:
+        if len(raw_fixed_points) > 0:
             _points = numpy.roll(
                 points,
-                -trajectoryClosestIndex(points, fixed_points.pop(0)),
+                -trajectoryClosestIndex(points, raw_fixed_points.pop(0)),
                 axis = 0
             )
 
@@ -136,7 +139,7 @@ def trajectoryResample(points, remain):
 
             # 4) Interpolate the path by the gcd factor
             factor = int(f_dist / gcd)
-            fpoints = INTERPOLATOR.interpolate(_points[:, :2], factor * len(_rpoints))
+            _fpoints = INTERPOLATOR.interpolate(_points[:, :2], factor * len(_rpoints))
 
             # 5) Compute index shift
             shift = int(
@@ -144,16 +147,21 @@ def trajectoryResample(points, remain):
             )
 
             # 6) Return rotated path
-            _rpoints = numpy.roll(
-                fpoints,
+            _upoints = numpy.roll(
+                _fpoints,
                 -shift,
                 axis = 0
-            )[numpy.linspace(0, len(fpoints), len(_rpoints), endpoint = False, dtype = numpy.int), :]
+            )
+
+            _rpoints = _upoints[numpy.linspace(0, len(_fpoints), len(_rpoints), endpoint = False, dtype = numpy.int), :]
+
+            fixed_points.append(_fpoints[0])
+            upoints.append(_upoints)
 
 
         rpoints.append(_rpoints)
 
-        if len(fixed_points) <= 0:
+        if len(raw_fixed_points) <= 0:
             break
 
     if len(rpoints) == 1:
