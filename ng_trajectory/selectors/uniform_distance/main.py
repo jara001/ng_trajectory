@@ -82,65 +82,81 @@ def trajectoryResample(points, remain):
         points = points[:-1, :]
 
 
-    # Rotate to get to the first fixed point
-    if len(P.getValue("fixed_points")) > 0:
-        points = numpy.roll(
-            points,
-            -trajectoryClosestIndex(points, P.getValue("fixed_points")[0]),
-            axis = 0
+    # Keep fixed points local
+    fixed_points = P.getValue("fixed_points")
+
+    # Result
+    rpoints = None
+
+
+    # Loop at least once (for sure) then with respect to the fixed points.
+    while True:
+
+        # Rotate to get to the first fixed point
+        if len(fixed_points) > 0:
+            _points = numpy.roll(
+                points,
+                -trajectoryClosestIndex(points, fixed_points.pop(0)),
+                axis = 0
+            )
+
+
+        # Resample if requested
+        if P.getValue("sampling_distance") != 0.0:
+            _points = INTERPOLATOR.interpolate(_points[:, :2], resolutionEstimate(_points, P.getValue("sampling_distance")))
+
+
+        # Select points equidistantly
+        if remain < 0:
+            _rpoints = INTERPOLATOR.interpolate(_points[:, :2], resolutionEstimate(_points, P.getValue("distance")))
+        # Select 'remain' points
+        else:
+            _rpoints = INTERPOLATOR.interpolate(_points[:, :2], remain)
+
+
+        # Return when no rotation
+        if P.getValue("rotate") == 0.0:
+            return _rpoints
+
+
+        ## Precise rotation using fractions
+        # Note: The precision is set to centimeters for 'remain'.
+        # 1) Current distance between individual points
+        if remain < 0:
+            f_dist = fractions.Fraction(str(P.getValue("distance")))
+        else:
+            f_dist = fractions.Fraction("%.2f" % (pathLength(_points) / remain))
+
+        # 2) Rotation + distance to the first rotated point
+        f_rot = fractions.Fraction(str(P.getValue("rotate")))
+        f_rot_dist = f_dist * f_rot
+
+        # 3) Greatest common divisor
+        # This tells us how much we have to increase the number of path points
+        # in order to rotate by shifting the indices
+        gcd = fractions_gcd(f_dist, f_rot_dist)
+
+        # 4) Interpolate the path by the gcd factor
+        factor = int(f_dist / gcd)
+        fpoints = INTERPOLATOR.interpolate(_points[:, :2], factor * len(_rpoints))
+
+        # 5) Compute index shift
+        shift = int(
+            f_rot / fractions_gcd(fractions.Fraction(1), f_rot)
         )
 
-    
-    # Resample if requested
-    if P.getValue("sampling_distance") != 0.0:
-        points = INTERPOLATOR.interpolate(points[:, :2], resolutionEstimate(points, P.getValue("sampling_distance")))
+        # 6) Return rotated path
+        rpoints = numpy.roll(
+            fpoints,
+            -shift,
+            axis = 0
+        )[numpy.linspace(0, len(fpoints), len(_rpoints), endpoint = False, dtype = numpy.int), :]
 
 
-    # Select points equidistantly
-    if remain < 0:
-        rpoints = INTERPOLATOR.interpolate(points[:, :2], resolutionEstimate(points, P.getValue("distance")))
-    # Select 'remain' points
-    else:
-        rpoints = INTERPOLATOR.interpolate(points[:, :2], remain)
+        if len(fixed_points) <= 0:
+            break
 
-
-    # Return when no rotation
-    if P.getValue("rotate") == 0.0:
-        return rpoints
-
-
-    ## Precise rotation using fractions
-    # Note: The precision is set to centimeters for 'remain'.
-    # 1) Current distance between individual points
-    if remain < 0:
-        f_dist = fractions.Fraction(str(P.getValue("distance")))
-    else:
-        f_dist = fractions.Fraction("%.2f" % (pathLength(points) / remain))
-
-    # 2) Rotation + distance to the first rotated point
-    f_rot = fractions.Fraction(str(P.getValue("rotate")))
-    f_rot_dist = f_dist * f_rot
-
-    # 3) Greatest common divisor
-    # This tells us how much we have to increase the number of path points
-    # in order to rotate by shifting the indices
-    gcd = fractions_gcd(f_dist, f_rot_dist)
-
-    # 4) Interpolate the path by the gcd factor
-    factor = int(f_dist / gcd)
-    fpoints = INTERPOLATOR.interpolate(points[:, :2], factor * len(rpoints))
-
-    # 5) Compute index shift
-    shift = int(
-        f_rot / fractions_gcd(fractions.Fraction(1), f_rot)
-    )
-
-    # 6) Return rotated path
-    return numpy.roll(
-        fpoints,
-        -shift,
-        axis = 0
-    )[numpy.linspace(0, len(fpoints), len(rpoints), endpoint = False, dtype = numpy.int), :]
+    return rpoints
 
 
 ######################
