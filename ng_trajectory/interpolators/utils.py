@@ -176,7 +176,7 @@ def trajectoryReduce(points: numpy.ndarray, remain: int) -> numpy.ndarray:
     return points[numpy.linspace(0, len(points)-1, remain, dtype=numpy.int, endpoint=False), :]
 
 
-def trajectoryClosest(points: numpy.ndarray, reference: numpy.ndarray) -> numpy.ndarray:
+def trajectoryClosest(points: numpy.ndarray, reference: numpy.ndarray, *, from_left: bool = False) -> numpy.ndarray:
     """Finds the closest point on the trajectory to the 'reference'.
 
     Arguments:
@@ -186,10 +186,10 @@ def trajectoryClosest(points: numpy.ndarray, reference: numpy.ndarray) -> numpy.
     Returns:
     closest -- point on the trajectory closest to the reference, 1x(>=2) numpy.ndarray
     """
-    return points[trajectoryClosestIndex(points, reference), :]
+    return points[trajectoryClosestIndex(points, reference, from_left), :]
 
 
-def trajectoryClosestIndex(points: numpy.ndarray, reference: numpy.ndarray) -> int:
+def trajectoryClosestIndex(points: numpy.ndarray, reference: numpy.ndarray, *, from_left: bool = False) -> int:
     """Finds the index of the closest point on the trajectory to the 'reference'.
 
     Arguments:
@@ -202,7 +202,41 @@ def trajectoryClosestIndex(points: numpy.ndarray, reference: numpy.ndarray) -> i
 
     _distances = numpy.subtract(points[:, :2], reference[:2])
 
-    return numpy.hypot(_distances[:, 0], _distances[:, 1]).argmin()
+    index = numpy.hypot(_distances[:, 0], _distances[:, 1]).argmin()
+
+    if not from_left:
+        return index
+
+    else:
+        """Obtain the closest point from the beginning of the path.
+
+        We use law of cosines to do this.
+        - B: closest point on the path
+        - R: reference point
+
+
+                            R
+                           / \_
+                       d1 |    \_ d2
+                         /a      \
+         -----A---------B---------C-----
+                            ds
+
+        d2^2 = d1^2 + ds^2 - 2 * d1 * ds * cos(a)
+
+        Rewritten as:
+        cos(a) = (d1^2 - d2^2 + ds^2) / (2 * d1 * ds)
+
+        If cos(a) > 0 then the angle 'a' is in (-90°, 90°), meaning
+        that R is on the side closer to C.
+
+        Note: Isn't it easier to use just dA and dC?
+        """
+        d1 = numpy.hypot(_distances[index, 0], _distances[index, 1])
+        d2 = numpy.hypot(_distances[index+1, 0], _distances[index+1, 1])
+        ds = pointDistance(points[index, :2], points[index+1, :2])
+
+        return index if (d1**2 - d2**2 + ds**2) / (2 * d1 * ds) > 0 else index - 1
 
 
 def trajectoryFarthest(points: numpy.ndarray, reference: numpy.ndarray) -> numpy.ndarray:
