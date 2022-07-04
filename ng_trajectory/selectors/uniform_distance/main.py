@@ -174,6 +174,33 @@ def trajectoryResample(points, remain):
     if len(rpoints) == 1:
         return rpoints[0]
 
+    else:
+        # Build up the new path waypoints
+        result = None
+
+        for _i in range(len(rpoints)):
+
+            # 1) Take the fixed point from the next segment
+            _p = fixed_points[(_i + 1) % len(rpoints)]
+
+            # 2) Find it in current path (rotated, full)
+            _cpi = trajectoryClosestIndex(upoints[_i], _p, from_left = True)
+
+            # 3) Loop through the selection to find all points that are more to the left
+            _max_i = -1
+
+            while _max_i + 1 < len(rpoints[_i]) and trajectoryClosestIndex(upoints[_i], rpoints[_i][_max_i + 1, :], from_left = True) < _cpi:
+                _max_i += 1
+
+            # 4) Append them to the result
+            if _max_i >= 0:
+                if result is None:
+                    result = rpoints[_i][:_max_i+1, :]
+                else:
+                    result = numpy.vstack((result, rpoints[_i][:_max_i+1, :]))
+
+        return result
+
 
 ######################
 # Functions
