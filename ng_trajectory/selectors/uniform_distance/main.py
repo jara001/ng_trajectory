@@ -118,7 +118,7 @@ def trajectoryResample(points, remain):
 
 
         # Rotate when required
-        if P.getValue("rotate") >= 0.0:
+        if P.getValue("rotate") > 0.0:
 
             ## Precise rotation using fractions
             # Note: The precision is set to centimeters for 'remain'.
