@@ -214,11 +214,6 @@ def init(**kwargs) -> None:
         print ("Expected 'rotate' to be 0<=rotate<1, but it is %f. Omitting." % kwargs.get("rotate"), file=sys.stderr)
         del kwargs["rotate"]
 
-    # Check fixed points
-    if "fixed_points" in kwargs and len(kwargs.get("fixed_points")) > 1:
-        print ("Passing multiple fixed points is not currently supported. Taking only the first one.", file = sys.stderr)
-        kwargs["fixed_points"] = [kwargs.get("fixed_points")[0]]
-
     # Update parameters
     P.updateAll(kwargs)
 
