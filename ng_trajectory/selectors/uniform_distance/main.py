@@ -99,12 +99,11 @@ def trajectoryResample(points, remain):
     while True:
 
         # Rotate to get to the first fixed point
-        if len(raw_fixed_points) > 0:
-            _points = numpy.roll(
-                points,
-                -trajectoryClosestIndex(points, raw_fixed_points.pop(0)),
-                axis = 0
-            )
+        _points = numpy.roll(
+            points,
+            -trajectoryClosestIndex(points, raw_fixed_points.pop(0)) if len(raw_fixed_points) > 0 else 0,
+            axis = 0
+        )
 
 
         # Resample if requested
