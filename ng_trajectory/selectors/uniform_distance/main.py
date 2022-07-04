@@ -91,6 +91,9 @@ def trajectoryResample(points, remain):
     fixed_points = []
     upoints = []
 
+    # Other values
+    rotate = [ P.getValue("rotate") for _ in range(max(1, len(P.getValue("fixed_points")))) ] if type(P.getValue("rotate")) is not list else P.getValue("rotate")
+
 
     # Loop at least once (for sure) then with respect to the fixed points.
     while True:
@@ -118,7 +121,7 @@ def trajectoryResample(points, remain):
 
 
         # Rotate when required
-        if P.getValue("rotate") > 0.0:
+        if rotate[0] > 0.0:
 
             ## Precise rotation using fractions
             # Note: The precision is set to centimeters for 'remain'.
@@ -129,7 +132,7 @@ def trajectoryResample(points, remain):
                 f_dist = fractions.Fraction("%.2f" % (pathLength(_points) / remain))
 
             # 2) Rotation + distance to the first rotated point
-            f_rot = fractions.Fraction(str(P.getValue("rotate")))
+            f_rot = fractions.Fraction(str(rotate.pop(0)))
             f_rot_dist = f_dist * f_rot
 
             # 3) Greatest common divisor
@@ -159,6 +162,8 @@ def trajectoryResample(points, remain):
             upoints.append(_upoints)
 
         else:
+            rotate.pop(0)
+
             # Create fpoints with a set factor to allow concatenating
             _fpoints = INTERPOLATOR.interpolate(_points[:, :2], 10 * len(_rpoints))
 
@@ -210,9 +215,16 @@ def init(**kwargs) -> None:
     """Initialize selector."""
 
     # Check value for rotate
-    if "rotate" in kwargs and not (0 <= kwargs.get("rotate") < 1):
-        print ("Expected 'rotate' to be 0<=rotate<1, but it is %f. Omitting." % kwargs.get("rotate"), file=sys.stderr)
-        del kwargs["rotate"]
+    if "rotate" in kwargs:
+
+        if type(kwargs.get("rotate")) is not list and not (0 <= kwargs.get("rotate") < 1):
+            print ("Expected 'rotate' to be 0<=rotate<1, but it is %f. Omitting." % kwargs.get("rotate"), file=sys.stderr)
+            del kwargs["rotate"]
+
+        elif type(kwargs.get("rotate")) is list and len(kwargs.get("rotate")) != len(kwargs.get("fixed_points", [])):
+            print ("Expected 'rotate' length to match number of fixed points (%d), but it is %d. Using only %f." % (len(kwargs.get("fixed_points", [])), len(kwargs.get("rotate")), kwargs.get("rotate")[0]))
+            kwargs["rotate"] = kwargs["rotate"][0]
+
 
     # Update parameters
     P.updateAll(kwargs)
