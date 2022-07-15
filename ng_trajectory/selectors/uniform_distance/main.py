@@ -249,4 +249,10 @@ def select(points: numpy.ndarray, remain: int, **overflown) -> numpy.ndarray:
         # Raise an exception, as we cannot proceed without further information.
         raise ValueError("Negative selection requires set 'distance' parameter for 'uniform_distance' selector.")
 
-    return trajectoryResample(points, remain)
+    rpoints = trajectoryResample(points, remain)
+
+    # !Force number of points
+    if remain > 0 and len(rpoints) != remain:
+        return trajectoryResample(points, remain - 1)
+
+    return rpoints
