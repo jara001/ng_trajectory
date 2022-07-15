@@ -83,7 +83,7 @@ def trajectoryResample(points, remain):
 
 
     # Keep fixed points local
-    raw_fixed_points = P.getValue("fixed_points")
+    raw_fixed_points = P.getValue("fixed_points").copy()
 
     # Result
     rpoints = []
@@ -92,8 +92,7 @@ def trajectoryResample(points, remain):
     upoints = []
 
     # Other values
-    rotate = [ P.getValue("rotate") for _ in range(max(1, len(P.getValue("fixed_points")))) ] if type(P.getValue("rotate")) is not list else P.getValue("rotate")
-
+    rotate = [ P.getValue("rotate") for _ in range(max(1, len(P.getValue("fixed_points")))) ] if type(P.getValue("rotate")) is not list else P.getValue("rotate").copy()
 
     # Loop at least once (for sure) then with respect to the fixed points.
     while True:
