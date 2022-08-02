@@ -98,6 +98,7 @@ PARSER.add_argument("--cmap",
 
 # Dynamicaly build up the parameters for profiler
 _PROFILE_SETTINGS = {
+    "overlap": 100,
     "_mu": 0.25,
     "v_lim": 6.0,
     "a_acc_max": 0.8,
