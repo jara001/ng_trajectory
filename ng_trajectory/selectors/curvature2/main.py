@@ -285,7 +285,7 @@ def select(
     """
 
     # Update parameters
-    P.updateAll(overflown)
+    P.updateAll(overflown, reset = False)
 
     final_peaks = None
 

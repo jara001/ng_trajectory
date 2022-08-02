@@ -14,6 +14,7 @@ from typing import List, Dict
 
 
 # Global variables
+INVALID_POINTS = []
 BORDERLINES = None
 
 
@@ -124,7 +125,7 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     Returns:
     rpenalty -- value of the penalty, 0 means no penalty, float
     """
-    global BORDERLINES
+    global BORDERLINES, INVALID_POINTS
 
     # Use the grid or compute it
     _grid = grid if grid else gridCompute(points)
@@ -151,9 +152,13 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     # Note: This is required for low number of groups.
     invalid = 1000
     any_invalid = False
+    INVALID_POINTS.clear()
 
     for _ip, _p in enumerate(points):
         if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
+
+            # Store invalid point
+            INVALID_POINTS.append(_p)
 
             # Note: Trying borderlines here, it works the same, just the meaning of 'invalid' is different.
             # Note: We used to have '<' here, however that failed with invalid index 0.

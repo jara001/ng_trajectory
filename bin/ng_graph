@@ -158,6 +158,12 @@ PARSER.add_argument("--step",
     type = int,
 )
 
+PARSER.add_argument("-p",
+    dest = "plot_friendly",
+    help = "Output information in plot friendly format.",
+    action = "store_true",
+)
+
 
 ######################
 # Graph class
@@ -493,22 +499,42 @@ class Log(object):
 # Utilities
 ######################
 
-def quantiles(data, n = 10):
+def quantiles(data, n = 10, method = "inclusive"):
     """Ported from Python 3.10.
 
     https://github.com/python/cpython/blob/3.10/Lib/statistics.py
+
+    Note: We are using 'inclusive' as default (similar to numpy),
+    as it is what we want.
+
+    Inclusive observes the data as min-max, exclusive expects that
+    the extrema might be outside of the given data.
     """
+    if n < 1:
+        raise ValueError("n must be at least 1")
     data = sorted(data)
     ld = len(data)
-    m = ld + 1
-    result = []
-    for i in range(1, n):
-        j = i * m // n                               # rescale i to m/n
-        j = 1 if j < 1 else ld-1 if j > ld-1 else j  # clamp to 1 .. ld-1
-        delta = i*m - j*n                            # exact integer math
-        interpolated = (data[j - 1] * (n - delta) + data[j] * delta) / n
-        result.append(interpolated)
-    return result
+    if ld < 2:
+        raise ValueError("must have at least two data points")
+    if method == "inclusive":
+        m = ld - 1
+        result = []
+        for i in range(1, n):
+            j, delta = divmod(i * m, n)
+            interpolated = (data[j] * (n - delta) + data[j + 1] * delta) / n
+            result.append(interpolated)
+        return result
+    if method == "exclusive":
+        m = ld + 1
+        result = []
+        for i in range(1, n):
+            j = i * m // n                               # rescale i to m/n
+            j = 1 if j < 1 else ld-1 if j > ld-1 else j  # clamp to 1 .. ld-1
+            delta = i*m - j*n                            # exact integer math
+            interpolated = (data[j - 1] * (n - delta) + data[j] * delta) / n
+            result.append(interpolated)
+        return result
+    raise ValueError("Unknown method: %s" % str(method))
 
 
 def scale_lightness(rgb: Tuple[float], scale_l: float):
@@ -734,4 +760,9 @@ if __name__ == "__main__":
             matplotlib.pyplot.savefig(outfile + ".png", format = "png", dpi = args.dpi)
     else:
         l = Log(filestream = args.input_file[0], show_quantiles = args.quantiles)
-        print(l)
+
+        if not args.plot_friendly:
+            print(l)
+        else:
+            print (",".join(["len,rate,min,avg,max,std"] + ["Q%02d" % _q for _q in l.quantile_show_list]))
+            print (",".join(["%s" % s for s in [l.length, l.rate, l.min, l.mean, l.max, l.std] + [l.quantile(_q) for _q in l.quantile_show_list]]))

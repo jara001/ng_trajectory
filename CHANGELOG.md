@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.7.0 - 2022-08-02
+### Added
+- Interpolators
+    - Arguments `from_left` for `trajectoryClosest*()` to get closest point from the path beginning.
+- Penalizers
+    - Variable `INVALID_POINTS` to store invalid points so that they are not computed multiple times.
+    - [**NEW**] _Curvature_
+        - Penalizer 'Curvature' operates on the curvature of feasible paths.
+- Selectors
+    - _Uniform_distance_
+        - Parameter `rotate` for rotating the selection.
+        - Parameter `fixed_points` to fix some points during selection, and to split the selection into multiple parts.
+- Script 'ng_plot' for generating maps and GIFs from log files.
+- Parameter '-p' for 'ng_graph' to show log statistics in plot-friendly csv format.
+
+### Changed
+- Selectors
+    - _Curvature2_
+        - Parameters of the selector are not reset to default state every `select()`.
+
+### Fixed
+- Optimizers
+    - _Braghin_
+        - Invalid points plotting is hidden behind `plot` parameter.
+- Properly compute quantiles in 'ng_graph'.
+
 ## 1.6.0 - 2022-05-24
 ### Added
 - Interpolators

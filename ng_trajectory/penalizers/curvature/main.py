@@ -1,6 +1,6 @@
 #!/usr/bin/env python3.6
 # main.py
-"""Penalize the incorrect solution by number of incorrectly placed points.
+"""Penalize the incorrect solution by curvature.
 """
 ######################
 # Imports & Globals
@@ -16,9 +16,9 @@ INVALID_POINTS = []
 
 
 # Parameters
-#from ng_trajectory.parameter import *
-#P = ParameterList()
-#P.createAdd("int_size", 400, int, "Number of points in the interpolation.", "")
+from ng_trajectory.parameter import *
+P = ParameterList()
+P.createAdd("k_max", 1.5, float, "Maximum allowed curvature in abs [m^-1]", "")
 
 
 ######################
@@ -27,11 +27,13 @@ INVALID_POINTS = []
 
 def init(**kwargs) -> None:
     """Initialize penalizer."""
-    pass
+
+    # Update parameters
+    P.updateAll(kwargs)
 
 
 def penalize(points: numpy.ndarray, valid_points: numpy.ndarray, grid: float, penalty: float = 100, **overflown) -> float:
-    """Get a penalty for the candidate solution based on number of incorrectly placed points.
+    """Get a penalty for the candidate solution based on number of incorrectly placed points and path curvature.
 
     Arguments:
     points -- points to be checked, nx(>=2) numpy.ndarray
@@ -45,6 +47,12 @@ def penalize(points: numpy.ndarray, valid_points: numpy.ndarray, grid: float, pe
     """
     global INVALID_POINTS
 
+    # Update parameters
+    P.updateAll(overflown, reset = False)
+
+    _k_max = P.getValue("k_max")
+
+
     # Use the grid or compute it
     _grid = grid if grid else gridCompute(points)
 
@@ -53,10 +61,22 @@ def penalize(points: numpy.ndarray, valid_points: numpy.ndarray, grid: float, pe
 
     for _p in points:
         if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
+            INVALID_POINTS.append(_p)
             invalid += 1
 
-            # Store invalid point
-            INVALID_POINTS.append(_p)
+    if invalid == 0:
+        invalid = numpy.add(
+            numpy.sum(
+                points[points[:, 2] > _k_max, 2]
+            ),
+            -numpy.sum(
+                points[points[:, 2] < -_k_max, 2]
+            )
+        ) / 100
 
+        INVALID_POINTS += points[(points[:, 2] > _k_max) | (points[:, 2] < -_k_max), :].tolist()
+        print (points[(points[:, 2] > _k_max) | (points[:, 2] < -_k_max), 2])
 
-    return invalid * penalty
+    print(points[(points[:, 2] > _k_max) | (points[:, 2] < -_k_max), 2])
+
+    return invalid * penalty * 10
