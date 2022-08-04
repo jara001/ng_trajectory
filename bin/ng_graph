@@ -164,6 +164,12 @@ PARSER.add_argument("-p",
     action = "store_true",
 )
 
+PARSER.add_argument("-r",
+    dest = "recursive_find",
+    help = "Look for the log files in subfolders as well.",
+    action = "store_true",
+)
+
 
 ######################
 # Graph class
@@ -721,13 +727,22 @@ if __name__ == "__main__":
 
                 for _li, loop in enumerate(log_names[x]):
                     for _i, step in enumerate(log_names[x][loop]):
-                        if not os.path.exists(log_names[x][loop][step]):
-                            continue
+                        _logname = log_names[x][loop][step]
+                        if not args.recursive_find:
+                            if not os.path.exists(_logname):
+                                continue
+                        else:
+                            for dirpath, _, filenames in os.walk("."):
+                                if _logname in filenames:
+                                    _logname = os.path.join(dirpath, _logname)
+                                    break
+                            else:
+                                continue
 
                         if _i not in logs:
-                            logs[_i] = Log(log_names[x][loop][step], show_quantiles = args.quantiles, merged_min = args.merged_min)
+                            logs[_i] = Log(_logname, show_quantiles = args.quantiles, merged_min = args.merged_min)
                         else:
-                            _log = Log(log_names[x][loop][step], show_quantiles = args.quantiles, merged_min = args.merged_min)
+                            _log = Log(_logname, show_quantiles = args.quantiles, merged_min = args.merged_min)
                             logs[_i].add(_log)
 
                 if args.step[0] in logs:
