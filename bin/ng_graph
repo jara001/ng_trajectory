@@ -323,6 +323,7 @@ class Log(object):
             with open(filename, "r") as f:
                 self.load_data(f)
         else:
+            self.__filename = filestream.name
             self.load_data(filestream)
 
 
