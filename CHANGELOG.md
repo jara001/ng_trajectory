@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Parameter `-r` for 'ng_graph' to recursively dig through the subfolders when looking for the log files.
+
 ## 1.7.0 - 2022-08-02
 ### Added
 - Interpolators
