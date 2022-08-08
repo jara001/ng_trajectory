@@ -779,10 +779,16 @@ if __name__ == "__main__":
             matplotlib.pyplot.savefig(outfile + ".pdf", format = "pdf", dpi = args.dpi)
             matplotlib.pyplot.savefig(outfile + ".png", format = "png", dpi = args.dpi)
     else:
-        l = Log(filestream = args.input_file[0], show_quantiles = args.quantiles)
+        _header_shown = False
 
-        if not args.plot_friendly:
-            print(l)
-        else:
-            print (",".join(["len,rate,min,avg,max,std"] + ["Q%02d" % _q for _q in l.quantile_show_list]))
-            print (",".join(["%s" % s for s in [l.length, l.rate, l.min, l.mean, l.max, l.std] + [l.quantile(_q) for _q in l.quantile_show_list]]))
+        for f in args.input_file:
+            l = Log(filestream = f, show_quantiles = args.quantiles)
+
+            if not args.plot_friendly:
+                print(l)
+            else:
+                if not _header_shown:
+                    print (",".join(["len,rate,min,avg,max,std"] + ["Q%02d" % _q for _q in l.quantile_show_list]))
+                    _header_shown = True
+
+                print (",".join(["%s" % s for s in [l.length, l.rate, l.min, l.mean, l.max, l.std] + [l.quantile(_q) for _q in l.quantile_show_list]]))
