@@ -43,6 +43,7 @@ are in the same location.
 
 # Argument groups
 GRAPH_PARSER = PARSER.add_argument_group("graph arguments", "Arguments controlling displayed/saved graph.")
+JSON_MODE_PARSER = PARSER.add_argument_group("json optional arguments", "Arguments used only when working with jsons (without '-l').")
 LOG_MODE_PARSER = PARSER.add_argument_group("log optional arguments", "Arguments used only when working with logs (with '-l').")
 
 # Arguments
@@ -117,7 +118,7 @@ GRAPH_PARSER.add_argument("--hide-bar",
     action = "store_false",
 )
 
-GRAPH_PARSER.add_argument("--merged-min",
+JSON_MODE_PARSER.add_argument("--merged-min",
     dest = "merged_min",
     help = "Merge the minimum of loops and draw a graph of that. (IROS-like graph.)",
     action = "store_true",
