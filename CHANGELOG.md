@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 - Parameter `-r` for 'ng_graph' to recursively dig through the subfolders when looking for the log files.
 - Parameter `-g` for 'ng_graph' to show a graph for log files.
+- Parameter `--segments` for 'ng_graph' to set number of segments for used log files.
 - Multiple log files can be processed at once in 'ng_graph'.
 
 ### Changed

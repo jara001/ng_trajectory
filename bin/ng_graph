@@ -41,6 +41,44 @@ are in the same location.
     """,
 )
 
+# Custom actions
+class store_selection(argparse.Action):
+    """Custom action to handle numbers selection (e.g., pages from a document).
+
+    All numbers are delimited by ','. May contain ranges, defined by '-'.
+
+    Example:
+    > 1,3,5-9,4-2,2
+    1 3 5 6 7 8 9 4 3 2 2
+
+    Source:
+    https://stackoverflow.com/questions/8632354/python-argparse-custom-actions-with-additional-arguments-passed
+    """
+
+    def __init__(self, option_strings, *args, **kwargs):
+        super(store_selection, self).__init__(option_strings = option_strings, *args, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string = None):
+        _numbers = []
+
+        for num in values[0].split(","):
+            try:
+                if "-" in num:
+                    _n1 = int(num[:num.index("-")])
+                    _n2 = int(num[num.index("-")+1:])
+
+                    if _n2 > _n1:
+                        _numbers += list(range(_n1, _n2+1))
+                    else:
+                        _numbers += list(range(_n2, _n1-1, -1))
+                else:
+                    _numbers.append(int(num))
+            except:
+                raise argparse.ArgumentError("Unable to parse '%s' for '%s'." % (num, option_string))
+
+        setattr(namespace, self.dest, _numbers)
+
+
 # Argument groups
 GRAPH_PARSER = PARSER.add_argument_group("graph arguments", "Arguments controlling displayed/saved graph.")
 JSON_MODE_PARSER = PARSER.add_argument_group("json optional arguments", "Arguments used only when working with jsons (without '-l').")
@@ -179,6 +217,14 @@ LOG_MODE_PARSER.add_argument("-g",
     dest = "show_graph",
     help = "Show the graph of the processed data.",
     action = "store_true",
+)
+
+LOG_MODE_PARSER.add_argument("--segments",
+    nargs = 1,
+    dest = "segments",
+    help = "Numbers of segments to be used for x-axis, e.g., 1,2,1,6-9,3.",
+    action = store_selection,
+    default = [],
 )
 
 
@@ -794,7 +840,12 @@ if __name__ == "__main__":
             for f in args.input_file:
                 l = Log(filestream = f, show_quantiles = args.quantiles)
 
-                g.plot_log(l, variate = _n)
+                g.plot_log(l, variate =
+                    _n if len(args.segments) == 0 else (
+                        args.segments[_n] if _n < len(args.segments) else args.segments[-1]
+                    )
+                )
+
                 _n += 1
 
             g.reduce_xticks()
