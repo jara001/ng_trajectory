@@ -41,6 +41,49 @@ are in the same location.
     """,
 )
 
+# Custom actions
+class store_selection(argparse.Action):
+    """Custom action to handle numbers selection (e.g., pages from a document).
+
+    All numbers are delimited by ','. May contain ranges, defined by '-'.
+
+    Example:
+    > 1,3,5-9,4-2,2
+    1 3 5 6 7 8 9 4 3 2 2
+
+    Source:
+    https://stackoverflow.com/questions/8632354/python-argparse-custom-actions-with-additional-arguments-passed
+    """
+
+    def __init__(self, option_strings, *args, **kwargs):
+        super(store_selection, self).__init__(option_strings = option_strings, *args, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string = None):
+        _numbers = []
+
+        for num in values[0].split(","):
+            try:
+                if "-" in num:
+                    _n1 = int(num[:num.index("-")])
+                    _n2 = int(num[num.index("-")+1:])
+
+                    if _n2 > _n1:
+                        _numbers += list(range(_n1, _n2+1))
+                    else:
+                        _numbers += list(range(_n2, _n1-1, -1))
+                else:
+                    _numbers.append(int(num))
+            except:
+                raise argparse.ArgumentError("Unable to parse '%s' for '%s'." % (num, option_string))
+
+        setattr(namespace, self.dest, _numbers)
+
+
+# Argument groups
+GRAPH_PARSER = PARSER.add_argument_group("graph arguments", "Arguments controlling displayed/saved graph.")
+JSON_MODE_PARSER = PARSER.add_argument_group("json optional arguments", "Arguments used only when working with jsons (without '-l').")
+LOG_MODE_PARSER = PARSER.add_argument_group("log optional arguments", "Arguments used only when working with logs (with '-l').")
+
 # Arguments
 PARSER.add_argument("input_file",
     nargs = "+",
@@ -81,7 +124,7 @@ PARSER.add_argument("-O",
     type = str,
 )
 
-PARSER.add_argument("--dpi",
+GRAPH_PARSER.add_argument("--dpi",
     nargs = "?",
     dest = "dpi",
     help = "DPI value used for exporting the figures.",
@@ -89,51 +132,51 @@ PARSER.add_argument("--dpi",
     type = int,
 )
 
-PARSER.add_argument("--hide-min",
+GRAPH_PARSER.add_argument("--hide-min",
     dest = "show_min",
     help = "Hide minimum value cap in the figure.",
     action = "store_false",
 )
 
-PARSER.add_argument("--hide-max",
+GRAPH_PARSER.add_argument("--hide-max",
     dest = "show_max",
     help = "Hide maximum value cap in the figure.",
     action = "store_false",
 )
 
-PARSER.add_argument("--hide-avg",
+GRAPH_PARSER.add_argument("--hide-avg",
     dest = "show_avg",
     help = "Hide average value marker in the figure.",
     action = "store_false",
 )
 
-PARSER.add_argument("--hide-bar",
+GRAPH_PARSER.add_argument("--hide-bar",
     dest = "show_bar",
     help = "Hide error bar in the figure.",
     action = "store_false",
 )
 
-PARSER.add_argument("--merged-min",
+JSON_MODE_PARSER.add_argument("--merged-min",
     dest = "merged_min",
     help = "Merge the minimum of loops and draw a graph of that. (IROS-like graph.)",
     action = "store_true",
 )
 
-PARSER.add_argument("--ymin",
+GRAPH_PARSER.add_argument("--ymin",
     nargs = "?",
     dest = "ymin",
     help = "Minimum value on y-axis to be shown in the figure.",
     type = float,
 )
 
-PARSER.add_argument("--ymax",
+GRAPH_PARSER.add_argument("--ymax",
     nargs = "?",
     dest = "ymax",
     help = "Maximum value on y-axis to be shown in the figure.",
     type = float,
 )
 
-PARSER.add_argument("--marker",
+GRAPH_PARSER.add_argument("--marker",
     nargs = "?",
     choices = list(matplotlib.markers.MarkerStyle.markers.keys()),
     dest = "marker",
@@ -142,7 +185,7 @@ PARSER.add_argument("--marker",
     type = str,
 )
 
-PARSER.add_argument("--markersize",
+GRAPH_PARSER.add_argument("--markersize",
     nargs = 1,
     dest = "markersize",
     help = "Marker size used in the figure.",
@@ -158,10 +201,30 @@ PARSER.add_argument("--step",
     type = int,
 )
 
-PARSER.add_argument("-p",
+LOG_MODE_PARSER.add_argument("-p",
     dest = "plot_friendly",
     help = "Output information in plot friendly format.",
     action = "store_true",
+)
+
+LOG_MODE_PARSER.add_argument("-r",
+    dest = "recursive_find",
+    help = "Look for the log files in subfolders as well.",
+    action = "store_true",
+)
+
+LOG_MODE_PARSER.add_argument("-g",
+    dest = "show_graph",
+    help = "Show the graph of the processed data.",
+    action = "store_true",
+)
+
+LOG_MODE_PARSER.add_argument("--segments",
+    nargs = 1,
+    dest = "segments",
+    help = "Numbers of segments to be used for x-axis, e.g., 1,2,1,6-9,3.",
+    action = store_selection,
+    default = [],
 )
 
 
@@ -313,6 +376,7 @@ class Log(object):
             with open(filename, "r") as f:
                 self.load_data(f)
         else:
+            self.__filename = filestream.name
             self.load_data(filestream)
 
 
@@ -721,13 +785,22 @@ if __name__ == "__main__":
 
                 for _li, loop in enumerate(log_names[x]):
                     for _i, step in enumerate(log_names[x][loop]):
-                        if not os.path.exists(log_names[x][loop][step]):
-                            continue
+                        _logname = log_names[x][loop][step]
+                        if not args.recursive_find:
+                            if not os.path.exists(_logname):
+                                continue
+                        else:
+                            for dirpath, _, filenames in os.walk("."):
+                                if _logname in filenames:
+                                    _logname = os.path.join(dirpath, _logname)
+                                    break
+                            else:
+                                continue
 
                         if _i not in logs:
-                            logs[_i] = Log(log_names[x][loop][step], show_quantiles = args.quantiles, merged_min = args.merged_min)
+                            logs[_i] = Log(_logname, show_quantiles = args.quantiles, merged_min = args.merged_min)
                         else:
-                            _log = Log(log_names[x][loop][step], show_quantiles = args.quantiles, merged_min = args.merged_min)
+                            _log = Log(_logname, show_quantiles = args.quantiles, merged_min = args.merged_min)
                             logs[_i].add(_log)
 
                 if args.step[0] in logs:
@@ -759,10 +832,53 @@ if __name__ == "__main__":
             matplotlib.pyplot.savefig(outfile + ".pdf", format = "pdf", dpi = args.dpi)
             matplotlib.pyplot.savefig(outfile + ".png", format = "png", dpi = args.dpi)
     else:
-        l = Log(filestream = args.input_file[0], show_quantiles = args.quantiles)
+        if args.show_graph:
+            g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize[0])
 
-        if not args.plot_friendly:
-            print(l)
+            _n = 0
+
+            for f in args.input_file:
+                l = Log(filestream = f, show_quantiles = args.quantiles)
+
+                g.plot_log(l, variate =
+                    _n if len(args.segments) == 0 else (
+                        args.segments[_n] if _n < len(args.segments) else args.segments[-1]
+                    )
+                )
+
+                _n += 1
+
+            g.reduce_xticks()
+            g.set_ylim(ymin = args.ymin, ymax = args.ymax)
+
+            if not args.save:
+                matplotlib.pyplot.show()
+            else:
+                if not args.outfile:
+                    outfile = args.input_file[0].name
+
+                    if outfile.endswith(".log"):
+                        outfile = outfile[:-4]
+
+                    if len(args.input_file) > 1:
+                        outfile += "-multiple%d" % len(args.input_file)
+                else:
+                    outfile = args.outfile
+
+                matplotlib.pyplot.savefig(outfile + ".pdf", format = "pdf", dpi = args.dpi)
+                matplotlib.pyplot.savefig(outfile + ".png", format = "png", dpi = args.dpi)
+
         else:
-            print (",".join(["len,rate,min,avg,max,std"] + ["Q%02d" % _q for _q in l.quantile_show_list]))
-            print (",".join(["%s" % s for s in [l.length, l.rate, l.min, l.mean, l.max, l.std] + [l.quantile(_q) for _q in l.quantile_show_list]]))
+            _header_shown = False
+
+            for f in args.input_file:
+                l = Log(filestream = f, show_quantiles = args.quantiles)
+
+                if not args.plot_friendly:
+                    print(l)
+                else:
+                    if not _header_shown:
+                        print (",".join(["len,rate,min,avg,max,std"] + ["Q%02d" % _q for _q in l.quantile_show_list]))
+                        _header_shown = True
+
+                    print (",".join(["%s" % s for s in [l.length, l.rate, l.min, l.mean, l.max, l.std] + [l.quantile(_q) for _q in l.quantile_show_list]]))
