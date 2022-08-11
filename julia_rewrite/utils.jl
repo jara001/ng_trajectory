@@ -11,25 +11,24 @@ function mapCreate(points::Array{Float64, 2}, origin = Nothing, size = Nothing, 
     _grid = grid != Nothing ? grid : gridCompute(points)
     println("\tGrid:", _grid)
 
-    _origin = origin != Nothing ? origin : minimum(points, dims = 1)
+    _origin = origin != Nothing ? origin : reshape(minimum(points, dims = 1), (2, 1))
 
     println("\tOrigin:", _origin)
 
-    _size = size != Nothing ? size : map(abs, maximum(points, dims = 1) - minimum(points, dims = 1))
+    _size = size != Nothing ? size : reshape(map(abs, maximum(points, dims = 1) - minimum(points, dims = 1)), (2, 1))
 
-    println("\tMin:", minimum(points, dims = 1))
-    println("\tMax:", maximum(points, dims = 1))
-    println("\tDist:", maximum(points, dims = 1) - _origin)
+    println("\tMin:", reshape(minimum(points, dims = 1), (2, 1)))
+    println("\tMax:", reshape(maximum(points, dims = 1), (2, 1)))
+    println("\tDist:", reshape(maximum(points, dims = 1), (2, 1)) - _origin)
 
     println("\tSize:", _size)
     println("\tCell size:", (_size ./ _grid) .+ 1, convert.(UInt64, (_size ./ _grid) .+ 1))
 
-    _m = Array{UInt8, 2}(undef, Tuple(convert.(UInt64, (_size ./ _grid) .+ 1)));
+    _m = zeros(UInt8, Tuple(convert.(UInt64, (_size ./ _grid) .+ 1)));
 
     for _p in eachrow(points)
-        println("origin:", typeof(_origin), _origin)
-        println("_p:", typeof(reshape(_p[1:2], (1, 2))), _p)
-        _m[Tuple(convert.(UInt64, map(round, (reshape(_p[1:2], (1, 2)) - _origin) ./ _grid)))] = 100
+        index = convert.(UInt64, map(round, ((_p[1:2] - _origin) ./ _grid) .+ 1))
+        _m[index[1], index[2]] = 100
         break;
     end
 
@@ -39,23 +38,27 @@ end
 
 
 if (abspath(PROGRAM_FILE) == @__FILE__)
-    println("Hello computer. My name is Dias. I'm your human. I am writing julia code. Thank you for running it.")
-    CONFIGURATION = JSON.parsefile("/mnt/c/Users/User/OneDrive/Рабочий стол/ng/configuration/matryoshka_ex_torino.json")
+    CONFIGURATION = JSON.parsefile(ARGS[1])
 
-    # START_POINTS = Array{Float64}(undef, 440, 2)
-    # VALID_POINTS = Array{Float64}(undef, 63959, 2)
+    # START_POINTS = read("start_points.bin")
+    # VALID_POINTS = read("valid_points.bin")
 
-    py"""
-       import numpy
-       start_points = numpy.load("/mnt/c/Users/User/OneDrive/Рабочий стол/ng/configuration/ng_start_points_torino2.npy")
-       valid_points = numpy.load("/mnt/c/Users/User/OneDrive/Рабочий стол/ng/configuration/ng_valid_points_torino2.npy")
-       """
+    START_POINTS = Array{Float64}(undef, 440, 2)
+    VALID_POINTS = Array{Float64}(undef, 63959, 2)
+    read!("start_points.bin", START_POINTS)
+    read!("valid_points.bin", VALID_POINTS)
 
-    # read!(CONFIGURATION["start_points"], START_POINTS)
-    # read!(CONFIGURATION["valid_points"], START_POINTS)
+    # py"""
+    #    import numpy
+    #    start_points = numpy.load("/mnt/c/Users/User/OneDrive/Рабочий стол/ng/configuration/ng_start_points_torino2.npy")
+    #    valid_points = numpy.load("/mnt/c/Users/User/OneDrive/Рабочий стол/ng/configuration/ng_valid_points_torino2.npy")
+    #    """
 
-    START_POINTS = convert(Array{Float64, 2}, PyArray(py"start_points"o))
-    VALID_POINTS = convert(Array{Float64, 2}, PyArray(py"valid_points"o))
+    # START_POINTS = convert(Array{Float64, 2}, PyArray(py"start_points"o))
+    # write("start_points.bin", START_POINTS)
+
+    # VALID_POINTS = convert(Array{Float64, 2}, PyArray(py"valid_points"o))
+    # write("valid_points.bin", VALID_POINTS)
 
     mapCreate(VALID_POINTS)
     # VALID_POINTS = PyArray(py"b"o)
