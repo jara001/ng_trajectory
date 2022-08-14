@@ -36,6 +36,11 @@ function mapCreate(points::Array{Float64, 2}, origin = Nothing, size = Nothing, 
 
 end
 
+function trajectory_closest_index(points, reference; from_left::bool = false)
+    _distances = points[:, 1:2] .- reference[1:2]
+
+end
+
 
 if (abspath(PROGRAM_FILE) == @__FILE__)
     CONFIGURATION = JSON.parsefile(ARGS[1])
