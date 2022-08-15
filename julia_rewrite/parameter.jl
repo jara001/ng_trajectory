@@ -1,6 +1,6 @@
 module ParameterListClass
 
-export ParameterList, add, to_string, get_value, reset, reset_all, iterate, update, update_all
+export ParameterList, add_parameter!, to_string, get_value, reset, reset_all, iterate, update, update_all
 
 module ParameterClass
 
@@ -17,6 +17,7 @@ end
 
 function reset_p(this::Parameter)
     this.value = this.default
+    return Nothing
 end
 
 function to_string_par(this::Parameter)
@@ -35,6 +36,7 @@ end
 
 function add_parameter!(this::ParameterList, p::Parameter)
     this.parameters[p.name] = p
+    return Nothing
 end
 
 function get_value(this::ParameterList, name::String)
@@ -43,12 +45,14 @@ end
 
 function reset(this::ParameterList, name::String)
     reset_p(get(this.parameters, name, Nothing))
+    return Nothing
 end
 
 function reset_all(this::ParameterList)
     for _p in this.parameters
         reset(this, _p)
     end
+    return Nothing
 end
 
 function iterate(this::ParameterList)
@@ -57,6 +61,7 @@ end
 
 function update(this::ParameterList, name::String, value)
     get(this.parameters, name, Nothing).value = value
+    return Nothing
 end
 
 function update_all(this::ParameterList, kwargs::Dict, reset::Bool = true)
@@ -69,6 +74,7 @@ function update_all(this::ParameterList, kwargs::Dict, reset::Bool = true)
             _p.value =  _v
         end
     end
+    return Nothing
 end
 
 function to_string(this::ParameterList)
@@ -83,4 +89,7 @@ if (abspath(PROGRAM_FILE) == @__FILE__)
     using .ParameterListClass
     a = Parameter("sampling_distance", 1.0, 1.0, float, "[m] Distance of super-sampling before the interpolation, skipped when 0.", "init")
     println(to_string_par(a))
+    P = ParameterList()
+    add_parameter!(P, a)
+    println(to_string(P))
 end

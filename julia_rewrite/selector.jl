@@ -1,3 +1,8 @@
+include("utils.jl")
+include("interpolator.jl")
+include("parameter.jl")
+include("criterions.jl")
+
 using .ParameterListClass.ParameterClass
 using .ParameterListClass
 
@@ -5,9 +10,23 @@ P = ParameterList()
 add_parameter!(P, Parameter("sampling_distance", 1.0, 1.0, float, "[m] Distance of super-sampling before the interpolation, skipped when 0.", "init"))
 add_parameter!(P, Parameter("distance", 0, 0, float, "[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.", "init"))
 add_parameter!(P, Parameter("rotate", 0, 0, float, "Parameter for rotating the input path. 0 is not rotated. <0, 1)", "init"))
-add_parameter!(P, Parameter("fixed_points", [], [], list, "Points to be used in the selection upon calling 'select'.", "init"))
+add_parameter!(P, Parameter("fixed_points", [], [], Array, "Points to be used in the selection upon calling 'select'.", "init"))
 
-function trajectoryResample(points, remain)
+#curvature2
+
+function path_point_distance_avg(points)
+    path_length(points) / length(points)
+end
+
+function factor_compute(points, resolution)
+    path_point_distance_avg(points) / resolution
+end
+
+function resolution_estimate(points, resolution)
+    trunc(Int, length(points) * factor_compute(points, resolution))
+end
+
+function trajectory_resample(points, remain)
     if points[1, :1] == points[end, :1]
         points = points[1:end-1, :]
     end
@@ -17,9 +36,39 @@ function trajectoryResample(points, remain)
     fixed_points = []
     upoints = []
 
-    rotate = typeof(get_value(P, "rotate")) != Vector ? [getValue(P, "rotate") for _ in range(1, maximum(1, length(get_value(P, "fixed_points"))))] : copy(get_value(P, "rotate"))
+    rotate = typeof(get_value(P, "rotate")) != Vector ? [getValue(P, "rotate") for _ in range(1, stop = maximum(1, length(get_value(P, "fixed_points"))))] : copy(get_value(P, "rotate"))
 
     while true
-        
+        _points = circshift(points, -trajectory_closest_index(points, len(raw_fixed_points) > 0 ? popfirst!(raw_fixed_points) : 0))
+
+        if get_value(P, "sampling_distance") != 0.0
+            _points = interpolate(_points[:, 1:2], resolution_estimate(_points, get_value(P, "sampling_distance")))
+        end
+
+        if remain < 0
+            _rpoints = interpolate(_points[:, 1:2], resolution_estimate(_points, get_value(P, "distance")))
+        else
+            _rpoints = interpolate(_points[:, 1:2], remain)
+        end
+
+        if rotate[1] > 0.0
+            #TODO
+        else
+            
+        end
     end
+end
+
+if (abspath(PROGRAM_FILE) == @__FILE__)
+    a = [ 0.16433    0.524746;
+        0.730177   0.787651;
+        0.646905   0.0135035;
+        0.796598   0.0387711;
+        0.442782   0.753235;
+        0.832315   0.483352;
+        0.442524   0.912381;
+        0.336651   0.236891;
+        0.0954936  0.303086;
+        0.459189   0.374318]
+    println(resolution_estimate(a, 0.14612325))
 end
