@@ -54,8 +54,41 @@ function trajectory_resample(points, remain)
         if rotate[1] > 0.0
             #TODO
         else
-            
+            popfirst!(rotate)
+            _fpoints = interpolate(_points[:, 1:2], 10 * length(_rpoints))
+            push!(fixed_points, _fpoints[1])
+            push!(upoints, _fpoints)
         end
+
+        push!(rpoints, _rpoints)
+
+        if length(raw_fixed_points) <= 0
+            break
+        end
+    end
+
+    if length(rpoints) == 1
+        return rpoints[1]
+    else
+        result = Nothing
+
+        for _i in range(1, stop = length(rpoints))
+            _p = fixed_points[(_i + 1) % length(rpoints)]
+            _cpi = trajectory_closest_index(upoints[_i], _p; from_left = true)
+            _max_i = 0
+
+            while _max_i + 1 < length(rpoints[_i]) && trajectory_closest_index(upoints[_i], rpoints[_i][_max_i + 1, :]', from_left = true) < _cpi
+                _max_i += 1
+            end
+
+            if _max_i >= 1
+                if result == Nothing
+                    result = rpoints[_i][1:_max_i+1, :]
+                else
+                    result = vcat(result, rpoints[_i][1:_max_i+1, :])
+            end
+        end
+        return result
     end
 end
 
