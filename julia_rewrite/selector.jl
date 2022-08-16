@@ -68,10 +68,9 @@ function trajectory_resample(points, remain)
     end
 
     if length(rpoints) == 1
-        println("return len == 1")
         return rpoints[1]
     else
-        result = Nothing
+        result = nothing
 
         for _i in range(1, stop = length(rpoints))
             _p = fixed_points[(_i + 1) % length(rpoints)]

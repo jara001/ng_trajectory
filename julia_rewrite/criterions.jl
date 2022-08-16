@@ -42,24 +42,25 @@ function h(k::Float64, v::Float64, d::Int, i::Int = -1)
     fz_res = fz(v)
     fy_res = fy(v,k)
 
-    if (_mu * _mu * fz_res * fz_res - fy_res * fy_res) <= 0:
+    if (_mu * _mu * fz_res * fz_res - fy_res * fy_res) <= 0
         return 0
     end
 
-    if d == -1:
+    if d == -1
         return -sqrt(_mu * _mu * fz_res * fz_res - fy_res * fy_res) / _m
-    elseif d == 1:
+    elseif d == 1
         return sqrt(_mu * _mu * fz_res * fz_res - fy_res * fy_res) / _m
     end
 
 end
 
 function backward_pass(points)
-    k = length(points)
+    k = length(eachrow(points))
+    len = length(eachrow(points))
 
     cur = zeros(k)
-    for i, p in enumerate(points)
-        cur[i] = p[2] != 0 ? abs(p[2]) : 0.001
+    for (i, p) in enumerate(eachrow(points))
+        cur[i] = p[3] != 0 ? abs(p[3]) : 0.001
     end
 
     v_bwd = zeros(k)
@@ -68,17 +69,17 @@ function backward_pass(points)
     v_max = zeros(k)
     v_max_cr = zeros(k)
     alim = zeros(k)
-    v_bwd[(k + 1) % length(points)] = v_lim
-    v_max[(k + 1) % length(points)] = v_lim
+    v_bwd[(k % len) + 1] = v_lim
+    v_max[(k % len) + 1] = v_lim
 
     while k > 0
         v_max_cr[k] = sqrt(_mu*_g/cur[k])
         v_max[k] = min(v_max_cr[k], v_lim)
-        ds = sqrt((points[(k + 1) % len(points), 0] - points[k, 0])^2 + (points[k%len(points), 1] - points[k-1, 1])^2)
-        alim[(k + 1) % length(points)] = (v_max[k]^2 - v_bwd[(k + 1) % len(points)]^2) / (2 * ds)
-        a[k] = -h(cur[(k + 1) % length(points)], v_bwd[(k + 1) % length(points)], -1 , k + 1)
-        a[k] = min(min(a[k], a_break_max), alim[(k + 1) % length(points)])
-        v_bwd[k] = sqrt((v_bwd[(k + 1) % len(points)] * v_bwd[(k + 1) % length(points)]) + (2 * a[k] * ds))
+        ds = sqrt((points[(k % len) + 1, 1] - points[k, 1])^2 + (points[(k % len) + 1, 2] - points[k, 2])^2)
+        alim[(k % len) + 1] = (v_max[k]^2 - v_bwd[(k % len) + 1]^2) / (2 * ds)
+        a[k] = -h(cur[(k % len) + 1], v_bwd[(k % len) + 1], -1 , k + 1)
+        a[k] = min(min(a[k], a_break_max), alim[(k % len) + 1])
+        v_bwd[k] = sqrt((v_bwd[(k % len) + 1] * v_bwd[(k % len) + 1]) + (2 * a[k] * ds))
         k -= 1
     end
 
@@ -87,26 +88,27 @@ end
 
 function forward_pass(points, v_bwd, v_max, cur)
     k = 1
-    t = zeros((length(points)))
-    v_fwd = zeros((length(points)))
-    a = zeros((length(points)))
+    len = length(eachrow(points))
+    t = zeros(len)
+    v_fwd = zeros(len)
+    a = zeros(len)
     t[k] = 0
     v_fwd[k] = v_0
 
-    while k <= len(points):
-        ds = sqrt((points[k, 1] - points[(k + 1) % length(points), 1])^2 + (points[k, 2] - points[(k + 1)%len(points), 2])^2)
-        a_lim = (v_bwd[(k + 1) % length(points)] * v_bwd[(k + 1) % length(points)] - v_fwd[k] * v_fwd[k])/(2*ds)
+    while k <= len
+        ds = sqrt((points[k, 1] - points[(k % len) + 1, 1])^2 + (points[k, 2] - points[((k % len) + 1), 2])^2)
+        a_lim = (v_bwd[(k % len) + 1] * v_bwd[(k % len) + 1] - v_fwd[k] * v_fwd[k])/(2*ds)
         a[k] = h(cur[k], v_fwd[k], 1)
         a[k] = min(min(a[k], a_acc_max),a_lim)
-        v_fwd[(k + 1) % length(points)] = sqrt(v_fwd[k]*v_fwd[k] + 2*a[k]*ds)
-        t[(k + 1) % length(points)] = t[k] + 2*ds/(v_fwd[(k + 1) % length(points)] + v_fwd[k])
+        v_fwd[(k % len) + 1] = sqrt(v_fwd[k]*v_fwd[k] + 2*a[k]*ds)
+        t[(k % len) + 1] = t[k] + 2*ds/(v_fwd[(k % len) + 1] + v_fwd[k])
         k = k + 1
     end
 
     return v_fwd, a, t
 end
 
-function profile_compute(points, overlap::Int = 0, fd::IOStream = nothing)
+function profile_compute(points, overlap::Int = 0)
     if overlap > 0
         _points = overlap_create(points, overlap)
     else
@@ -134,13 +136,13 @@ function profile_compute(points, overlap::Int = 0, fd::IOStream = nothing)
         mx = overlapRemove(mx, overlap)
         cur = overlapRemove(cur, overlap)
 
-        if fd != nothing
-            write(fd, "Backward speed: \n $bwd")
-            write(fd, "Maximum speed: \n $mx")
-            write(fd, "Curvature: \n $cur")
-            write(fd, "Final speed: \n $_v")
-            flush(fd)
-        end
+        # if fd != nothing
+        #     write(fd, "Backward speed: \n $bwd")
+        #     write(fd, "Maximum speed: \n $mx")
+        #     write(fd, "Curvature: \n $cur")
+        #     write(fd, "Final speed: \n $_v")
+        #     flush(fd)
+        # end
 
     end
 
@@ -158,5 +160,5 @@ if (abspath(PROGRAM_FILE) == @__FILE__)
         0.336651   0.236891   0.236891;
         0.0954936  0.303086   0.303086;
         0.459189   0.374318   0.374318]
-    println(path_length(a))
+    println(profile_compute(a, 0))
 end
