@@ -36,10 +36,10 @@ function trajectory_resample(points, remain)
     fixed_points = []
     upoints = []
 
-    rotate = typeof(get_value(P, "rotate")) != Vector ? [getValue(P, "rotate") for _ in range(1, stop = maximum(1, length(get_value(P, "fixed_points"))))] : copy(get_value(P, "rotate"))
+    rotate = typeof(get_value(P, "rotate")) != Vector ? [get_value(P, "rotate") for _ in range(1, stop = max(1, length(get_value(P, "fixed_points"))))] : copy(get_value(P, "rotate"))
 
     while true
-        _points = circshift(points, -trajectory_closest_index(points, len(raw_fixed_points) > 0 ? popfirst!(raw_fixed_points) : 0))
+        _points = circshift(points, length(raw_fixed_points) > 0 ? -trajectory_closest_index(points,  popfirst!(raw_fixed_points)) : 0)
 
         if get_value(P, "sampling_distance") != 0.0
             _points = interpolate(_points[:, 1:2], resolution_estimate(_points, get_value(P, "sampling_distance")))
@@ -68,6 +68,7 @@ function trajectory_resample(points, remain)
     end
 
     if length(rpoints) == 1
+        println("return len == 1")
         return rpoints[1]
     else
         result = Nothing
@@ -83,9 +84,14 @@ function trajectory_resample(points, remain)
 
             if _max_i >= 1
                 if result == Nothing
+                    print("adding: ")
+                    println(rpoints[_i][1:_max_i+1, :])
                     result = rpoints[_i][1:_max_i+1, :]
                 else
+                    print("adding: ")
+                    println(rpoints[_i][1:_max_i+1, :])
                     result = vcat(result, rpoints[_i][1:_max_i+1, :])
+                end
             end
         end
         return result
@@ -103,5 +109,5 @@ if (abspath(PROGRAM_FILE) == @__FILE__)
         0.336651   0.236891;
         0.0954936  0.303086;
         0.459189   0.374318]
-    println(resolution_estimate(a, 0.14612325))
+    println(result)
 end

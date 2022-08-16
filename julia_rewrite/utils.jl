@@ -3,11 +3,11 @@ using PyCall
 
 #
 
-function gridCompute(points)
+function grid_compute(points)
     minimum(minimum(u[2:length(u)] - u[1:length(u)-1] for u in [unique!(c[:]) for c in eachcol(points)]))
 end
 
-function mapCreate(points::Array{Float64, 2}, origin = Nothing, size = Nothing, grid = Nothing)
+function map_create(points::Array{Float64, 2}, origin = Nothing, size = Nothing, grid = Nothing)
     println("Creating map...")
 
     _grid = grid != Nothing ? grid : gridCompute(points)
