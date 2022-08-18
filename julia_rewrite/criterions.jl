@@ -14,7 +14,7 @@ a_break_max = 4.5   # Maximum longitudal decceleration [m.s^-2]
 # Length
 ######################
 
-function path_length(points, overflown...)
+function path_length(points: overflown...)
     sum(sqrt.(sum((circshift(points[:, 1:2], 1) .- points[:, 1:2]).^2, dims = 2)), dims = 1)[1]
 end
 

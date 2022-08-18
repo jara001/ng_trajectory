@@ -1,16 +1,20 @@
 using JSON
 using PyCall
 
-#
+######################
+# Utilities (segmentator)
+######################
 
 function grid_compute(points)
     minimum(minimum(u[2:length(u)] - u[1:length(u)-1] for u in [unique!(c[:]) for c in eachcol(points)]))
 end
 
 function map_create(points::Array{Float64, 2}, origin = Nothing, size = Nothing, grid = Nothing)
+    global MAP, MAP_ORIGIN, MAP_GRID
+
     println("Creating map...")
 
-    _grid = grid != Nothing ? grid : gridCompute(points)
+    _grid = grid != Nothing ? grid : grid_compute(points)
     println("\tGrid:", _grid)
 
     _origin = origin != Nothing ? origin : reshape(minimum(points, dims = 1), (2, 1))
@@ -29,26 +33,36 @@ function map_create(points::Array{Float64, 2}, origin = Nothing, size = Nothing,
     _m = zeros(UInt8, Tuple(convert.(UInt64, (_size ./ _grid) .+ 1)));
 
     for _p in eachrow(points)
-        index = convert.(UInt64, map(round, ((_p[1:2] - _origin) ./ _grid) .+ 1))
+        index = Int.(round.((_p[1:2] - _origin) ./ _grid) .+ 1)
         _m[index[1], index[2]] = 100
-        break;
     end
+
+    MAP = _m
+    MAP_ORIGIN = _origin
+    MAP_GRID = _grid
 
     println("Map created.")
 
+    return MAP, MAP_ORIGIN, MAP_GRID
+end
+
+function point_to_map(points)
+    # global MAP_ORIGIN, MAP_GRID
+    Int.(round.((points[1:2] - MAP_ORIGIN) / MAP_GRID))
+end
+
+function points_to_map(points)
+    # global MAP_ORIGIN, MAP_GRID
+    Int.(round.((points[:, 1:2] .- MAP_ORIGIN') ./ MAP_GRID))
 end
 
 ######################
-# Utilities (Point)
+# Utilities (selector)
 ######################
 
 function point_distance(a, b)
     sqrt(sum([(b[i] - a[i])^2 for i in range(1, stop = min(length(a), length(b)))]))
 end
-
-######################
-# Utilities (Trajectory)
-######################
 
 function trajectory_closest_index(points, reference; from_left::Bool = false)
     _distances = points[:, 1:2] .- reference[1:2]'
@@ -92,7 +106,7 @@ if (abspath(PROGRAM_FILE) == @__FILE__)
 
     # # VALID_POINTS = PyArray(py"b"o)
 
-    a = [ 0.16433    0.524746;
+    a = [ 0.16433   0.524746;
         0.730177   0.787651;
         0.646905   0.0135035;
         0.796598   0.0387711;

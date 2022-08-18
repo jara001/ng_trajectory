@@ -1,10 +1,10 @@
 module ParameterListClass
 
-export ParameterList, add_parameter!, to_string, get_value, reset, reset_all, iterate, update, update_all
+export ParameterList, add_parameter!, to_string, get_value, reset!, reset_all!, iterate, update!, update_all!
 
 module ParameterClass
 
-export Parameter, reset_p, to_string_par
+export Parameter, reset_p!, to_string_par
 
 mutable struct Parameter
     name::String
@@ -15,7 +15,7 @@ mutable struct Parameter
     group::String
 end
 
-function reset_p(this::Parameter)
+function reset_p!(this::Parameter)
     this.value = this.default
     return Nothing
 end
@@ -36,37 +36,37 @@ end
 
 function add_parameter!(this::ParameterList, p::Parameter)
     this.parameters[p.name] = p
-    return Nothing
+    return nothing
 end
 
 function get_value(this::ParameterList, name::String)
-    get(this.parameters, name, Nothing).value
+    get(this.parameters, name, nothing).value
 end
 
-function reset(this::ParameterList, name::String)
-    reset_p(get(this.parameters, name, Nothing))
-    return Nothing
+function reset!(this::ParameterList, name::String)
+    reset_p!(get(this.parameters, name, nothing))
+    return nothing
 end
 
-function reset_all(this::ParameterList)
+function reset_all!(this::ParameterList)
     for _p in this.parameters
-        reset(this, _p)
+        reset!(this, _p.first)
     end
-    return Nothing
+    return nothing
 end
 
 function iterate(this::ParameterList)
     pairs(this)
 end
 
-function update(this::ParameterList, name::String, value)
-    get(this.parameters, name, Nothing).value = value
-    return Nothing
+function update!(this::ParameterList, name::String, value)
+    get(this.parameters, name, nothing).value = value
+    return nothing
 end
 
-function update_all(this::ParameterList, kwargs::Dict, reset::Bool = true)
+function update_all!(this::ParameterList, kwargs; reset::Bool = true)
     if reset == true
-        reset_all(this)
+        reset_all!(this)
     end
 
     for (_p, _v) in pairs(kwargs)
@@ -74,7 +74,7 @@ function update_all(this::ParameterList, kwargs::Dict, reset::Bool = true)
             _p.value =  _v
         end
     end
-    return Nothing
+    return nothing
 end
 
 function to_string(this::ParameterList)
