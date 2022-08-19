@@ -64,14 +64,14 @@ function update!(this::ParameterList, name::String, value)
     return nothing
 end
 
-function update_all!(this::ParameterList, kwargs; reset::Bool = true)
+function update_all!(this::ParameterList, kwargs; reset::Bool=true)
     if reset == true
         reset_all!(this)
     end
 
     for (_p, _v) in pairs(kwargs)
         if haskey(this.parameters, _p)
-            _p.value =  _v
+            _p.value = _v
         end
     end
     return nothing

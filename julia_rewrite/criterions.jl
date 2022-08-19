@@ -14,8 +14,8 @@ a_break_max = 4.5   # Maximum longitudal decceleration [m.s^-2]
 # Length
 ######################
 
-function path_length(points: overflown...)
-    sum(sqrt.(sum((circshift(points[:, 1:2], 1) .- points[:, 1:2]).^2, dims = 2)), dims = 1)[1]
+function path_length(points; overflown...)
+    sum(sqrt.(sum((circshift(points[:, 1:2], 1) .- points[:, 1:2]) .^ 2, dims=2)), dims=1)[1]
 end
 
 ######################
@@ -23,24 +23,24 @@ end
 ######################
 
 function overlap_create(points, overlap)
-    vcat(points[end - overlap + 1:end - overlap + 1,:], points, points[1:overlap])
+    vcat(points[end-overlap+1:end-overlap+1, :], points, points[1:overlap])
 end
 
 function overlap_remove(points, overlap)
-    points[overlap:end + 1 - overlap, :]
+    points[overlap:end+1-overlap, :]
 end
 
 function fz(v::Float64)
-    _m*_g + 0.5*(_ro*_A*_cl*v*v)
+    _m * _g + 0.5 * (_ro * _A * _cl * v * v)
 end
 
 function fy(v::Float64, k::Float64)
-    _m*v*v*k
+    _m * v * v * k
 end
 
-function h(k::Float64, v::Float64, d::Int, i::Int = -1)
+function h(k::Float64, v::Float64, d::Int, i::Int=-1)
     fz_res = fz(v)
-    fy_res = fy(v,k)
+    fy_res = fy(v, k)
 
     if (_mu * _mu * fz_res * fz_res - fy_res * fy_res) <= 0
         return 0
@@ -69,17 +69,17 @@ function backward_pass(points)
     v_max = zeros(k)
     v_max_cr = zeros(k)
     alim = zeros(k)
-    v_bwd[(k % len) + 1] = v_lim
-    v_max[(k % len) + 1] = v_lim
+    v_bwd[(k%len)+1] = v_lim
+    v_max[(k%len)+1] = v_lim
 
     while k > 0
-        v_max_cr[k] = sqrt(_mu*_g/cur[k])
+        v_max_cr[k] = sqrt(_mu * _g / cur[k])
         v_max[k] = min(v_max_cr[k], v_lim)
-        ds = sqrt((points[(k % len) + 1, 1] - points[k, 1])^2 + (points[(k % len) + 1, 2] - points[k, 2])^2)
-        alim[(k % len) + 1] = (v_max[k]^2 - v_bwd[(k % len) + 1]^2) / (2 * ds)
-        a[k] = -h(cur[(k % len) + 1], v_bwd[(k % len) + 1], -1 , k + 1)
-        a[k] = min(min(a[k], a_break_max), alim[(k % len) + 1])
-        v_bwd[k] = sqrt((v_bwd[(k % len) + 1] * v_bwd[(k % len) + 1]) + (2 * a[k] * ds))
+        ds = sqrt((points[(k%len)+1, 1] - points[k, 1])^2 + (points[(k%len)+1, 2] - points[k, 2])^2)
+        alim[(k%len)+1] = (v_max[k]^2 - v_bwd[(k%len)+1]^2) / (2 * ds)
+        a[k] = -h(cur[(k%len)+1], v_bwd[(k%len)+1], -1, k + 1)
+        a[k] = min(min(a[k], a_break_max), alim[(k%len)+1])
+        v_bwd[k] = sqrt((v_bwd[(k%len)+1] * v_bwd[(k%len)+1]) + (2 * a[k] * ds))
         k -= 1
     end
 
@@ -96,19 +96,19 @@ function forward_pass(points, v_bwd, v_max, cur)
     v_fwd[k] = v_0
 
     while k <= len
-        ds = sqrt((points[k, 1] - points[(k % len) + 1, 1])^2 + (points[k, 2] - points[((k % len) + 1), 2])^2)
-        a_lim = (v_bwd[(k % len) + 1] * v_bwd[(k % len) + 1] - v_fwd[k] * v_fwd[k])/(2*ds)
+        ds = sqrt((points[k, 1] - points[(k%len)+1, 1])^2 + (points[k, 2] - points[((k%len)+1), 2])^2)
+        a_lim = (v_bwd[(k%len)+1] * v_bwd[(k%len)+1] - v_fwd[k] * v_fwd[k]) / (2 * ds)
         a[k] = h(cur[k], v_fwd[k], 1)
-        a[k] = min(min(a[k], a_acc_max),a_lim)
-        v_fwd[(k % len) + 1] = sqrt(v_fwd[k]*v_fwd[k] + 2*a[k]*ds)
-        t[(k % len) + 1] = t[k] + 2*ds/(v_fwd[(k % len) + 1] + v_fwd[k])
+        a[k] = min(min(a[k], a_acc_max), a_lim)
+        v_fwd[(k%len)+1] = sqrt(v_fwd[k] * v_fwd[k] + 2 * a[k] * ds)
+        t[(k%len)+1] = t[k] + 2 * ds / (v_fwd[(k%len)+1] + v_fwd[k])
         k = k + 1
     end
 
     return v_fwd, a, t
 end
 
-function profile_compute(points, overlap::Int = 0)
+function profile_compute(points, overlap::Int=0)
     if overlap > 0
         _points = overlap_create(points, overlap)
     else
@@ -136,7 +136,7 @@ function profile_compute(points, overlap::Int = 0)
         mx = overlapRemove(mx, overlap)
         cur = overlapRemove(cur, overlap)
 
-        # if fd != nothing
+        # if fd !== nothing
         #     write(fd, "Backward speed: \n $bwd")
         #     write(fd, "Maximum speed: \n $mx")
         #     write(fd, "Curvature: \n $cur")
@@ -150,15 +150,15 @@ function profile_compute(points, overlap::Int = 0)
 end
 
 if (abspath(PROGRAM_FILE) == @__FILE__)
-    a = [ 0.16433    0.524746   0.524746;
-        0.730177   0.787651   0.787651;
-        0.646905   0.0135035   0.0135035;
-        0.796598   0.0387711   0.0387711;
-        0.442782   0.753235   0.753235;
-        0.832315   0.483352   0.483352;
-        0.442524   0.912381   0.912381;
-        0.336651   0.236891   0.236891;
-        0.0954936  0.303086   0.303086;
-        0.459189   0.374318   0.374318]
+    a = [0.16433 0.524746 0.524746
+        0.730177 0.787651 0.787651
+        0.646905 0.0135035 0.0135035
+        0.796598 0.0387711 0.0387711
+        0.442782 0.753235 0.753235
+        0.832315 0.483352 0.483352
+        0.442524 0.912381 0.912381
+        0.336651 0.236891 0.236891
+        0.0954936 0.303086 0.303086
+        0.459189 0.374318 0.374318]
     println(profile_compute(a, 0))
 end

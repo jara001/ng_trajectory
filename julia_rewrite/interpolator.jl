@@ -1,16 +1,16 @@
 using Dierckx
 
-function interpolate(points::Array{Float64, 2}, int_size = 400, overflown...)
+function interpolate(points::Array{Float64,2}, int_size=400, overflown...)
 
     _points = vcat(points, points[1:1, :])
     x, y = eachcol(_points)
-    distance = vec(cumsum(sqrt.(sum(diff(_points, dims=1).^2, dims=2 )), dims = 1))
+    distance = vec(cumsum(sqrt.(sum(diff(_points, dims=1) .^ 2, dims=2)), dims=1))
     distance = insert!(distance, 1, 0) ./ last(distance)
 
     alpha = range(0, stop=1, length=int_size + 1)[1:end-1]
 
-    splinex = Spline1D(distance, x; periodic = true)
-    spliney = Spline1D(distance, y; periodic = true)
+    splinex = Spline1D(distance, x; periodic=true)
+    spliney = Spline1D(distance, y; periodic=true)
 
     ipolx = splinex(alpha)
     ipol2x = derivative(splinex, alpha; nu=2)
@@ -21,9 +21,9 @@ function interpolate(points::Array{Float64, 2}, int_size = 400, overflown...)
     ipol1y = derivative(spliney, alpha; nu=1)
 
     xx = (ipol1x .* ipol2y) .- (ipol1y .* ipol2x)
-    yy = sqrt.((ipol1x .^2 .+ ipol1y .^2) .^3)
+    yy = sqrt.((ipol1x .^ 2 .+ ipol1y .^ 2) .^ 3)
 
-    hcat(ipolx, ipoly, xx./yy)
+    hcat(ipolx, ipoly, xx ./ yy)
 end
 
 # if (abspath(PROGRAM_FILE) == @__FILE__)

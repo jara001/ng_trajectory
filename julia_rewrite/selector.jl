@@ -36,10 +36,10 @@ function trajectory_resample(points, remain)
     fixed_points = []
     upoints = []
 
-    rotate = typeof(get_value(P, "rotate")) != Vector ? [get_value(P, "rotate") for _ in range(1, stop = max(1, length(get_value(P, "fixed_points"))))] : copy(get_value(P, "rotate"))
+    rotate = typeof(get_value(P, "rotate")) != Vector ? [get_value(P, "rotate") for _ in range(1, stop=max(1, length(get_value(P, "fixed_points"))))] : copy(get_value(P, "rotate"))
 
     while true
-        _points = circshift(points, length(raw_fixed_points) > 0 ? -trajectory_closest_index(points,  popfirst!(raw_fixed_points)) : 0)
+        _points = circshift(points, length(raw_fixed_points) > 0 ? -trajectory_closest_index(points, popfirst!(raw_fixed_points)) : 0)
 
         if get_value(P, "sampling_distance") != 0.0
             _points = interpolate(_points[:, 1:2], resolution_estimate(_points, get_value(P, "sampling_distance")))
@@ -72,12 +72,12 @@ function trajectory_resample(points, remain)
     else
         result = nothing
 
-        for _i in range(1, stop = length(rpoints))
-            _p = fixed_points[(_i + 1) % length(rpoints)]
-            _cpi = trajectory_closest_index(upoints[_i], _p; from_left = true)
+        for _i in range(1, stop=length(rpoints))
+            _p = fixed_points[(_i+1)%length(rpoints)]
+            _cpi = trajectory_closest_index(upoints[_i], _p; from_left=true)
             _max_i = 0
 
-            while _max_i + 1 < length(rpoints[_i]) && trajectory_closest_index(upoints[_i], rpoints[_i][_max_i + 1, :]', from_left = true) < _cpi
+            while _max_i + 1 < length(rpoints[_i]) && trajectory_closest_index(upoints[_i], rpoints[_i][_max_i+1, :]', from_left=true) < _cpi
                 _max_i += 1
             end
 
@@ -98,15 +98,15 @@ function trajectory_resample(points, remain)
 end
 
 if (abspath(PROGRAM_FILE) == @__FILE__)
-    a = [ 0.16433    0.524746;
-        0.730177   0.787651;
-        0.646905   0.0135035;
-        0.796598   0.0387711;
-        0.442782   0.753235;
-        0.832315   0.483352;
-        0.442524   0.912381;
-        0.336651   0.236891;
-        0.0954936  0.303086;
-        0.459189   0.374318]
+    a = [0.16433 0.524746
+        0.730177 0.787651
+        0.646905 0.0135035
+        0.796598 0.0387711
+        0.442782 0.753235
+        0.832315 0.483352
+        0.442524 0.912381
+        0.336651 0.236891
+        0.0954936 0.303086
+        0.459189 0.374318]
     println(result)
 end

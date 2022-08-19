@@ -24,7 +24,7 @@ function init(track; kwargs...)
 
     update_all!(P, kwargs)
 
-    if MAP == nothing || get_value(P, "hold_map") == false
+    if MAP === nothing || get_value(P, "hold_map") == false
         MAP, MAP_ORIGIN, MAP_GRID = map_create(track)
     end
 end

@@ -7,7 +7,7 @@ export INVALID_POINTS
 INVALID_POINTS = []
 
 function penalize(points, valid_points::Array{Float64, 2}, grid, penalty = 100: overflown...)
-    _grid = grid == nothing ? grid_compute(points) : grid
+    _grid = grid === nothing ? grid_compute(points) : grid
 
     invalid = 0
     empty!(INVALID_POINTS)
