@@ -87,6 +87,10 @@ end
 # Utilities (optimizer)
 ######################
 
+function trajectory_reduce(points, remain)
+    points[trunc.(Int, range(1, stop=size(points, 1), length=remain + 1)[1:end-1]), :]
+end
+
 function trajectory_sort(points; verify_sort::Bool=false)
     _points = points
 
