@@ -95,8 +95,8 @@ function trajectory_sort(points; verify_sort::Bool=false)
     _points = points
 
     sorted_points = []
-    push!(sorted_points, _points[1:1, :])
-    _points = _points[1:end.!=1, :]
+    push!(sorted_points, vec(_points[1:1, :]))
+    _points = collect(eachrow(_points[1:end.!=1, :]))
 
     while length(_points) > 0
         min_dist = 100000
@@ -114,21 +114,20 @@ function trajectory_sort(points; verify_sort::Bool=false)
         push!(sorted_points, point)
         filter!(e -> e != point, _points)
     end
-
-    spoints = sorted_points
+    spoints = mapreduce(permutedims, vcat, sorted_points)
 
     if verify_sort == true
         _grid = minimum(abs.(minimum(spoints[2:end, :] - spoints[1:end-1, :])) for u in [unique!(c[:]) for c in eachcol(points)])
 
         while true
-            _dist = points_distance(spoints)
+            _dists = points_distance(spoints)
 
-            _outliers = _dist[_dist>sqrt(2)*_grid]
+            _outliers = _dists[_dists.>sqrt(2)*_grid]
 
             if length(_outliers) == 1
                 println("trajectorySort: Only one large jump in the trajectory found.")
-                @printf("trajectorySort: points = %s", spoints)
-                @printf("trajectorySort: dists = %s", _dists)
+                @printf("trajectorySort: points = %s\n", spoints)
+                @printf("trajectorySort: dists = %s\n", _dists)
                 println("trajectorySort: Continuing without dealing with outliers.")
                 break
             elseif length(_outliers) > 0

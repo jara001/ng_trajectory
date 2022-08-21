@@ -11,14 +11,12 @@ include("segmentator.jl")
 function points_filter(points, grid=nothing)
     _points = []
     _grid = grid !== nothing ? grid : minimum(minimum(u[2:length(u)] - u[1:length(u)-1] for u in [unique(c[:]) for c in eachcol(points)]))
+    _cells = [[trunc(Int, (round.(_p[_d] / _grid))) for _d = 1:ndims(points)] for _p in eachrow(points)]
+    _cells_copy = [[trunc(Int, (round.(_p[_d] / _grid))) for _d = 1:ndims(points)] for _p in eachrow(points)]
+    points_l = points
 
-    _cells = [Int.(round.(_p[_d] / _grid)) for _d = 1:ndims(points), _p in eachrow(points)]
-    _cells_copy = [Int(round(_p[_d] / _grid)) for _d = 1:ndims(points), _p in eachrow(points)]
-
-    points_l = eachrow(points)
-
-    for _p in points_l
-        _cell = [Int.(round.(_p[_d] / _grid)) for _d = 1:ndims(points)]
+    for _p in eachrow(points_l)
+        _cell = [trunc(Int, (round.(_p[_d] / _grid))) for _d = 1:ndims(points)]
 
         _xr = -1:1
         _yr = -1:1
@@ -36,8 +34,8 @@ function points_filter(points, grid=nothing)
 
                     _nearbyc = [_cell[1] + _xr, _cell[2] + _yr]
 
-                    if _nearbyc in _cells_copy && points_l[findfirst(_cells_copy, _nearbyc)] in _points
-                        _nearbyp = points_l[findfirst(_cells_copy, _nearbyc)]
+                    if _nearbyc in _cells_copy && points_l[findfirst(item -> item == _nearbyc, _cells_copy)] in _points
+                        _nearbyp = points_l[findfirst(item -> item == _nearbyc, _cells_copy)]
                         filter!(e -> e ≠ _nearbyp, _points)
                         points_l = [points_l; _nearbyp]
                     end
@@ -109,24 +107,21 @@ function groups_border_beautify(borders, border_length)
     return bborders
 end
 
-function groups_center_compute(groups)
-    centers = []
-    for _g in groups
-        push!(centers, mean(_g, dims=1))
-    end
-    _centers
+function groups_center_compute(_groups)
+    mean(_groups, dims=1)
 end
 
-# function group_layers_compute(layers0, layers0_center, layers_count)
-#     layers0_size = [length(layer) for layer in layers0]
+function group_layers_compute(layer0::Matrix{Float64}, layer0_center, layer_count::Int)
 
-#     [[trajectory_reduce(
-#             ([((layer0[:, 1:2] .- layers0_center[i][j] for j in 1:ndims(layers0_center[i]))
-#             .* 1 - (1 / layers_count[i]) * layer_index)
-#             .+ layers0_center[i][j] for j in 1:ndims(layers0_center[i])]
-#             , trunc(Int, layers0_size[i] - (layers0_size[i] / layers_count[i]) * layer_index))...)
-#              for layer_index in 1:layers_count[i]] for (i, layer0) in enumerate(layers0)]
-# end
+    layers_size = length(eachrow(layer0))
+    a = [1 - (1 / 5) * layer_index for layer_index in 0:layer_count-1]
+    points = [(layer0[:, 1:2] .- layer0_center) .* x .+ layer0_center for x in a]
+    remains = (trunc.(Int, layers_size - (layers_size / layer_count) * layer_index for layer_index in 0:layer_count-1))
+
+
+    [trajectory_reduce(points[i:i, :], remains[i]) for i in eachindex(remains)]
+end
+
 
 if (abspath(PROGRAM_FILE) == @__FILE__)
     a = [0.16433 0.524746
@@ -139,10 +134,11 @@ if (abspath(PROGRAM_FILE) == @__FILE__)
         0.336651 0.236891
         0.0954936 0.303086
         0.459189 0.374318]
-    _groups = [a, a .+ 0.1]
+    _groups = a
+    layers_center = groups_center_compute(a)
+    grouplayers = group_layers_compute(_groups, layers_center, 5)
 
     # grouplayers = groups_border_obtain(_groups)
-    grouplayers = points_filter(a)
-    println(grouplayers)
-
+    # grouplayers = interpolate(a, 400)
+    println("result: ", grouplayers)
 end
