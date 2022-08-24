@@ -20,6 +20,21 @@ function selector_init(;kwargs...)
     update_all!(P, kwargs)
 end
 
+function select(points, remain::Int; overflown...)
+    if remain < 0 && getValue(P, "distance") <= 0
+        # Raise an exception, as we cannot proceed without further information.
+        throw(ArgumentError("Negative selection requires set 'distance' parameter for 'uniform_distance' selector."))
+    end
+
+    rpoints = trajectory_resample(points, remain)
+
+    if remain > 0 && len(rpoints) != remain
+        return trajectory_resample(points, remain - 1)
+    end
+
+    return rpoints
+end
+
 function path_point_distance_avg(points)
     path_length(points) / length(points)
 end

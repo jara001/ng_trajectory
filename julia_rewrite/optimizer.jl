@@ -1,12 +1,124 @@
 using Statistics
+
 include("utils.jl")
 include("interpolator.jl")
 include("segmentator.jl")
+include("selector.jl")
+
+using .ParameterListClass.ParameterClass
+using .ParameterListClass
+
+# Global variables
+OPTIMIZER = nothing
+MATRYOSHKA = nothing
+VALID_POINTS = nothing
+CRITERION_ARGS = nothing
+INTERPOLATOR_ARGS = nothing
+SEGMENTATOR_ARGS = nothing
+SELECTOR_ARGS = nothing
+PENALIZER_INIT = nothing
+PENALIZER_ARGS = nothing
+LOGFILE = nothing
+VERBOSITY = 3
+#FILELOCK = Lock()
+HOLDMAP = nothing
+GRID = nothing
+PENALTY = nothing
+FIGURE = nothing
+PLOT = nothing
+
+P = ParameterList()
+
+add_parameter!(P, Parameter("budget", 100, 100, Int, "Budget parameter for the genetic algorithm.", "init (general)"))
+add_parameter!(P, Parameter("groups", 8, 8, Int, "Number of groups to segmentate the track into.", "init (general)"))
+add_parameter!(P, Parameter("workers", "Sys.CPU_CORES", "Sys.CPU_CORES", Int, "Number threads for the genetic algorithm.", "init (general)"))
+add_parameter!(P, Parameter("penalty", 100, 100, Float64, "Constant used for increasing the penalty criterion.", "init (general)"))
+add_parameter!(P, Parameter("criterion_args", Dict(), Dict(), Dict, "Arguments for the criterion function.", "init (general)"))
+add_parameter!(P, Parameter("interpolator_args", Dict(), Dict(), Dict, "Arguments for the interpolator function.", "init (general)"))
+add_parameter!(P, Parameter("segmentator_args", Dict(), Dict(), Dict, "Arguments for the segmentator function.", "init (general)"))
+add_parameter!(P, Parameter("selector_args", Dict(), Dict(), Dict, "Arguments for the selector function.", "init (general)"))
+add_parameter!(P, Parameter("penalizer_init", Dict(), Dict(), Dict, "Arguments for the init part of the penalizer function.", "init (general)"))
+add_parameter!(P, Parameter("penalizer_args", Dict(), Dict(), Dict, "Arguments for the penalizer function.", "init (general)"))
+add_parameter!(P, Parameter("logging_verbosity", 2, 2, Int, "Index for verbosity of the logger.", "init (general)"))
+add_parameter!(P, Parameter("hold_matryoshka", false, false, Bool, "Whether the transformation should be created only once.", "init (Matryoshka)"))
+add_parameter!(P, Parameter("plot", false, false, Bool, "Whether a graphical representation should be created.", "init (viz.)"))
+add_parameter!(P, Parameter("grid", "computed by default", "computed by default", Vector, "X-size and y-size of the grid used for points discretization.", "init (Matryoshka)"))
+add_parameter!(P, Parameter("plot_mapping", false, false, Bool, "Whether a grid should be mapped onto the track (to show the mapping).", "init (viz.)"))
 
 ######################
 # Utils
 ######################
 
+function optimizer_init(; points,
+    group_centers,
+    group_centerline,
+    budget::Int=100,
+    layers::Int=5,
+    groups::Int=8,
+    workers::Int=Sys.CPU_CORES,
+    penalty=100,
+    criterion_args::Dict=Dict(),
+    interpolator_args::Dict=Dict(),
+    segmentator_args::Dict=Dict(),
+    selector_args::Dict=Dict(),
+    penalizer_init::Dict=Dict(),
+    penalizer_args::Dict=Dict(),
+    logfile::IO=stdout,
+    logging_verbosity::Int=2,
+    hold_matryoshka::Bool=false,
+    plot::Bool=false,
+    grid::Vector=[],
+    figure=nothing,
+    kwargs...)
+
+    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE, PLOT
+    global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER, PENALIZER_INIT, PENALIZER_ARGS
+
+    CRITERION_ARGS = criterion_args
+    INTERPOLATOR_ARGS = interpolator_args
+    SEGMENTATOR_ARGS = segmentator_args
+    SELECTOR_ARGS = selector_args
+    PENALIZER_INIT = penalizer_init
+    PENALIZER_ARGS = penalizer_args
+    LOGFILE = logfile
+    VERBOSITY = logging_verbosity
+    _holdmatryoshka = hold_matryoshka
+    PENALTY = penalty
+    FIGURE = figure
+    PLOT = plot
+
+
+    VALID_POINTS = points
+
+    if MATRYOSHKA === nothing || _holdmatryoshka == false
+        group_centers = select(group_centerline, groups; SELECTOR_ARGS...)
+
+        if plot == true
+            # TODO: plot
+        end
+
+        _groups = segmentate(points, group_centers; SEGMENTATOR_ARGS...)
+
+        penalizer_init()
+
+        grouplayers = groups_border_obtain(_groups)
+        grouplayers = groups_border_beautify(grouplayers, 400)
+
+        if plot == true
+            # TODO: plot
+        end
+
+        layers_center = group_center_compute(_groups)
+        layers_count = [ layers for _ in 1:length(grouplayers) ]
+
+
+    end
+
+
+
+
+
+end
 
 function points_filter(points, grid=nothing)
     _points = []
