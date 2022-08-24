@@ -10,6 +10,10 @@ v_lim = 4.5         # Maximum forward speed [m.s^-1]
 a_acc_max = 0.8     # Maximum longitudal acceleration [m.s^-2]
 a_break_max = 4.5   # Maximum longitudal decceleration [m.s^-2]
 
+function criterion_init()
+    # TODO: update globals
+end
+
 ######################
 # Length
 ######################

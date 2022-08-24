@@ -14,6 +14,12 @@ add_parameter!(P, Parameter("fixed_points", [], [], Array, "Points to be used in
 
 #curvature2
 
+function selector_init(;kwargs...)
+    #TODO: rotate
+
+    update_all!(P, kwargs)
+end
+
 function path_point_distance_avg(points)
     path_length(points) / length(points)
 end
@@ -95,6 +101,10 @@ function trajectory_resample(points, remain)
         end
         return result
     end
+end
+
+function xxx()
+    println("bye")
 end
 
 if (abspath(PROGRAM_FILE) == @__FILE__)

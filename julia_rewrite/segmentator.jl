@@ -19,7 +19,7 @@ add_parameter!(P, Parameter("reserve_selected", [], [], Array, "IDs of segments 
 add_parameter!(P, Parameter("reserve_distance", 2.0, 2.0, float, "Distance from the line segment that is reserved to the segment.", ""))
 add_parameter!(P, Parameter("plot_flood", false, false, Bool, "Whether the flooded areas should be plotted.", ""))
 
-function init(track; kwargs...)
+function segmentator_init(track; kwargs...)
     global MAP, MAP_ORIGIN, MAP_GRID
 
     update_all!(P, kwargs)
