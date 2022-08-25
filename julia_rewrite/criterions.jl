@@ -14,6 +14,11 @@ function criterion_init()
     # TODO: update globals
 end
 
+function compute(points, overlap::Int = 0; overflown...)
+    _, _, _t = profile_compute(points, overlap)
+    return Float64(_t[end])
+end
+
 ######################
 # Length
 ######################

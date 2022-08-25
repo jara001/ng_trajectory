@@ -1,9 +1,12 @@
 using Statistics
+using Dierckx
+using Printf
 
 include("utils.jl")
 include("interpolator.jl")
 include("segmentator.jl")
 include("selector.jl")
+include("criterion.jl")
 
 using .ParameterListClass.ParameterClass
 using .ParameterListClass
@@ -20,7 +23,7 @@ PENALIZER_INIT = nothing
 PENALIZER_ARGS = nothing
 LOGFILE = nothing
 VERBOSITY = 3
-#FILELOCK = Lock()
+FILELOCK = lock(ReentrantLock())
 HOLDMAP = nothing
 GRID = nothing
 PENALTY = nothing
@@ -109,15 +112,150 @@ function optimizer_init(; points,
         end
 
         layers_center = group_center_compute(_groups)
-        layers_count = [ layers for _ in 1:length(grouplayers) ]
+        layers_count = [layers for _ in 1:length(grouplayers)]
 
+        MATRYOSHKA = [matryoshka_create(grouplayers[_i], layers_center[_i], layers_count[_i]) for _i in 1:length(_groups)]
 
+        # TODO: plot
+
+        println("Matryoshka mapping constructed.")
+
+        if GRID === nothing
+            if length(grid) == 2
+                GRID = grid
+            else
+                _GRID = grid_compute(points)
+                GRID = [_GRID, _GRID]
+            end
+        end
     end
 
+    # TODO: nevergrad
+    # note budget = population
+end
 
+function optimize()
+    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS
 
+    # TODO: nevergrad
 
+end
 
+function _opt(points)
+    global VALID_POINTS, CRITERION_ARGS, INTERPOLATOR_ARGS, PENALIZER_ARGS
+    global MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
+
+    points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(points)]
+
+    _points = interpolate(points; INTERPOLATOR_ARGS...)
+
+    penalty = penalize(_points, VALID_POINTS, GRID, PENALTY; PENALIZER_ARGS...)
+
+    if penalty != 0
+        FILELOCK do
+            if VERBOSITY > 2
+                @printf(LOGFILE, "pointsA:%s", string(points))
+                @printf(LOGFILE, "pointsT:%s", string(_points))
+            end
+            if VERBOSITY > 1
+                @printf(LOGFILE, "penalty:%f", penalty)
+            end
+            flush(LOGFILE)
+
+        end
+        return penalty
+    end
+
+    _c = compute(_points; CRITERION_ARGS...)
+    FILELOCK do
+        if VERBOSITY > 2
+            @printf(LOGFILE, "pointsA:%s", string(points))
+            @printf(LOGFILE, "pointsT:%s", string(_points.tolist()))
+        end
+        if VERBOSITY > 1
+            @printf(LOGFILE, "correct:%f", _c)
+        end
+        LOGFILE.flush()
+    end
+    return _c
+end
+
+function matryoshka_create(layer0, layer0_center, layer_count::Int)
+    layers = group_layers_compute(layer0, layer0_center, layer_count)
+    layer0_size = length(layer0)
+
+    _tc = Array{Float64,2}
+    _rc = Array{Float64,2}
+
+    for _layer_index in 1:layer_count
+        layer_params = layer_index_to_parameters(_layer_index, layer0_size, layer_count)
+        indices = 1:layer_params[1]
+        tc = indices_to_transformed_coordinates(indices, layer_params...)
+        rc = indices_to_real_coordinates(indices, layers[Int(_layer_index)])
+
+        _tc = vcat(_tc, tc)
+        _rc = vcat(_rc, rc)
+    end
+
+    _ip2d = []
+    for _d in 1:size(_rc)[2]
+        push!(_ip2d, Spline2D(_tc[:, 0], _tc[:, 1], _rc[:, _d]))
+    end
+
+    return _ip2d
+end
+
+function matryoshka_map(matryoshka, coords)
+
+    _rcoords = []
+    for _c in coords
+        _dims = []
+        for _interpolator in matryoshka
+            push!(_dims, Spline2D(_c[0], _c[1], _interpolator))
+        end
+        push!(_rcoords, _dims)
+    end
+    return _rcoords
+end
+
+function layer_index_to_parameters(layer_index::Int, layer0_size::Int, layer_count::Int)
+    (trunc(Int, layer0_size - ((layer0_size / layer_count) * layer_index)), 1 - (1.0 / layer_count) * layer_index)
+end
+
+function indices_to_transformed_coordinates(indices, layer_size::Int, scale::Float64)
+    _coords = []
+    l = Float64(layer_size)
+    for _i in indices
+        _point = []
+        for _d in [1, -1]
+            push!(_point, (
+                max(
+                    min(
+                        (abs(-((((l / 2.0) + _i + _d * (l / 8.0)) % l) - (l / 2.0))) / (l / 4.0)) - 0.5,
+                        1
+                    ),
+                    0
+                ) * scale + ((1 - scale) / 2.0)
+            ))
+        end
+        _coords.append(_point)
+    end
+    return _coords
+end
+
+function indices_to_real_coordinates(indices, points)
+    _rcoords = []
+    for _i in indices
+        if trunc(Int, _i) == _i
+            push!(_rcoords, points[trunc(Int, _i), :])
+        else
+            push!(_rcoords,
+                points[trunc(Int, _i), :] .+ (_i - trunc(Int, _i)) .* (points[(trunc(Int, _i)+1)%size(points)[1], :] .- points[trunc(Int, _i), :])
+            )
+        end
+    end
+
+    return _rcoords
 end
 
 function points_filter(points, grid=nothing)

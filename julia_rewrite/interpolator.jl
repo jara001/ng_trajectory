@@ -1,6 +1,6 @@
 using Dierckx
 
-function interpolate(points::Array{Float64,2}, int_size=400, overflown...)
+function interpolate(points::Array{Float64,2}; int_size=400, overflown...)
 
     _points = vcat(points, points[1:1, :])
     x, y = eachcol(_points)

@@ -10,7 +10,7 @@ function penalizer_init()
     #pass
 end
 
-function penalize(points, valid_points::Array{Float64, 2}, grid, penalty = 100: overflown...)
+function penalize(points, valid_points::Array{Float64, 2}, grid, penalty = 100; overflown...)
     _grid = grid === nothing ? grid_compute(points) : grid
 
     invalid = 0
