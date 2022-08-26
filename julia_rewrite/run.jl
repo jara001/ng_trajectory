@@ -6,6 +6,7 @@ include("selector.jl")
 include("interpolator.jl")
 include("segmentator.jl")
 include("criterions.jl")
+include("optimizer.jl")
 
 function cascade_run(; track, fileformat, notification, loop_i, loop_output, conf...)
     # TODO: time
@@ -21,9 +22,19 @@ function cascade_run(; track, fileformat, notification, loop_i, loop_output, con
     # interpolator init
     segmentator_init(track, merge(_alg, get(alg, "segmentator_init", {}), "logfile" => "")...)
     criterion_init()
+    optimizer_init(points = track, group_centers = rcandidate, group_centerline = result, logfile = LOGFILE)
 
+    _fitne
 
+    # TODO: plot
 
+    # TODO: fileformat
+
+    if _fitness < fitness
+        return (_fitness, _rcandidate, _tcandidate, _result)
+    else
+        return loop_output
+    end
 end
 
 # TODO: loop
@@ -87,7 +98,7 @@ function execute(START_POINTS=nothing, VALID_POINTS=nothing)
         notification = notification * @sprintf "[%%d / %d]" CONFIGURATION["loops"]
 
         solution = loop_cascade_run(;
-            elements = CONFIGURATION["loops"],
+            elements=CONFIGURATION["loops"],
             track=VALID_POINTS,
             initline=START_POINTS,
             fileformat=fileformat,
@@ -95,4 +106,9 @@ function execute(START_POINTS=nothing, VALID_POINTS=nothing)
             CONFIGURATION...
         )
     end
+
+    # TODO: time
+    @printf("Optimization finished in .")
+
+    return solution
 end

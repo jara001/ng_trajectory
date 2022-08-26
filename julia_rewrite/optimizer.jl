@@ -1,6 +1,7 @@
 using Statistics
 using Dierckx
 using Printf
+using Evolutionary
 
 include("utils.jl")
 include("interpolator.jl")
@@ -58,7 +59,7 @@ function optimizer_init(; points,
     budget::Int=100,
     layers::Int=5,
     groups::Int=8,
-    workers::Int=Sys.CPU_CORES,
+    workers::Int=Sys.CPU_THREADS,
     penalty=100,
     criterion_args::Dict=Dict(),
     interpolator_args::Dict=Dict(),
@@ -130,22 +131,39 @@ function optimizer_init(; points,
         end
     end
 
-    # TODO: nevergrad
-    # note budget = population
+    # TODO: set bounds
+    OPTIMIZER = GA(populationSize=budget, Evolutionary.Options(parallelization=:thread))
 end
 
 function optimize()
     global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS
 
+    res = Evolutionary.optimize(_opt, zeros(length(MATRYOSHKA), 2), OPTIMIZER)
     # TODO: nevergrad
+    points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(Evolutionary.minimizer(res)))]
 
+    PENALIZER_ARGS["optimization"] = false
+    final = _opt(Evolutionary.minimizer(res))
+
+    _points = interpolate(points)
+
+    # TODO: plot
+
+    FILELOCK do
+        if VERBOSITY > 0
+            @printf(LOGFILE, "solution:%s", string(points))
+            @printf(LOGFILE, "final:%f", final)
+        end
+    end
+
+    return (final, points, Evolutionary.minimizer(res), _points)
 end
 
 function _opt(points)
     global VALID_POINTS, CRITERION_ARGS, INTERPOLATOR_ARGS, PENALIZER_ARGS
     global MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
 
-    points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(points)]
+    points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points))]
 
     _points = interpolate(points; INTERPOLATOR_ARGS...)
 
