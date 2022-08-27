@@ -14,9 +14,8 @@ add_parameter!(P, Parameter("fixed_points", [], [], Array, "Points to be used in
 
 #curvature2
 
-function selector_init(;kwargs...)
+function selector_init(; kwargs...)
     #TODO: rotate
-
     update_all!(P, kwargs)
 end
 

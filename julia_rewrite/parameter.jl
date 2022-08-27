@@ -69,7 +69,7 @@ function update_all!(this::ParameterList, kwargs; reset::Bool=true)
         reset_all!(this)
     end
 
-    for (_p, _v) in pairs(kwargs)
+    for (_p, _v) in kwargs
         if haskey(this.parameters, _p)
             _p.value = _v
         end

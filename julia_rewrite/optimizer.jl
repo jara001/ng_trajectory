@@ -7,7 +7,7 @@ include("utils.jl")
 include("interpolator.jl")
 include("segmentator.jl")
 include("selector.jl")
-include("criterion.jl")
+include("criterions.jl")
 
 using .ParameterListClass.ParameterClass
 using .ParameterListClass
@@ -24,7 +24,7 @@ PENALIZER_INIT = nothing
 PENALIZER_ARGS = nothing
 LOGFILE = nothing
 VERBOSITY = 3
-FILELOCK = lock(ReentrantLock())
+FILELOCK = ReentrantLock()
 HOLDMAP = nothing
 GRID = nothing
 PENALTY = nothing
@@ -149,7 +149,7 @@ function optimize()
 
     # TODO: plot
 
-    FILELOCK do
+    lock(FILELOCK) do
         if VERBOSITY > 0
             @printf(LOGFILE, "solution:%s", string(points))
             @printf(LOGFILE, "final:%f", final)
@@ -170,7 +170,7 @@ function _opt(points)
     penalty = penalize(_points, VALID_POINTS, GRID, PENALTY; PENALIZER_ARGS...)
 
     if penalty != 0
-        FILELOCK do
+        lock(FILELOCK) do
             if VERBOSITY > 2
                 @printf(LOGFILE, "pointsA:%s", string(points))
                 @printf(LOGFILE, "pointsT:%s", string(_points))
@@ -185,7 +185,7 @@ function _opt(points)
     end
 
     _c = compute(_points; CRITERION_ARGS...)
-    FILELOCK do
+    lock(FILELOCK) do
         if VERBOSITY > 2
             @printf(LOGFILE, "pointsA:%s", string(points))
             @printf(LOGFILE, "pointsT:%s", string(_points.tolist()))
@@ -229,7 +229,7 @@ function matryoshka_map(matryoshka, coords)
     for _c in coords
         _dims = []
         for _interpolator in matryoshka
-            push!(_dims, Spline2D(_c[0], _c[1], _interpolator))
+            push!(_dims, _interpolator(_c[0], _c[1]))
         end
         push!(_rcoords, _dims)
     end
@@ -249,14 +249,12 @@ function indices_to_transformed_coordinates(indices, layer_size::Int, scale::Flo
             push!(_point, (
                 max(
                     min(
-                        (abs(-((((l / 2.0) + _i + _d * (l / 8.0)) % l) - (l / 2.0))) / (l / 4.0)) - 0.5,
-                        1
-                    ),
+                        (abs(-((((l / 2.0) + _i + _d * (l / 8.0)) % l) - (l / 2.0))) / (l / 4.0)) - 0.5, 1),
                     0
                 ) * scale + ((1 - scale) / 2.0)
             ))
         end
-        _coords.append(_point)
+        push!(_coords, _point)
     end
     return _coords
 end
@@ -367,7 +365,7 @@ function groups_border_beautify(borders, border_length)
 
         border_sorted = trajectory_sort(border_filtered, verify_sort=true)
 
-        border_interpolated = interpolate(border_sorted, border_length)
+        border_interpolated = interpolate(border_sorted, int_size=border_length)
 
         push!(bborders, border_interpolated)
     end
@@ -386,7 +384,6 @@ function group_layers_compute(layer0::Matrix{Float64}, layer0_center, layer_coun
     points = [(layer0[:, 1:2] .- layer0_center) .* x .+ layer0_center for x in a]
     remains = (trunc.(Int, layers_size - (layers_size / layer_count) * layer_index for layer_index in 0:layer_count-1))
 
-
     [trajectory_reduce(points[i:i, :], remains[i]) for i in eachindex(remains)]
 end
 
@@ -402,11 +399,18 @@ if (abspath(PROGRAM_FILE) == @__FILE__)
         0.336651 0.236891
         0.0954936 0.303086
         0.459189 0.374318]
-    _groups = a
-    layers_center = groups_center_compute(a)
-    grouplayers = group_layers_compute(_groups, layers_center, 5)
+    # _groups = a
+    # layers_center = groups_center_compute(a)
+    # grouplayers = group_layers_compute(_groups, layers_center, 5)
 
     # grouplayers = groups_border_obtain(_groups)
     # grouplayers = interpolate(a, 400)
-    println("result: ", grouplayers)
+    x = [2 * i for i in 0:19]
+    y = [i for i in 0:19]
+    z = (x .- 1) .^ 2 .+ y .^ 2
+    spline = Spline2D(x, y, z, s=1e-4)
+    # println("result: ", spline(a[:, 1], a[:, 2]))
+    for _c in eachrow(a)
+        println(spline(_c[1], _c[2]))
+    end
 end
