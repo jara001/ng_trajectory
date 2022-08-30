@@ -1,10 +1,10 @@
-module ParameterListClass
+# module ParameterListClass
 
-export ParameterList, add_parameter!, to_string, get_value, reset!, reset_all!, iterate, update!, update_all!
+# export ParameterList, add_parameter!, to_string, get_value, reset!, reset_all!, iterate, update!, update_all!
 
-module ParameterClass
+# module ParameterClass
 
-export Parameter, reset_p!, to_string_par
+# export Parameter, reset_p!, to_string_par
 
 mutable struct Parameter
     name::String
@@ -24,10 +24,9 @@ function to_string_par(this::Parameter)
     string(this.name, " (", this.type, ") ", this.value, " [", this.description, "]")
 end
 
-end #MODULE
+# end #MODULE
 
-using .ParameterClass
-
+# using .ParameterClass
 
 mutable struct ParameterList
     parameters::Dict
@@ -81,15 +80,16 @@ function to_string(this::ParameterList)
     string("\t", join([to_string_par(parameter) for parameter in values(this.parameters)]))
 end
 
-end #MODULE
+# end #MODULE
 
 
 if (abspath(PROGRAM_FILE) == @__FILE__)
-    using .ParameterListClass.ParameterClass
-    using .ParameterListClass
+    # using .ParameterListClass.ParameterClass
+    # using .ParameterListClass
     a = Parameter("sampling_distance", 1.0, 1.0, float, "[m] Distance of super-sampling before the interpolation, skipped when 0.", "init")
     println(to_string_par(a))
     P = ParameterList()
     add_parameter!(P, a)
+    println(get_value(P, "sampling_distance"))
     println(to_string(P))
 end

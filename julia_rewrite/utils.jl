@@ -7,7 +7,7 @@ using Printf
 ######################
 
 function grid_compute(points)
-    minimum(minimum(u[2:length(u)] - u[1:length(u)-1] for u in [unique!(c[:]) for c in eachcol(points)]))
+    minimum(minimum(u[2:length(u)] - u[1:length(u)-1] for u in [unique!(sort(c[:])) for c in eachcol(points)]))
 end
 
 function map_create(points::Array{Float64,2}, origin=nothing, size=nothing, grid=nothing)
@@ -15,14 +15,14 @@ function map_create(points::Array{Float64,2}, origin=nothing, size=nothing, grid
 
     println("Creating map...")
 
-    _grid = grid != Nothing ? grid : grid_compute(points)
+    _grid = grid !== nothing ? grid : grid_compute(points)
     println("\tGrid:", _grid)
 
-    _origin = origin != Nothing ? origin : reshape(minimum(points, dims=1), (2, 1))
+    _origin = origin !== nothing ? origin : reshape(minimum(points, dims=1), (2, 1))
 
     println("\tOrigin:", _origin)
 
-    _size = size != Nothing ? size : reshape(map(abs, maximum(points, dims=1) - minimum(points, dims=1)), (2, 1))
+    _size = size !== nothing ? size : reshape(map(abs, maximum(points, dims=1) - minimum(points, dims=1)), (2, 1))
 
     println("\tMin:", reshape(minimum(points, dims=1), (2, 1)))
     println("\tMax:", reshape(maximum(points, dims=1), (2, 1)))
@@ -49,12 +49,12 @@ end
 
 function point_to_map(points)
     # global MAP_ORIGIN, MAP_GRID
-    Int.(round.((points[1:2] - MAP_ORIGIN) / MAP_GRID))
+    Int.(round.((points[1:2] - MAP_ORIGIN) ./ MAP_GRID) .+ 1)
 end
 
 function points_to_map(points)
     # global MAP_ORIGIN, MAP_GRID
-    Int.(round.((points[:, 1:2] .- MAP_ORIGIN') ./ MAP_GRID))
+    Int.(round.((points[:, 1:2] .- MAP_ORIGIN') ./ MAP_GRID) .+ 1)
 end
 
 ######################
@@ -62,7 +62,7 @@ end
 ######################
 
 function point_distance(a, b)
-    sqrt(sum([(b[i] - a[i])^2 for i in range(1, stop=min(length(a), length(b)))]))
+    sqrt(sum([(b[i] - a[i])^2 for i in 1:min(length(a), length(b))]))
 end
 
 function points_distance(points)
@@ -95,8 +95,10 @@ function trajectory_sort(points; verify_sort::Bool=false)
     _points = points
 
     sorted_points = []
-    push!(sorted_points, vec(_points[1:1, :]))
-    _points = collect(eachrow(_points[1:end.!=1, :]))
+    # push!(sorted_points, vec(_points[1:1, :]))
+    # _points = collect(eachrow(_points[1:end.!=1, :]))
+    push!(sorted_points, popfirst!(_points))
+    # _points = _points[1:end.!=1, :]
 
     while length(_points) > 0
         min_dist = 100000
@@ -114,10 +116,11 @@ function trajectory_sort(points; verify_sort::Bool=false)
         push!(sorted_points, point)
         filter!(e -> e != point, _points)
     end
+    # spoints = vcat(sorted_points...)
     spoints = mapreduce(permutedims, vcat, sorted_points)
 
     if verify_sort == true
-        _grid = minimum(abs.(minimum(spoints[2:end, :] - spoints[1:end-1, :])) for u in [unique!(c[:]) for c in eachcol(points)])
+        _grid = minimum(abs.(minimum(spoints[2:end, :] - spoints[1:end-1, :])) for u in [unique(sort(c[:])) for c in eachcol(points)])
 
         while true
             _dists = points_distance(spoints)
@@ -178,20 +181,11 @@ if (abspath(PROGRAM_FILE) == @__FILE__)
 
     # # VALID_POINTS = PyArray(py"b"o)
 
-    a = [0.16433 0.524746
-        0.730177 0.787651
-        0.646905 0.0135035
-        0.796598 0.0387711
-        0.442782 0.753235
-        0.832315 0.483352
-        0.442524 0.912381
-        0.336651 0.236891
-        0.0954936 0.303086
-        0.459189 0.374318]
+    a = [[0.16433, 0.524746], [0.730177, 0.787651], [0.646905, 0.0135035], [0.796598, 0.0387711], [0.442782, 0.753235], [0.832315, 0.483352], [0.442524, 0.912381], [0.336651, 0.236891], [0.0954936, 0.303086], [0.459189, 0.374318]]
     b = [0.7589091211161472,
         0.8091539348190575,
         0.5256478329286531,
         0.41357337873861466]
 
-    println(typeof(trajectory_closest_index(a, b)))
+    println(trajectory_sort(a; verify_sort=true))
 end

@@ -3,20 +3,20 @@ include("interpolator.jl")
 include("parameter.jl")
 include("criterions.jl")
 
-using .ParameterListClass.ParameterClass
-using .ParameterListClass
+# using .ParameterListClass.ParameterClass
+# using .ParameterListClass
 
-P = ParameterList()
-add_parameter!(P, Parameter("sampling_distance", 1.0, 1.0, float, "[m] Distance of super-sampling before the interpolation, skipped when 0.", "init"))
-add_parameter!(P, Parameter("distance", 0, 0, float, "[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.", "init"))
-add_parameter!(P, Parameter("rotate", 0, 0, float, "Parameter for rotating the input path. 0 is not rotated. <0, 1)", "init"))
-add_parameter!(P, Parameter("fixed_points", [], [], Array, "Points to be used in the selection upon calling 'select'.", "init"))
+P_sel = ParameterList()
+add_parameter!(P_sel, Parameter("sampling_distance", 1.0, 1.0, float, "[m] Distance of super-sampling before the interpolation, skipped when 0.", "init"))
+add_parameter!(P_sel, Parameter("distance", 0, 0, float, "[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.", "init"))
+add_parameter!(P_sel, Parameter("rotate", 0, 0, float, "Parameter for rotating the input path. 0 is not rotated. <0, 1)", "init"))
+add_parameter!(P_sel, Parameter("fixed_points", [], [], Array, "Points to be used in the selection upon calling 'select'.", "init"))
 
 #curvature2
 
 function selector_init(; kwargs...)
     #TODO: rotate
-    update_all!(P, kwargs)
+    update_all!(P_sel, kwargs)
 end
 
 function select(points, remain::Int; overflown...)
@@ -27,7 +27,7 @@ function select(points, remain::Int; overflown...)
 
     rpoints = trajectory_resample(points, remain)
 
-    if remain > 0 && len(rpoints) != remain
+    if remain > 0 && size(rpoints, 1) != remain
         return trajectory_resample(points, remain - 1)
     end
 
@@ -51,31 +51,31 @@ function trajectory_resample(points, remain)
         points = points[1:end-1, :]
     end
 
-    raw_fixed_points = copy(get_value(P, "fixed_points"))
+    raw_fixed_points = copy(get_value(P_sel, "fixed_points"))
     rpoints = []
     fixed_points = []
     upoints = []
 
-    rotate = typeof(get_value(P, "rotate")) != Vector ? [get_value(P, "rotate") for _ in range(1, stop=max(1, length(get_value(P, "fixed_points"))))] : copy(get_value(P, "rotate"))
+    rotate = typeof(get_value(P_sel, "rotate")) != Vector ? [get_value(P_sel, "rotate") for _ in range(1, stop=max(1, length(get_value(P_sel, "fixed_points"))))] : copy(get_value(P_sel, "rotate"))
 
     while true
         _points = circshift(points, length(raw_fixed_points) > 0 ? -trajectory_closest_index(points, popfirst!(raw_fixed_points)) : 0)
 
-        if get_value(P, "sampling_distance") != 0.0
-            _points = interpolate(_points[:, 1:2], resolution_estimate(_points, get_value(P, "sampling_distance")))
+        if get_value(P_sel, "sampling_distance") != 0.0
+            _points = interpolate(_points[:, 1:2], int_size = resolution_estimate(_points, get_value(P_sel, "sampling_distance")))
         end
 
         if remain < 0
-            _rpoints = interpolate(_points[:, 1:2], resolution_estimate(_points, get_value(P, "distance")))
+            _rpoints = interpolate(_points[:, 1:2], int_size = resolution_estimate(_points, get_value(P_sel, "distance")))
         else
-            _rpoints = interpolate(_points[:, 1:2], remain)
+            _rpoints = interpolate(_points[:, 1:2], int_size = remain)
         end
 
         if rotate[1] > 0.0
             #TODO
         else
             popfirst!(rotate)
-            _fpoints = interpolate(_points[:, 1:2], 10 * length(_rpoints))
+            _fpoints = interpolate(_points[:, 1:2], int_size = 10 * length(_rpoints))
             push!(fixed_points, _fpoints[1])
             push!(upoints, _fpoints)
         end
@@ -122,15 +122,9 @@ function xxx()
 end
 
 if (abspath(PROGRAM_FILE) == @__FILE__)
-    a = [0.16433 0.524746
-        0.730177 0.787651
-        0.646905 0.0135035
-        0.796598 0.0387711
-        0.442782 0.753235
-        0.832315 0.483352
-        0.442524 0.912381
-        0.336651 0.236891
-        0.0954936 0.303086
-        0.459189 0.374318]
-    println(result)
+    using NPZ
+    START_POINTS = npzread("configuration/ng_start_points_torino2.npy")
+    res = trajectory_resample(vcat(START_POINTS), 12)
+    println(res)
+    println(size(res, 1))
 end

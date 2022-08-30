@@ -14,7 +14,7 @@ function criterion_init()
     # TODO: update globals
 end
 
-function compute(points, overlap::Int = 0; overflown...)
+function compute(points, overlap::Int=100; overflown...)
     _, _, _t = profile_compute(points, overlap)
     return Float64(_t[end])
 end
@@ -32,11 +32,12 @@ end
 ######################
 
 function overlap_create(points, overlap)
-    vcat(points[end-overlap+1:end-overlap+1, :], points, points[1:overlap])
+    _overlap = overlap > size(points, 1) ? size(points, 1) : overlap
+    vcat(points[end-_overlap+1:end, :], points, points[1:_overlap, :])
 end
 
 function overlap_remove(points, overlap)
-    points[overlap:end+1-overlap, :]
+    points[overlap+1:end-overlap, :]
 end
 
 function fz(v::Float64)
@@ -64,8 +65,8 @@ function h(k::Float64, v::Float64, d::Int, i::Int=-1)
 end
 
 function backward_pass(points)
-    k = length(eachrow(points))
-    len = length(eachrow(points))
+    k = size(points, 1)
+    len = size(points, 1)
 
     cur = zeros(k)
     for (i, p) in enumerate(eachrow(points))
@@ -97,7 +98,7 @@ end
 
 function forward_pass(points, v_bwd, v_max, cur)
     k = 1
-    len = length(eachrow(points))
+    len = size(points, 1)
     t = zeros(len)
     v_fwd = zeros(len)
     a = zeros(len)
@@ -123,7 +124,7 @@ function profile_compute(points, overlap::Int=0)
     else
         _points = points
     end
-
+    @show _points
     bwd, mx, cur = backward_pass(_points)
     v, a, t = forward_pass(_points, bwd, mx, cur)
 
@@ -159,15 +160,6 @@ function profile_compute(points, overlap::Int=0)
 end
 
 if (abspath(PROGRAM_FILE) == @__FILE__)
-    a = [0.16433 0.524746 0.524746
-        0.730177 0.787651 0.787651
-        0.646905 0.0135035 0.0135035
-        0.796598 0.0387711 0.0387711
-        0.442782 0.753235 0.753235
-        0.832315 0.483352 0.483352
-        0.442524 0.912381 0.912381
-        0.336651 0.236891 0.236891
-        0.0954936 0.303086 0.303086
-        0.459189 0.374318 0.374318]
-    println(profile_compute(a, 0))
+    a = [15.948168943187245 5.184533766170699; 13.344948522985717 7.352767046797679; 9.842467467003205 7.2210443303164995; 5.94249715695647 7.221049885241514; 1.9486657857305651 6.829040548798835; 1.1579217265457844 3.317023590873; 3.10027006023066 1.5448352214980736; 5.99608251621141 2.180063409932212; 5.1267522596244195 5.163292925161625; 7.989068288582386 5.057849184482343; 12.325639560801093 4.464779551662567; 14.650113631105448 1.74629088388137]
+    println(profile_compute(a, 100))
 end

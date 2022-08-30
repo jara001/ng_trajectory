@@ -8,7 +8,6 @@ include("segmentator.jl")
 include("criterions.jl")
 include("optimizer.jl")
 
-
 f_helper(x) = x
 f_helper(d::Dict) = Dict(Symbol(k) => f_helper(v) for (k, v) in d)
 symbol_dict(d::Dict) = f_helper(d)
@@ -22,6 +21,8 @@ function cascade_run(; track, fileformat, notification, loop_i, loop_output, con
     if fileformat !== nothing
         # TODO: fileformat
     end
+
+    LOGFILE = stdout
 
     selector_init(;merge(_alg, get(_alg, :selector_init, Dict()), Dict(:logfile => ""))...)
     # interpolator init

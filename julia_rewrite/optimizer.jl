@@ -8,9 +8,11 @@ include("interpolator.jl")
 include("segmentator.jl")
 include("selector.jl")
 include("criterions.jl")
+include("parameter.jl")
+include("penalizer.jl")
 
-using .ParameterListClass.ParameterClass
-using .ParameterListClass
+# using .ParameterListClass.ParameterClass
+# using .ParameterListClass
 
 # Global variables
 OPTIMIZER = nothing
@@ -56,9 +58,9 @@ add_parameter!(P, Parameter("plot_mapping", false, false, Bool, "Whether a grid 
 function optimizer_init(; points,
     group_centers,
     group_centerline,
-    budget::Int=100,
+    budget::Int=10,
     layers::Int=5,
-    groups::Int=8,
+    groups::Int=12,
     workers::Int=Sys.CPU_THREADS,
     penalty=100,
     criterion_args::Dict=Dict(),
@@ -93,7 +95,6 @@ function optimizer_init(; points,
 
 
     VALID_POINTS = points
-
     if MATRYOSHKA === nothing || _holdmatryoshka == false
         group_centers = select(group_centerline, groups; SELECTOR_ARGS...)
 
@@ -102,8 +103,7 @@ function optimizer_init(; points,
         end
 
         _groups = segmentate(points, group_centers; SEGMENTATOR_ARGS...)
-
-        penalizer_init()
+        # penalizer_init()
 
         grouplayers = groups_border_obtain(_groups)
         grouplayers = groups_border_beautify(grouplayers, 400)
@@ -112,7 +112,7 @@ function optimizer_init(; points,
             # TODO: plot
         end
 
-        layers_center = group_center_compute(_groups)
+        layers_center = groups_center_compute(_groups)
         layers_count = [layers for _ in 1:length(grouplayers)]
 
         MATRYOSHKA = [matryoshka_create(grouplayers[_i], layers_center[_i], layers_count[_i]) for _i in 1:length(_groups)]
@@ -120,6 +120,14 @@ function optimizer_init(; points,
         # TODO: plot
 
         println("Matryoshka mapping constructed.")
+
+        # outfile = "notes.txt"
+        # open(outfile, "w") do f
+        #     for i in MATRYOSHKA[1]
+        #         show(f, "text/plain", i)
+        #         show(f, "\n")
+        #     end
+        # end
 
         if GRID === nothing
             if length(grid) == 2
@@ -132,12 +140,14 @@ function optimizer_init(; points,
     end
 
     # TODO: set bounds
-    OPTIMIZER = GA(populationSize=budget, Evolutionary.Options(parallelization=:thread))
+    OPTIMIZER = GA(populationSize=budget)
 end
 
 function optimize()
     global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS
 
+    # length matryoshka = 12
+    # res = Evolutionary.optimize(_opt, zeros(length(MATRYOSHKA), 2), OPTIMIZER, Evolutionary.Options(parallelization=:thread))
     res = Evolutionary.optimize(_opt, zeros(length(MATRYOSHKA), 2), OPTIMIZER)
     # TODO: nevergrad
     points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(Evolutionary.minimizer(res)))]
@@ -164,8 +174,7 @@ function _opt(points)
     global MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
 
     points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points))]
-
-    _points = interpolate(points; INTERPOLATOR_ARGS...)
+    _points = interpolate(mapreduce(permutedims, vcat, points); INTERPOLATOR_ARGS...)
 
     penalty = penalize(_points, VALID_POINTS, GRID, PENALTY; PENALIZER_ARGS...)
 
@@ -188,7 +197,7 @@ function _opt(points)
     lock(FILELOCK) do
         if VERBOSITY > 2
             @printf(LOGFILE, "pointsA:%s", string(points))
-            @printf(LOGFILE, "pointsT:%s", string(_points.tolist()))
+            @printf(LOGFILE, "pointsT:%s", string(_points))
         end
         if VERBOSITY > 1
             @printf(LOGFILE, "correct:%f", _c)
@@ -200,24 +209,27 @@ end
 
 function matryoshka_create(layer0, layer0_center, layer_count::Int)
     layers = group_layers_compute(layer0, layer0_center, layer_count)
-    layer0_size = length(layer0)
+    layer0_size = size(layer0, 1)
 
-    _tc = Array{Float64,2}
-    _rc = Array{Float64,2}
+    _tc = Array{Float64}(undef, 0, 2)
+    _rc = Array{Float64}(undef, 0, 2)
 
-    for _layer_index in 1:layer_count
+    for _layer_index in 0:layer_count-1
         layer_params = layer_index_to_parameters(_layer_index, layer0_size, layer_count)
         indices = 1:layer_params[1]
         tc = indices_to_transformed_coordinates(indices, layer_params...)
-        rc = indices_to_real_coordinates(indices, layers[Int(_layer_index)])
+        rc = indices_to_real_coordinates(indices, layers[Int(_layer_index)+1])
 
-        _tc = vcat(_tc, tc)
-        _rc = vcat(_rc, rc)
+        _tc = vcat(_tc, mapreduce(permutedims, vcat, tc))
+        _rc = vcat(_rc, mapreduce(permutedims, vcat, rc))
     end
 
     _ip2d = []
-    for _d in 1:size(_rc)[2]
-        push!(_ip2d, Spline2D(_tc[:, 0], _tc[:, 1], _rc[:, _d]))
+
+    # =====
+
+    for _d in axes(_rc, 2)
+        push!(_ip2d, Spline2D(_tc[:, 1], _tc[:, 2], _rc[:, _d]; s=5.0))
     end
 
     return _ip2d
@@ -229,7 +241,7 @@ function matryoshka_map(matryoshka, coords)
     for _c in coords
         _dims = []
         for _interpolator in matryoshka
-            push!(_dims, _interpolator(_c[0], _c[1]))
+            push!(_dims, _interpolator(_c[1], _c[2]))
         end
         push!(_rcoords, _dims)
     end
@@ -275,8 +287,9 @@ function indices_to_real_coordinates(indices, points)
 end
 
 function points_filter(points, grid=nothing)
+    # _points = Array{Float64}(undef, 0, 2)
     _points = []
-    _grid = grid !== nothing ? grid : minimum(minimum(u[2:length(u)] - u[1:length(u)-1] for u in [unique(c[:]) for c in eachcol(points)]))
+    _grid = grid !== nothing ? grid : minimum(minimum(u[2:length(u)] - u[1:length(u)-1] for u in [unique(sort(c[:])) for c in eachcol(points)]))
     _cells = [[trunc(Int, (round.(_p[_d] / _grid))) for _d = 1:ndims(points)] for _p in eachrow(points)]
     _cells_copy = [[trunc(Int, (round.(_p[_d] / _grid))) for _d = 1:ndims(points)] for _p in eachrow(points)]
     points_l = points
@@ -299,17 +312,19 @@ function points_filter(points, grid=nothing)
                     end
 
                     _nearbyc = [_cell[1] + _xr, _cell[2] + _yr]
-
+                    # if _nearbyc in _cells_copy
+                    #     @show points_l[findfirst(item -> item == _nearbyc, _cells_copy)]
+                    # end
                     if _nearbyc in _cells_copy && points_l[findfirst(item -> item == _nearbyc, _cells_copy)] in _points
                         _nearbyp = points_l[findfirst(item -> item == _nearbyc, _cells_copy)]
                         filter!(e -> e ≠ _nearbyp, _points)
-                        points_l = [points_l; _nearbyp]
+                        push!(points_l, _nearbyp)
                     end
                 end
             end
             filter!(e -> e ≠ _cell, _cells)
         else
-            _points = [_points; _p]
+            push!(_points, _p)
         end
     end
 
@@ -320,40 +335,35 @@ function groups_border_obtain(groups, grid=nothing)
     _borders = []
 
     for (_i, _g) in enumerate(groups)
-        _border = []
-        _grid = grid !== nothing ? grid : grid_compute(_g)
+        _border = Array{Float64}(undef, 0, 2)
+        _grid = grid !== nothing ? grid : minimum(minimum(u[2:end] - u[1:end-1] for u in [unique(sort(_g[:, d])) for d in 1:size(_g)[2]]))
 
         for _d in 1:ndims(_g)
 
             for _u in unique(sort(_g[:, _d]))
                 temp = _g[findall(_g[:, _d] .== _u), :]
-                push!(_border, minimum(temp, dims=1)[1:1, :])
-                push!(_border, maximum(temp, dims=1)[1:1, :])
+                _border = vcat(_border, minimum(temp, dims=1))
+                _border = vcat(_border, maximum(temp, dims=1))
 
-                _v = temp[1:1, :]
+                _v = _g[findall(_g[:, _d] .== _u), :]
                 _v = _v[:, 1:end.!=_d]
-
-                sort!(_v, dims=1)
+                _v = _v[sortperm(_v[:, 1]), :]
 
                 # TODO: numpy.roll ?
-                _dists = _v[2:end] .- _v[1:end-1]
+                _dists = circshift(_v, (1, 0))[2:end, :] .- _v[1:end-1, :]
 
-                _bords = []
-
-                if isempty(_dists) == false
-                    _bords = first(findall(_dists .> (_grid * 1.5)))
-                end
+                _bords = findall(_dists .> (_grid * 1.5))
 
                 for _b in _bords
-                    push!(_border, _d == 1 ? [_u] .+ _v[_b] : _v[_b] .+ [_u])
-                    push!(_border, _d == 1 ? [_u] .+ _v[_b+1] : _v[_b+1] .+ [_u])
+                    _border = vcat(_border, _d == 1 ? [_u] .+ _v[_b] : _v[_b] .+ [_u])
+                    _border = vcat(_border, _d == 1 ? [_u] .+ _v[_b+1] : _v[_b+1] .+ [_u])
                 end
             end
 
         end
         push!(_borders, _border)
     end
-    [unique.(b)[1] for b in eachrow(_borders)]
+    [unique(sortslices(b, dims=1, by=x -> (x[1], x[2])), dims=1) for b in _borders]
 end
 
 function groups_border_beautify(borders, border_length)
@@ -374,43 +384,35 @@ function groups_border_beautify(borders, border_length)
 end
 
 function groups_center_compute(_groups)
-    mean(_groups, dims=1)
+    _centers = []
+
+    for _g in _groups
+        push!(_centers, mean(_g, dims=1))
+    end
+
+    _centers
 end
 
 function group_layers_compute(layer0::Matrix{Float64}, layer0_center, layer_count::Int)
 
-    layers_size = length(eachrow(layer0))
-    a = [1 - (1 / 5) * layer_index for layer_index in 0:layer_count-1]
-    points = [(layer0[:, 1:2] .- layer0_center) .* x .+ layer0_center for x in a]
+    layers_size = size(layer0, 1)
+    # a = [1 - (1 / layer_count) * layer_index for layer_index in 0:layer_count-1]
+    # points = [(layer0[:, 1:2] .- layer0_center) .* x .+ layer0_center for x in a]
+    points = [(layer0[:, 1:2] .- layer0_center) .* (1 - (1 / layer_count) * layer_index) .+ layer0_center for layer_index in 0:layer_count-1]
     remains = (trunc.(Int, layers_size - (layers_size / layer_count) * layer_index for layer_index in 0:layer_count-1))
 
-    [trajectory_reduce(points[i:i, :], remains[i]) for i in eachindex(remains)]
+    [trajectory_reduce(points[i], remains[i]) for i in eachindex(remains)]
 end
 
 
 if (abspath(PROGRAM_FILE) == @__FILE__)
-    a = [0.16433 0.524746
-        0.730177 0.787651
-        0.646905 0.0135035
-        0.796598 0.0387711
-        0.442782 0.753235
-        0.832315 0.483352
-        0.442524 0.912381
-        0.336651 0.236891
-        0.0954936 0.303086
-        0.459189 0.374318]
-    # _groups = a
-    # layers_center = groups_center_compute(a)
-    # grouplayers = group_layers_compute(_groups, layers_center, 5)
-
-    # grouplayers = groups_border_obtain(_groups)
     # grouplayers = interpolate(a, 400)
-    x = [2 * i for i in 0:19]
-    y = [i for i in 0:19]
-    z = (x .- 1) .^ 2 .+ y .^ 2
-    spline = Spline2D(x, y, z, s=1e-4)
-    # println("result: ", spline(a[:, 1], a[:, 2]))
-    for _c in eachrow(a)
-        println(spline(_c[1], _c[2]))
-    end
+    # x = [2 * i for i in 0:19]
+    # y = [i for i in 0:19]
+    # z = (x .- 1) .^ 2 .+ y .^ 2
+    # spline = Spline2D(x, y, z, s=1e-4)
+    # # println("result: ", spline(a[:, 1], a[:, 2]))
+    # for _c in eachrow(a)
+    #     println(spline(_c[1], _c[2]))
+    # end
 end
