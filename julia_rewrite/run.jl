@@ -1,6 +1,7 @@
 using JSON
 using NPZ
 using Printf
+using Plots
 
 include("selector.jl")
 include("interpolator.jl")
@@ -50,7 +51,7 @@ function loop_cascade_run(; track, initline, fileformat, notification, loop_i, l
     fitness = 10000000
     result = initline
     rcandidate = initline
-    tcandidate = [[0.5, 0.5] for _ in 1:size(initline)[1]]
+    tcandidate = [0.5 for _ in 1:size(initline, 1)*2]
 
     _fileformat = nothing
     if fileformat !== nothing
@@ -138,6 +139,9 @@ function execute(START_POINTS=nothing, VALID_POINTS=nothing)
         end
     end
 
+    scatter(VALID_POINTS[:, 1], VALID_POINTS[:, 2], markershape=:+, markersize=1)
+    plot!(solution[4][:, 1], solution[4][:, 2])
+    savefig("myplot.png")
     # TODO: time
     @printf("Optimization finished in .")
 

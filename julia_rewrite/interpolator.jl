@@ -27,6 +27,7 @@ function interpolate(points; int_size=400, overflown...)
 end
 
 if (abspath(PROGRAM_FILE) == @__FILE__)
+    using Plots
     a = [0.16433 0.524746
         0.730177 0.787651
         0.646905 0.0135035
@@ -37,5 +38,7 @@ if (abspath(PROGRAM_FILE) == @__FILE__)
         0.336651 0.236891
         0.0954936 0.303086
         0.459189 0.374318]
-    println(interpolate(a))
+    b = interpolate(a)
+    plot(b[:, 1], b[:, 2])
+    savefig("myplot.png")
 end

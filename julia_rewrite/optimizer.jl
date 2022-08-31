@@ -140,7 +140,6 @@ function optimizer_init(; points,
     end
 
     # TODO: set bounds
-    OPTIMIZER = GA(populationSize=budget)
 end
 
 function optimize()
@@ -148,21 +147,26 @@ function optimize()
 
     # length matryoshka = 12
     # res = Evolutionary.optimize(_opt, zeros(length(MATRYOSHKA), 2), OPTIMIZER, Evolutionary.Options(parallelization=:thread))
-    res = Evolutionary.optimize(_opt, zeros(length(MATRYOSHKA), 2), OPTIMIZER)
+
+    constr = BoxConstraints(zeros(length(MATRYOSHKA) * 2), ones(length(MATRYOSHKA) * 2))
+    x0 = [0.5 for _ in 1:length(MATRYOSHKA)*2]
+
+    res = Evolutionary.optimize(_opt, constr, x0, GA(selection = uniformranking(3), mutation=uniform(0.1), crossover=DC), Evolutionary.Options(iterations=10))
     # TODO: nevergrad
-    points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(Evolutionary.minimizer(res)))]
+    points01 = reshape(Evolutionary.minimizer(res), (length(MATRYOSHKA), 2))
+    points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points01))]
 
     PENALIZER_ARGS["optimization"] = false
     final = _opt(Evolutionary.minimizer(res))
 
-    _points = interpolate(points)
+    _points = interpolate(mapreduce(permutedims, vcat, points))
 
     # TODO: plot
 
     lock(FILELOCK) do
         if VERBOSITY > 0
-            @printf(LOGFILE, "solution:%s", string(points))
-            @printf(LOGFILE, "final:%f", final)
+            @printf(LOGFILE, "solution:%s\n", string(points))
+            @printf(LOGFILE, "final:%f\n", final)
         end
     end
 
@@ -172,37 +176,37 @@ end
 function _opt(points)
     global VALID_POINTS, CRITERION_ARGS, INTERPOLATOR_ARGS, PENALIZER_ARGS
     global MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
-
+    points = reshape(points, (length(MATRYOSHKA), 2))
     points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points))]
     _points = interpolate(mapreduce(permutedims, vcat, points); INTERPOLATOR_ARGS...)
 
-    penalty = penalize(_points, VALID_POINTS, GRID, PENALTY; PENALIZER_ARGS...)
+    penalty = penalize(_points, VALID_POINTS, GRID, PENALTY)
 
     if penalty != 0
         lock(FILELOCK) do
             if VERBOSITY > 2
-                @printf(LOGFILE, "pointsA:%s", string(points))
-                @printf(LOGFILE, "pointsT:%s", string(_points))
+                @printf(LOGFILE, "pointsA:%s\n", string(points))
+                @printf(LOGFILE, "pointsT:%s\n", string(_points))
             end
             if VERBOSITY > 1
-                @printf(LOGFILE, "penalty:%f", penalty)
+                @printf(LOGFILE, "penalty:%f\n", penalty)
             end
             flush(LOGFILE)
 
         end
-        return penalty
+        return Float64(penalty)
     end
 
     _c = compute(_points; CRITERION_ARGS...)
     lock(FILELOCK) do
         if VERBOSITY > 2
-            @printf(LOGFILE, "pointsA:%s", string(points))
-            @printf(LOGFILE, "pointsT:%s", string(_points))
+            @printf(LOGFILE, "pointsA:%s\n", string(points))
+            @printf(LOGFILE, "pointsT:%s\n", string(_points))
         end
         if VERBOSITY > 1
-            @printf(LOGFILE, "correct:%f", _c)
+            @printf(LOGFILE, "correct:%f\n", _c)
         end
-        LOGFILE.flush()
+        flush(LOGFILE)
     end
     return _c
 end
@@ -229,7 +233,7 @@ function matryoshka_create(layer0, layer0_center, layer_count::Int)
     # =====
 
     for _d in axes(_rc, 2)
-        push!(_ip2d, Spline2D(_tc[:, 1], _tc[:, 2], _rc[:, _d]; s=5.0))
+        push!(_ip2d, Spline2D(_tc[:, 1], _tc[:, 2], _rc[:, _d]; s=length(_tc[:, 1]) - sqrt(2 * length(_tc[:, 1]))))
     end
 
     return _ip2d

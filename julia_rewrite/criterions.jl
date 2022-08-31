@@ -37,7 +37,8 @@ function overlap_create(points, overlap)
 end
 
 function overlap_remove(points, overlap)
-    points[overlap+1:end-overlap, :]
+    _overlap = overlap > size(points, 1) ? size(points, 1) : ove
+    points[_overlap+1:end-_overlap, :]
 end
 
 function fz(v::Float64)
@@ -124,7 +125,6 @@ function profile_compute(points, overlap::Int=0)
     else
         _points = points
     end
-    @show _points
     bwd, mx, cur = backward_pass(_points)
     v, a, t = forward_pass(_points, bwd, mx, cur)
 
@@ -142,9 +142,9 @@ function profile_compute(points, overlap::Int=0)
 
         _t = _t .- _t[1]
 
-        bwd = overlapRemove(bwd, overlap)
-        mx = overlapRemove(mx, overlap)
-        cur = overlapRemove(cur, overlap)
+        bwd = overlap_remove(bwd, overlap)
+        mx = overlap_remove(mx, overlap)
+        cur = overlap_remove(cur, overlap)
 
         # if fd !== nothing
         #     write(fd, "Backward speed: \n $bwd")
