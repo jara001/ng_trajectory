@@ -1,0 +1,42 @@
+{
+    "_version": 2,
+    "_comment": "Example of configuration file for Matryoshka mapping.",
+    "loops": 1,
+    "groups": 30,
+    "interpolator": "cubic_spline",
+    "segmentator": "flood_fill",
+    "selector": "uniform",
+    "cascade": [
+        {
+            "algorithm": "matryoshka",
+            "budget": 10,
+            "layers": 5,
+            "criterion": "profile",
+            "criterion_args": {
+                "overlap": 100
+            }
+        }
+    ],
+    "start_points": "configuration/ng_start_points_ruudskogen.npy",
+    "valid_points": "configuration/ng_valid_points_ruudskogen.npy",
+    "logging_verbosity": 2,
+    "hold_map": true,
+    "plot": true,
+    "plot_args": [
+        {
+            "_figure": {
+                "function": "axis",
+                "_args": [ "equal" ]
+            },
+            "trackPlot": [ "@track" ]
+        },
+        {
+            "pointsPlot": {
+                "_args": [ "@result" ]
+            },
+            "pointsScatter": {
+                "_args": [ "@rcandidate" ]
+            }
+        }
+    ]
+}
