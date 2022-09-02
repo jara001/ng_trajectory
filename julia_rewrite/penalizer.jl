@@ -12,7 +12,7 @@ end
 
 function penalize(points, valid_points::Array{Float64, 2}, grid, penalty = 100; overflown...)
     _grid = grid === nothing ? grid_compute(points) : typeof(grid) == Vector{Float64} ? grid[1] : grid
-    
+
     invalid = 0
     empty!(INVALID_POINTS)
     for _p in eachrow(points)
@@ -23,6 +23,7 @@ function penalize(points, valid_points::Array{Float64, 2}, grid, penalty = 100; 
         end
     end
 
+    # invalid = sum(.!any(all(abs.(valid_points .- _p[1:2]') .< _grid, dims = 2)) for _p in eachrow(points))
     invalid * penalty
 end
 
@@ -38,6 +39,6 @@ if (abspath(PROGRAM_FILE) == @__FILE__)
         0.0954936  0.303086;
         0.459189   0.374318]
     b = a .+ 0.1
-    println(penalize(a, b, [0.03999999910593033, 0.03999999910593033]))
+    println(penalize(a, b, 0.03999999910593033))
     println(INVALID_POINTS)
 end

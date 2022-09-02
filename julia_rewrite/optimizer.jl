@@ -156,7 +156,7 @@ function optimize()
     points01 = reshape(Evolutionary.minimizer(res), (length(MATRYOSHKA), 2))
     points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points01))]
 
-    PENALIZER_ARGS["optimization"] = false
+    PENALIZER_ARGS[:optimization] = false
     final = _opt(Evolutionary.minimizer(res))
 
     _points = interpolate(mapreduce(permutedims, vcat, points))
@@ -180,7 +180,7 @@ function _opt(points)
     points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points))]
     _points = interpolate(mapreduce(permutedims, vcat, points); INTERPOLATOR_ARGS...)
 
-    penalty = penalize(_points, VALID_POINTS, GRID, PENALTY)
+    penalty = penalize(_points, VALID_POINTS, GRID, PENALTY; PENALIZER_ARGS...)
 
     if penalty != 0
         lock(FILELOCK) do

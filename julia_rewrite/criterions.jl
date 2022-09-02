@@ -37,7 +37,7 @@ function overlap_create(points, overlap)
 end
 
 function overlap_remove(points, overlap)
-    _overlap = overlap > size(points, 1) ? size(points, 1) : ove
+    _overlap = overlap > size(points, 1) ? size(points, 1) : overlap
     points[_overlap+1:end-_overlap, :]
 end
 

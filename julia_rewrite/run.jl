@@ -10,13 +10,14 @@ include("criterions.jl")
 include("optimizer.jl")
 
 f_helper(x) = x
+f_helper(x::Vector) = [f_helper(e) for e in x]
 f_helper(d::Dict) = Dict(Symbol(k) => f_helper(v) for (k, v) in d)
 symbol_dict(d::Dict) = f_helper(d)
 
 function cascade_run(; track, fileformat, notification, loop_i, loop_output, conf...)
     # TODO: time
 
-    _alg = symbol_dict(merge(conf, symbol_dict(loop_i[2])))
+    _alg = merge(conf, loop_i[2])
 
     fitness, rcandidate, tcandidate, result = loop_output
     if fileformat !== nothing
@@ -25,12 +26,19 @@ function cascade_run(; track, fileformat, notification, loop_i, loop_output, con
 
     LOGFILE = stdout
 
-    selector_init(;merge(_alg, get(_alg, :selector_init, Dict()), Dict(:logfile => ""))...)
-    # interpolator init
-    segmentator_init(track; merge(_alg, get(_alg, :segmentator_init, Dict()), Dict(:logfile => ""))...)
-    criterion_init()
-    optimizer_init(points=track, group_centers=rcandidate, group_centerline=result, logfile=LOGFILE)
+    # update params
+    selector_init(; merge(_alg, get(_alg, :selector_init, Dict()), Dict(:logfile => ""))...)
 
+    # create map
+    segmentator_init(track; merge(_alg, get(_alg, :segmentator_init, Dict()), Dict(:logfile => ""))...)
+
+    # update params
+    criterion_init()
+
+    # construct matryoshka mapping
+    optimizer_init(points=track, group_centers=rcandidate, group_centerline=result, logfile=LOGFILE; _alg...)
+
+    # run GA
     _fitness, _rcandidate, _tcandidate, _result = optimize()
 
     # TODO: plot
@@ -75,7 +83,7 @@ function loop_cascade_run(; track, initline, fileformat, notification, loop_i, l
             fileformat=_fileformat,
             notification=notification,
             loop_i=i,
-            loop_output=(fitness, rcandidate, tcandidate, result);
+            loop_output=cascade_output === nothing ? (fitness, rcandidate, tcandidate, result) : cascade_output;
             conf...
         )
     end
@@ -90,7 +98,7 @@ end
 function execute(START_POINTS=nothing, VALID_POINTS=nothing)
     # TODO: time
 
-    CONFIGURATION = JSON.parsefile("configuration/matryoshka_ex_torino.json")
+    CONFIGURATION = JSON.parsefile("configuration/matryoshka_ex_ruudskogen.json")
     CONFIGURATION = symbol_dict(CONFIGURATION)
 
     if START_POINTS === nothing
