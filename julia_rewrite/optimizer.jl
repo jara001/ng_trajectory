@@ -2,6 +2,7 @@ using Statistics
 using Dierckx
 using Printf
 using Evolutionary
+using Gnuplot
 
 include("utils.jl")
 include("interpolator.jl")
@@ -179,6 +180,9 @@ function _opt(points)
     points = reshape(points, (length(MATRYOSHKA), 2))
     points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points))]
     _points = interpolate(mapreduce(permutedims, vcat, points); INTERPOLATOR_ARGS...)
+
+    @gp VALID_POINTS[:, 1] VALID_POINTS[:, 2] "w p pt 1 lc rgbcolor '0xeeeeee'" :-
+    @gp :- _points[:, 1] _points[:, 2] "w l"
 
     penalty = penalize(_points, VALID_POINTS, GRID, PENALTY; PENALIZER_ARGS...)
 
