@@ -43,7 +43,7 @@ function cascade_run(; track, fileformat, notification, loop_i, loop_output, con
     optimizer_init(points=track, group_centers=rcandidate, group_centerline=result, logfile=LOGFILE; _alg...)
 
     # run GA
-    _fitne
+    _fitness, _rcandidate, _tcandidate, _result = optimize()
 
     # TODO: plot
 
@@ -105,12 +105,14 @@ function variate_run(; fileformat, notification, loop_i, loop_output, conf...)
     # Update logging file
     if fileformat !== nothing
         # Fill group count, and add format for number of loops
-        fileformat = @sprintf(fileformat, _value) * @sprintf("-%%0%dd", length(string(CONFIGURATION[:loops])))
+
+        # fileformat = @sprintf(fileformat, _value) * @sprintf("-%%0%dd", length(string(CONFIGURATION[:loops])))
     end
 
     # Update notification
     # Fill loop index, group count and prepare loops progress
-    notification = @sprintf(notification, _i + 1, _value, _param) * @sprintf(" [%%d / %d]", CONFIGURATION[:loops])
+
+    # notification = @sprintf(notification, _i + 1, _value, _param) * @sprintf(" [%%d / %d]", CONFIGURATION[:loops])
 
     ## Loop cascade
     for i in enumerate(conf[:cascade])
@@ -136,7 +138,7 @@ end
 function execute(START_POINTS=nothing, VALID_POINTS=nothing)
 
     CONFIGURATION = JSON.parsefile("configuration/matryoshka_ex_torino.json")
-    CONFIGURATION = symbol
+    CONFIGURATION = symbol_dict(CONFIGURATION)
 
     # Load data about the track
     if START_POINTS === nothing
@@ -155,7 +157,7 @@ function execute(START_POINTS=nothing, VALID_POINTS=nothing)
     # Notification about progress
     notification = ""
 
-    solution = not
+    solution = nothing
 
     # Identify and prepare variating variable
     if haskey(CONFIGURATION, :variate) && CONFIGURATION[:variate] in CONFIGURATION

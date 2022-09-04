@@ -120,14 +120,19 @@ function forward_pass(points, v_bwd, v_max, cur)
 end
 
 function profile_compute(points, overlap::Int=0)
+
+    # Overlap points
     if overlap > 0
         _points = overlap_create(points, overlap)
     else
         _points = points
     end
+
+    # Compute speed profile
     bwd, mx, cur = backward_pass(_points)
     v, a, t = forward_pass(_points, bwd, mx, cur)
 
+    # Convert to numpy.ndarray
     bwd = bwd[:, :]
     mx = mx[:, :]
     cur = cur[:, :]
@@ -135,11 +140,14 @@ function profile_compute(points, overlap::Int=0)
     _a = a[:, :]
     _t = t[:, :]
 
+    # Remove overlap and convert to numpy.ndarray
     if overlap > 0
         _v = overlap_remove(_v, overlap)
         _a = overlap_remove(_a, overlap)
         _t = overlap_remove(_t, overlap)
 
+
+        # Fix time array
         _t = _t .- _t[1]
 
         bwd = overlap_remove(bwd, overlap)

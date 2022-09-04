@@ -69,8 +69,8 @@ function update_all!(this::ParameterList, kwargs; reset::Bool=true)
     end
 
     for (_p, _v) in kwargs
-        if haskey(this.parameters, string(_p))
-            _p.value = _v
+        if haskey(this.parameters, _p)
+            update!(this, _p, _v)
         end
     end
     return nothing

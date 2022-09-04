@@ -67,6 +67,7 @@ end
 function segmentate(points, group_centers; overflown...)
     global MAP, MAP_ORIGIN, MAP_GRID, MAP_LAST
 
+    # Update parameters
     update_all!(P_seg, overflown, reset=false)
 
     _groups = [[] for _ in 1:size(group_centers, 1)]
@@ -78,16 +79,20 @@ function segmentate(points, group_centers; overflown...)
         for (_i, _c) in zip(Iterators.countfrom(0), eachrow(points_to_map(group_centers)))
             _map[_c[1], _c[2]] = (_i) & 0xff
         end
-    else
+    else # if reserve_width
         println("Computing reserved zones...")
 
+        # Use enlarged map (required for walls)
         _map = zeros(UInt8, size(MAP)[1] + 2, size(MAP)[2] + 2)
         _map[2:end-1, 2:end-1] = copy(MAP)
         _map[_map.==100] .= 255
 
+        # Detect walls and color them
         color = 200
+        # Find an occurence of wall
         walls = findall(_map .== 0)
 
+        # Color them
         while length(walls) > 0
             queue = [(walls[1][1], walls[1][2])]
 
@@ -100,6 +105,7 @@ function segmentate(points, group_centers; overflown...)
                             continue
                         end
 
+                        # Try does catch larger values but not negative
                         if cell[1] + _a < 0 || cell[2] + _b < 0
                             continue
                         end
@@ -131,6 +137,9 @@ function segmentate(points, group_centers; overflown...)
                 continue
             end
 
+            # Create "links" to the nearest of both walls
+
+            # Find closest points
             for _wall_index in 0:1
                 distance = 100000
                 closest = nothing
@@ -149,6 +158,7 @@ function segmentate(points, group_centers; overflown...)
 
             @printf("\t\tWall %i... %03.2f%%", _wall_index, 0.0)
 
+            # Create link to the wall; color all points that are in proximity of the line
             valids = findall(_map .== 255)
             valids_length = length(valids)
 
@@ -156,7 +166,7 @@ function segmentate(points, group_centers; overflown...)
                 _distance = segment_distance((_vx, _vy), _c, closest)
 
                 if _distance < get_value(P_seg, "reserve_distance")
-                    _map[_vx, _vy] = 100 + _i
+                    _map[_vx, _vy] = 100 + _i #+ _wall_index
                 end
                 if _vi % 1000 == 0
                     @printf("\r\t\tWall %i... %03.2f%%", _wall_index, 100.0 * _vi / valids_length)
@@ -189,6 +199,7 @@ function segmentate(points, group_centers; overflown...)
                     continue
                 end
 
+                # Color if its empty or reserved for this group
                 if _cell == 255 || _cell == 100 + _map[cell[1], cell[2]]
                     _map[cell[1]+_a, cell[2]+_b] = _map[cell[1], cell[2]]
                     queue = vcat(queue, [cell[1] + _a cell[2] + _b])
@@ -198,7 +209,7 @@ function segmentate(points, group_centers; overflown...)
         end
     end
 
-    # @show(_map)
+    # Save last map
     MAP_LAST = _map
     for p in eachrow(points)
         index = point_to_map(p)
@@ -206,7 +217,7 @@ function segmentate(points, group_centers; overflown...)
 
         # Group only taken points
         if _i != 255 && _i < 100
-            push!(_groups[_i + 1], p)
+            push!(_groups[_i+1], p)
         end
     end
 

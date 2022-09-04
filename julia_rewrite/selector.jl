@@ -27,6 +27,7 @@ function select(points, remain::Int; overflown...)
 
     rpoints = trajectory_resample(points, remain)
 
+    # !Force number of points
     if remain > 0 && size(rpoints, 1) != remain
         return trajectory_resample(points, remain - 1)
     end
@@ -57,10 +58,10 @@ function trajectory_resample(points, remain)
     raw_fixed_points = copy(get_value(P_sel, "fixed_points"))
 
     # Result
-    rpoints
+    rpoints = []
     # Intermediate results
     fixed_points = []
-    upoints
+    upoints = []
 
     # Other values
     rotate = typeof(get_value(P_sel, "rotate")) != Vector ? [get_value(P_sel, "rotate") for _ in range(1, stop=max(1, length(get_value(P_sel, "fixed_points"))))] : copy(get_value(P_sel, "rotate"))
@@ -90,6 +91,7 @@ function trajectory_resample(points, remain)
 
             # Create fpoints with a set factor to allow concatenating
             _fpoints = interpolate(_points[:, 1:2], int_size=10 * length(_rpoints))
+
             push!(fixed_points, _fpoints[1])
             push!(upoints, _fpoints)
         end
@@ -104,25 +106,29 @@ function trajectory_resample(points, remain)
     if length(rpoints) == 1
         return rpoints[1]
     else
+        # Build up the new path waypoints
         result = nothing
 
         for _i in range(1, stop=length(rpoints))
+
+            # 1) Take the fixed point from the next segment
             _p = fixed_points[(_i+1)%length(rpoints)]
+
+            # 2) Find it in current path (rotated, full)
             _cpi = trajectory_closest_index(upoints[_i], _p; from_left=true)
+
+            # 3) Loop through the selection to find all points that are more to the left
             _max_i = 0
 
             while _max_i + 1 < length(rpoints[_i]) && trajectory_closest_index(upoints[_i], rpoints[_i][_max_i+1, :]', from_left=true) < _cpi
                 _max_i += 1
             end
 
+            # 4) Append them to the result
             if _max_i >= 1
                 if result == Nothing
-                    print("adding: ")
-                    println(rpoints[_i][1:_max_i+1, :])
                     result = rpoints[_i][1:_max_i+1, :]
                 else
-                    print("adding: ")
-                    println(rpoints[_i][1:_max_i+1, :])
                     result = vcat(result, rpoints[_i][1:_max_i+1, :])
                 end
             end

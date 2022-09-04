@@ -14,13 +14,16 @@ function map_create(points::Array{Float64,2}, origin=nothing, size=nothing, grid
 
     println("Creating map...")
 
+    # Obtain grid size if not set
     _grid = grid !== nothing ? grid : grid_compute(points)
     println("\tGrid:", _grid)
 
+    # Obtain origin if not set
     _origin = origin !== nothing ? origin : reshape(minimum(points, dims=1), (2, 1))
 
     println("\tOrigin:", _origin)
 
+    # Obtain size if not set
     _size = size !== nothing ? size : reshape(map(abs, maximum(points, dims=1) - minimum(points, dims=1)), (2, 1))
 
     println("\tMin:", reshape(minimum(points, dims=1), (2, 1)))
@@ -91,13 +94,12 @@ function trajectory_reduce(points, remain)
 end
 
 function trajectory_sort(points; verify_sort::Bool=false)
+
     _points = points
 
     sorted_points = []
-    # push!(sorted_points, vec(_points[1:1, :]))
-    # _points = collect(eachrow(_points[1:end.!=1, :]))
     push!(sorted_points, popfirst!(_points))
-    # _points = _points[1:end.!=1, :]
+
 
     while length(_points) > 0
         min_dist = 100000
@@ -115,15 +117,24 @@ function trajectory_sort(points; verify_sort::Bool=false)
         push!(sorted_points, point)
         filter!(e -> e != point, _points)
     end
-    # spoints = vcat(sorted_points...)
-    spoints = mapreduce(permutedims, vcat, sorted_points)
+
+    # Verify the sorting
+    # Sometimes, when multiple points with same distance are present,
+    # the result is not correct. This checks for points outside the
+    # expected sqrt(2)*_grid distance and tries to move them to better
+    # positions
+    spoints = mapreduce(permutedims, vcat, sorted_points) # convert 2d vector to matrix
 
     if verify_sort == true
+        # Obtain grid size
         _grid = minimum(abs.(minimum(spoints[2:end, :] - spoints[1:end-1, :])) for u in [unique(sort(c[:])) for c in eachcol(points)])
 
         while true
+
+            # Get distances between consecutive points
             _dists = points_distance(spoints)
 
+            # Find outliers
             _outliers = _dists[_dists.>sqrt(2)*_grid]
 
             if length(_outliers) == 1
@@ -132,17 +143,22 @@ function trajectory_sort(points; verify_sort::Bool=false)
                 @printf("trajectorySort: dists = %s\n", _dists)
                 println("trajectorySort: Continuing without dealing with outliers.")
                 break
+            # Continue only if outliers found
             elseif length(_outliers) > 0
+                # Outlier indices
                 _oi = findall(_dists .> sqrt(2) * _grid)
 
+                # Find group sizes
                 _groups = (
                     [(_oi[_i] + 1, _oi[_i+1], _oi[_i+1] - _oi[_i]) for _i in 1:(length(_oi)-1)]
-                )
-                # test +- 1
-                _groups = (groups..., (_oi[end] + 1, _oi[1], _oi[1] + length(spoints) - _oi[end])...)
+                ) # start id, end id (both inclusive), size of the group
 
+
+                _groups = (groups..., (_oi[end] + 1, _oi[1], _oi[1] + length(spoints) - _oi[end])...)
+                # Sort the groups in order to find the largest group
                 _groups = sort(_groups, by=last, rev=true)
 
+                # Delete outlier
                 spoints = _points[1:end.!=_groups%length(spoints), :]
             else
                 break

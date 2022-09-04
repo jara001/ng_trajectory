@@ -13,9 +13,6 @@ include("criterions.jl")
 include("parameter.jl")
 include("penalizer.jl")
 
-# using .ParameterListClass.ParameterClass
-# using .ParameterListClass
-
 # Global variables
 OPTIMIZER = nothing
 MATRYOSHKA = nothing
@@ -84,6 +81,7 @@ function optimizer_init(; points,
     global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE, PLOT, BUDGET, NUM_WORKERS
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER, PENALIZER_INIT, PENALIZER_ARGS
 
+    # Local to global variables
     CRITERION_ARGS = criterion_args
     INTERPOLATOR_ARGS = interpolator_args
     SEGMENTATOR_ARGS = segmentator_args
@@ -102,14 +100,19 @@ function optimizer_init(; points,
 
     VALID_POINTS = points
     if MATRYOSHKA === nothing || _holdmatryoshka == false
+        # Note: In version <=1.3.0 the group_centerline passed to the SELECTOR was sorted using
+        #       ng_trajectory.interpolators.utils.trajectorySort, but it sometimes rotated the
+        #       already sorted centerline; interestingly, the result was counterclockwise at all
+        #       times (or at least very very often).
+
         group_centers = select(group_centerline, groups; SELECTOR_ARGS...)
 
         if plot == true
             # TODO: plot
         end
 
+        # Matryoshka construction
         _groups = segmentate(points, group_centers; SEGMENTATOR_ARGS...)
-        # penalizer_init()
 
         grouplayers = groups_border_obtain(_groups)
         grouplayers = groups_border_beautify(grouplayers, 400)
@@ -128,16 +131,9 @@ function optimizer_init(; points,
         println("Matryoshka mapping constructed.")
 
         if GRID === nothing
-            if length(grid) == 2
-                GRID = grid
-            else
-                _GRID = grid_compute(points)
-                GRID = [_GRID, _GRID]
-            end
+            GRID = grid_compute(points)
         end
     end
-
-    # TODO: set bounds
 end
 
 function optimize()
@@ -151,8 +147,10 @@ function optimize()
 
     nevergrad = pyimport("nevergrad")
 
+    # Optimizer definition
     instrum = nevergrad.Instrumentation(nevergrad.var.Array(num_rows, 2).bounded(0, 1))
     OPTIMIZER = nevergrad.optimizers.DoubleFastGADiscreteOnePlusOne(instrumentation = instrum, budget = BUDGET)
+
     recommendation = OPTIMIZER.minimize(_opt, batch_mode=false)
 
     points01 = convert(Array{Float64,2}, recommendation.args[1])
@@ -163,6 +161,8 @@ function optimize()
     PENALIZER_ARGS[:optimization] = false
     final = _opt(recommendation.args[1])
 
+    # Interpolate received points
+    # It is expected that they are unique and sorted.
     _points = interpolate(mapreduce(permutedims, vcat, points))
 
     lock(FILELOCK) do
@@ -182,12 +182,14 @@ function _opt(points)
     points = convert(Array{Float64, 2}, points)
     # points = reshape(points, (length(MATRYOSHKA), 2))
 
+    # Transform points
     points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points))]
     _points = interpolate(mapreduce(permutedims, vcat, points); INTERPOLATOR_ARGS...)
 
     # @gp VALID_POINTS[:, 1] VALID_POINTS[:, 2] "w p pt 1 lc rgbcolor '0xeeeeee'" :-
     # @gp :- _points[:, 1] _points[:, 2] "w l"
 
+    # Check the correctness of the points and compute penalty
     penalty = penalize(_points, VALID_POINTS, GRID, PENALTY; PENALIZER_ARGS...)
 
     if penalty != 0
@@ -223,6 +225,10 @@ function matryoshka_create(layer0, layer0_center, layer_count::Int)
     layers = group_layers_compute(layer0, layer0_center, layer_count)
     layer0_size = size(layer0, 1)
 
+    # Method, where we learn the interpolator all layers at once and use that information
+    # for computing of the transformation
+    # Note: This is much more precise.
+
     _tc = Array{Float64}(undef, 0, 2)
     _rc = Array{Float64}(undef, 0, 2)
 
@@ -236,9 +242,8 @@ function matryoshka_create(layer0, layer0_center, layer_count::Int)
         _rc = vcat(_rc, mapreduce(permutedims, vcat, rc))
     end
 
+    # transformedCoordinatesToRealCoordinates
     _ip2d = []
-
-    # =====
 
     for _d in axes(_rc, 2)
         push!(_ip2d, Spline2D(_tc[:, 1], _tc[:, 2], _rc[:, _d]; s=length(_tc[:, 1]) - sqrt(2 * length(_tc[:, 1]))))
@@ -324,9 +329,7 @@ function points_filter(points, grid=nothing)
                     end
 
                     _nearbyc = [_cell[1] + _xr, _cell[2] + _yr]
-                    # if _nearbyc in _cells_copy
-                    #     @show points_l[findfirst(item -> item == _nearbyc, _cells_copy)]
-                    # end
+
                     if _nearbyc in _cells_copy && points_l[findfirst(item -> item == _nearbyc, _cells_copy)] in _points
                         _nearbyp = points_l[findfirst(item -> item == _nearbyc, _cells_copy)]
                         filter!(e -> e ≠ _nearbyp, _points)
@@ -344,26 +347,38 @@ function points_filter(points, grid=nothing)
 end
 
 function groups_border_obtain(groups, grid=nothing)
+
     _borders = []
 
     for (_i, _g) in enumerate(groups)
         _border = Array{Float64}(undef, 0, 2)
+
+        # Obtain grid size if not set
         _grid = grid !== nothing ? grid : minimum(minimum(u[2:end] - u[1:end-1] for u in [unique(sort(_g[:, d])) for d in 1:size(_g)[2]]))
 
+        # Go through all dimensions
         for _d in 1:ndims(_g)
 
+            # Find unique values in that dimension
             for _u in unique(sort(_g[:, _d]))
                 temp = _g[findall(_g[:, _d] .== _u), :]
+                # Append points with max / min values in another dimension
                 _border = vcat(_border, minimum(temp, dims=1))
                 _border = vcat(_border, maximum(temp, dims=1))
 
+                # Append inner borders
+                # Obtain values in the dimension
                 _v = _g[findall(_g[:, _d] .== _u), :]
                 _v = _v[:, 1:end.!=_d]
+
+                # Sort them
+                # Enforce the axis as otherwise it is not sorted in ascending order everytime.
                 _v = _v[sortperm(_v[:, 1]), :]
 
-                # TODO: numpy.roll ?
+                # Find distances between concurrent points
                 _dists = circshift(_v, (1, 0))[2:end, :] .- _v[1:end-1, :]
 
+                # Find points in the distance larger than 1.5x _grid
                 _bords = findall(_dists .> (_grid * 1.5))
 
                 for _b in _bords
@@ -408,8 +423,6 @@ end
 function group_layers_compute(layer0::Matrix{Float64}, layer0_center, layer_count::Int)
 
     layers_size = size(layer0, 1)
-    # a = [1 - (1 / layer_count) * layer_index for layer_index in 0:layer_count-1]
-    # points = [(layer0[:, 1:2] .- layer0_center) .* x .+ layer0_center for x in a]
     points = [(layer0[:, 1:2] .- layer0_center) .* (1 - (1 / layer_count) * layer_index) .+ layer0_center for layer_index in 0:layer_count-1]
     remains = (trunc.(Int, layers_size - (layers_size / layer_count) * layer_index for layer_index in 0:layer_count-1))
 
