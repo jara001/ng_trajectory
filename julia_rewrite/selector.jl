@@ -47,35 +47,49 @@ function resolution_estimate(points, resolution)
 end
 
 function trajectory_resample(points, remain)
+
+    # Throw away repeated point
     if points[1, :1] == points[end, :1]
         points = points[1:end-1, :]
     end
 
+    # Keep fixed points local
     raw_fixed_points = copy(get_value(P_sel, "fixed_points"))
-    rpoints = []
-    fixed_points = []
-    upoints = []
 
+    # Result
+    rpoints
+    # Intermediate results
+    fixed_points = []
+    upoints
+
+    # Other values
     rotate = typeof(get_value(P_sel, "rotate")) != Vector ? [get_value(P_sel, "rotate") for _ in range(1, stop=max(1, length(get_value(P_sel, "fixed_points"))))] : copy(get_value(P_sel, "rotate"))
 
     while true
+        # Rotate to get to the first fixed point
         _points = circshift(points, length(raw_fixed_points) > 0 ? -trajectory_closest_index(points, popfirst!(raw_fixed_points)) : 0)
 
+        # Resample if requested
         if get_value(P_sel, "sampling_distance") != 0.0
-            _points = interpolate(_points[:, 1:2], int_size = resolution_estimate(_points, get_value(P_sel, "sampling_distance")))
+            _points = interpolate(_points[:, 1:2], int_size=resolution_estimate(_points, get_value(P_sel, "sampling_distance")))
         end
 
+        # Select points equidistantly
         if remain < 0
-            _rpoints = interpolate(_points[:, 1:2], int_size = resolution_estimate(_points, get_value(P_sel, "distance")))
+            _rpoints = interpolate(_points[:, 1:2], int_size=resolution_estimate(_points, get_value(P_sel, "distance")))
+        # Select 'remain' points
         else
-            _rpoints = interpolate(_points[:, 1:2], int_size = remain)
+            _rpoints = interpolate(_points[:, 1:2], int_size=remain)
         end
 
+        # Rotate when required
         if rotate[1] > 0.0
             #TODO
         else
             popfirst!(rotate)
-            _fpoints = interpolate(_points[:, 1:2], int_size = 10 * length(_rpoints))
+
+            # Create fpoints with a set factor to allow concatenating
+            _fpoints = interpolate(_points[:, 1:2], int_size=10 * length(_rpoints))
             push!(fixed_points, _fpoints[1])
             push!(upoints, _fpoints)
         end

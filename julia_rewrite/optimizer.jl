@@ -3,6 +3,7 @@ using Dierckx
 using Printf
 using Evolutionary
 using Gnuplot
+using PyCall
 
 include("utils.jl")
 include("interpolator.jl")
@@ -33,6 +34,8 @@ GRID = nothing
 PENALTY = nothing
 FIGURE = nothing
 PLOT = nothing
+BUDGET = nothing
+NUM_WORKERS = nothing
 
 P = ParameterList()
 
@@ -78,7 +81,7 @@ function optimizer_init(; points,
     figure=nothing,
     kwargs...)
 
-    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE, PLOT
+    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE, PLOT, BUDGET, NUM_WORKERS
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER, PENALIZER_INIT, PENALIZER_ARGS
 
     CRITERION_ARGS = criterion_args
@@ -93,6 +96,8 @@ function optimizer_init(; points,
     PENALTY = penalty
     FIGURE = figure
     PLOT = plot
+    BUDGET = budget
+    NUM_WORKERS = workers
 
 
     VALID_POINTS = points
@@ -122,14 +127,6 @@ function optimizer_init(; points,
 
         println("Matryoshka mapping constructed.")
 
-        # outfile = "notes.txt"
-        # open(outfile, "w") do f
-        #     for i in MATRYOSHKA[1]
-        #         show(f, "text/plain", i)
-        #         show(f, "\n")
-        #     end
-        # end
-
         if GRID === nothing
             if length(grid) == 2
                 GRID = grid
@@ -146,23 +143,27 @@ end
 function optimize()
     global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS
 
-    # length matryoshka = 12
-    # res = Evolutionary.optimize(_opt, zeros(length(MATRYOSHKA), 2), OPTIMIZER, Evolutionary.Options(parallelization=:thread))
+    # constr = BoxConstraints(zeros(length(MATRYOSHKA) * 2), ones(length(MATRYOSHKA) * 2))
+    # x0 = [0.5 for _ in 1:length(MATRYOSHKA)*2]
+    # res = Evolutionary.optimize(_opt, constr, x0, GA(selection=uniformranking(3), mutation=uniform(0.1), crossover=DC), Evolutionary.Options(iterations=10))
 
-    constr = BoxConstraints(zeros(length(MATRYOSHKA) * 2), ones(length(MATRYOSHKA) * 2))
-    x0 = [0.5 for _ in 1:length(MATRYOSHKA)*2]
+    num_rows = length(MATRYOSHKA)
 
-    res = Evolutionary.optimize(_opt, constr, x0, GA(selection = uniformranking(3), mutation=uniform(0.1), crossover=DC), Evolutionary.Options(iterations=10))
-    # TODO: nevergrad
-    points01 = reshape(Evolutionary.minimizer(res), (length(MATRYOSHKA), 2))
+    nevergrad = pyimport("nevergrad")
+
+    instrum = nevergrad.Instrumentation(nevergrad.var.Array(num_rows, 2).bounded(0, 1))
+    OPTIMIZER = nevergrad.optimizers.DoubleFastGADiscreteOnePlusOne(instrumentation = instrum, budget = BUDGET)
+    recommendation = OPTIMIZER.minimize(_opt, batch_mode=false)
+
+    points01 = convert(Array{Float64,2}, recommendation.args[1])
+    # points01 = reshape(Evolutionary.minimizer(res), (length(MATRYOSHKA), 2))
+
     points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points01))]
 
     PENALIZER_ARGS[:optimization] = false
-    final = _opt(Evolutionary.minimizer(res))
+    final = _opt(recommendation.args[1])
 
     _points = interpolate(mapreduce(permutedims, vcat, points))
-
-    # TODO: plot
 
     lock(FILELOCK) do
         if VERBOSITY > 0
@@ -171,18 +172,21 @@ function optimize()
         end
     end
 
-    return (final, points, Evolutionary.minimizer(res), _points)
+    return (final, points, recommendation.args[1], _points)
 end
 
 function _opt(points)
     global VALID_POINTS, CRITERION_ARGS, INTERPOLATOR_ARGS, PENALIZER_ARGS
     global MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
-    points = reshape(points, (length(MATRYOSHKA), 2))
+
+    points = convert(Array{Float64, 2}, points)
+    # points = reshape(points, (length(MATRYOSHKA), 2))
+
     points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points))]
     _points = interpolate(mapreduce(permutedims, vcat, points); INTERPOLATOR_ARGS...)
 
-    @gp VALID_POINTS[:, 1] VALID_POINTS[:, 2] "w p pt 1 lc rgbcolor '0xeeeeee'" :-
-    @gp :- _points[:, 1] _points[:, 2] "w l"
+    # @gp VALID_POINTS[:, 1] VALID_POINTS[:, 2] "w p pt 1 lc rgbcolor '0xeeeeee'" :-
+    # @gp :- _points[:, 1] _points[:, 2] "w l"
 
     penalty = penalize(_points, VALID_POINTS, GRID, PENALTY; PENALIZER_ARGS...)
 

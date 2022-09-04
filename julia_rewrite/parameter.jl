@@ -58,8 +58,8 @@ function iterate(this::ParameterList)
     pairs(this)
 end
 
-function update!(this::ParameterList, name::String, value)
-    get(this.parameters, name, nothing).value = value
+function update!(this::ParameterList, name, value)
+    get(this.parameters, string(name), nothing).value = value
     return nothing
 end
 
@@ -69,7 +69,7 @@ function update_all!(this::ParameterList, kwargs; reset::Bool=true)
     end
 
     for (_p, _v) in kwargs
-        if haskey(this.parameters, _p)
+        if haskey(this.parameters, string(_p))
             _p.value = _v
         end
     end

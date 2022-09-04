@@ -2,6 +2,7 @@ using JSON
 using NPZ
 using Printf
 using Plots
+using Gnuplot
 
 include("selector.jl")
 include("interpolator.jl")
@@ -15,11 +16,14 @@ f_helper(d::Dict) = Dict(Symbol(k) => f_helper(v) for (k, v) in d)
 symbol_dict(d::Dict) = f_helper(d)
 
 function cascade_run(; track, fileformat, notification, loop_i, loop_output, conf...)
-    # TODO: time
 
+    # Get configuration for current step
     _alg = merge(conf, loop_i[2])
 
+    # Rename output from previous stages
     fitness, rcandidate, tcandidate, result = loop_output
+
+
     if fileformat !== nothing
         # TODO: fileformat
     end
@@ -39,12 +43,13 @@ function cascade_run(; track, fileformat, notification, loop_i, loop_output, con
     optimizer_init(points=track, group_centers=rcandidate, group_centerline=result, logfile=LOGFILE; _alg...)
 
     # run GA
-    _fitness, _rcandidate, _tcandidate, _result = optimize()
+    _fitne
 
     # TODO: plot
 
     # TODO: fileformat
 
+    # Store only better solution for next steps of the cascade
     if _fitness < fitness
         return (_fitness, _rcandidate, _tcandidate, _result)
     else
@@ -52,10 +57,9 @@ function cascade_run(; track, fileformat, notification, loop_i, loop_output, con
     end
 end
 
-# TODO: loop
 function loop_cascade_run(; track, initline, fileformat, notification, loop_i, loop_output=nothing, conf...)
-    # TODO: time
 
+    # Initial solution
     fitness = 10000000
     result = initline
     rcandidate = initline
@@ -69,13 +73,7 @@ function loop_cascade_run(; track, initline, fileformat, notification, loop_i, l
     # notification = @sprintf(notification, (loop_i + 1)) * @sprintf(" Running step %%d/%d", length(conf["cascade"]))
     notification = @sprintf(" Running step %%d/%d", length(conf[:cascade]))
 
-    # cascade_output = cascade_run(
-    #     ;track=track,
-    #     fileformat=_fileformat,
-    #     notification=notification,
-    #     merge(conf, "loop_i" => 1, "loop_output" => (fitness, rcandidate, tcandidate, result))...
-    # )
-
+    # Run cascade
     cascade_output = nothing
     for i in enumerate(conf[:cascade])
         cascade_output = cascade_run(
@@ -88,6 +86,46 @@ function loop_cascade_run(; track, initline, fileformat, notification, loop_i, l
         )
     end
 
+    # TODO: print to file
+
+    if loop_output === nothing || cascade_output[1] < loop_output[1]
+        return cascade_output
+    else
+        return loop_output
+    end
+end
+
+function variate_run(; fileformat, notification, loop_i, loop_output, conf...)
+
+    # Local variables
+    _i = loop_i[1]
+    _param = loop_i[2][1]
+    _value = loop_i[2][2]
+
+    # Update logging file
+    if fileformat !== nothing
+        # Fill group count, and add format for number of loops
+        fileformat = @sprintf(fileformat, _value) * @sprintf("-%%0%dd", length(string(CONFIGURATION[:loops])))
+    end
+
+    # Update notification
+    # Fill loop index, group count and prepare loops progress
+    notification = @sprintf(notification, _i + 1, _value, _param) * @sprintf(" [%%d / %d]", CONFIGURATION[:loops])
+
+    ## Loop cascade
+    for i in enumerate(conf[:cascade])
+        cascade_output = cascade_run(
+            elements=CONFIGURATION[:loops],
+            fileformat=fileformat,
+            notification=notification,
+            loop_i=i,
+            loop_output=cascade_output === nothing ? (fitness, rcandidate, tcandidate, result) : cascade_output;
+            merge(Dict(_param => _value), conf)...
+        )
+    end
+
+    @printf("Variating %s %s finished.", _param, _value)
+
     if loop_output === nothing || cascade_output[1] < loop_output[1]
         return cascade_output
     else
@@ -96,11 +134,11 @@ function loop_cascade_run(; track, initline, fileformat, notification, loop_i, l
 end
 
 function execute(START_POINTS=nothing, VALID_POINTS=nothing)
-    # TODO: time
 
-    CONFIGURATION = JSON.parsefile("configuration/matryoshka_ex_ruudskogen.json")
-    CONFIGURATION = symbol_dict(CONFIGURATION)
+    CONFIGURATION = JSON.parsefile("configuration/matryoshka_ex_torino.json")
+    CONFIGURATION = symbol
 
+    # Load data about the track
     if START_POINTS === nothing
         START_POINTS = npzread(CONFIGURATION[:start_points])
     end
@@ -108,33 +146,69 @@ function execute(START_POINTS=nothing, VALID_POINTS=nothing)
         VALID_POINTS = npzread(CONFIGURATION[:valid_points])
     end
 
+    # Logging file format
     fileformat = nothing
     if haskey(CONFIGURATION, :prefix)
-        fileformat = @sprintf "%s" CONFIGURATION[:prefix]
+        fileformat = @sprintf("%s", CONFIGURATION[:prefix])
     end
 
+    # Notification about progress
     notification = ""
 
-    solution = nothing
+    solution = not
+
+    # Identify and prepare variating variable
     if haskey(CONFIGURATION, :variate) && CONFIGURATION[:variate] in CONFIGURATION
-        #TODO: variate
+        param = CONFIGURATION[:variate]
+        values = CONFIGURATION[Symbol(param)]
+
+        # Force list
+        if typeof(values) != Vector
+            values = [values]
+        end
+
+        # Convert to tuples
+        tvalues = [(param, value) for value in values]
+
+        # Add variate to the file format
+        if fileformat !== nothing
+            if all(typeof(_value) == Vector for _value in values)
+                fileformat = fileformat * @sprintf("%%0%dd", length(string(max(values))))
+            else
+                fileformat = fileformat * "-%s"
+            end
+        end
+
+        # ... and also to the notification
+        notification = notification * @sprintf("{%%d / %d (%%s %%s)}", length(values))
+
+        ## And variate the parameter
+        solution = nothing
+        for i in enumerate(tvalues)
+            solution = variate_run(
+                track=VALID_POINTS,
+                initline=START_POINTS,
+                fileformat=fileformat,
+                notification=notification,
+                loop_i=i,
+                loop_output=solution;
+                CONFIGURATION...
+            )
+        end
+
     else
+        # Skip to the loop
+        # Update logging file
         if fileformat !== nothing
             fileformat = fileformat * @sprintf("%%0%dd", length(string(CONFIGURATION[:loops])))
         end
 
+        # Update notification
         notification = notification * @sprintf("[%%d / %d]", CONFIGURATION[:loops])
 
-        solution = loop_cascade_run(
-            track=VALID_POINTS,
-            initline=START_POINTS,
-            fileformat=fileformat,
-            notification=notification,
-            loop_i=1;
-            CONFIGURATION...
-        )
-
-        for i in 2:CONFIGURATION[:loops]
+        ## Loop cascade
+        solution = nothing
+        for i in 1:CONFIGURATION[:loops]
             solution = loop_cascade_run(
                 track=VALID_POINTS,
                 initline=START_POINTS,
@@ -150,8 +224,7 @@ function execute(START_POINTS=nothing, VALID_POINTS=nothing)
     scatter(VALID_POINTS[:, 1], VALID_POINTS[:, 2], markershape=:+, markersize=1)
     plot!(solution[4][:, 1], solution[4][:, 2])
     savefig("myplot.png")
-    # TODO: time
-    @printf("Optimization finished in .")
+    @printf("Optimization finished.")
 
     return solution
 end
