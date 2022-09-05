@@ -226,7 +226,7 @@ function execute(START_POINTS=nothing, VALID_POINTS=nothing)
     scatter(VALID_POINTS[:, 1], VALID_POINTS[:, 2], markershape=:+, markersize=1)
     plot!(solution[4][:, 1], solution[4][:, 2])
     savefig("myplot.png")
-    @printf("Optimization finished.")
+    @printf("Optimization finished.\n")
 
     return solution
 end
