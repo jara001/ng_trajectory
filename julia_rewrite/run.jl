@@ -137,7 +137,8 @@ end
 
 function execute(START_POINTS=nothing, VALID_POINTS=nothing)
 
-    CONFIGURATION = JSON.parsefile("configuration/matryoshka_ex_torino.json")
+    # CONFIGURATION = JSON.parsefile("configuration/matryoshka_ex_torino.json")
+    CONFIGURATION = JSON.parsefile(ARGS[1])
     CONFIGURATION = symbol_dict(CONFIGURATION)
 
     # Load data about the track
