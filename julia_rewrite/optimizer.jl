@@ -1,7 +1,8 @@
 using Statistics
 using Dierckx
 using Printf
-using Evolutionary
+# using Evolutionary
+using Metaheuristics
 using Gnuplot
 using PyCall
 
@@ -139,9 +140,19 @@ end
 function optimize()
     global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS
 
+    # Evolutionary
     # constr = BoxConstraints(zeros(length(MATRYOSHKA) * 2), ones(length(MATRYOSHKA) * 2))
     # x0 = [0.5 for _ in 1:length(MATRYOSHKA)*2]
     # res = Evolutionary.optimize(_opt, constr, x0, GA(selection=uniformranking(3), mutation=uniform(0.1), crossover=DC), Evolutionary.Options(iterations=10))
+    # points01 = reshape(Evolutionary.minimizer(res), (length(MATRYOSHKA), 2))
+
+    # Metaheuristics
+    # x0 = [0.5 for _ in 1:length(MATRYOSHKA)*2]
+    # bounds = repeat([0.0, 1.0], 1, length(MATRYOSHKA) * 2)
+    # ga = Metaheuristics.GA(; crossover=Metaheuristics.OrderCrossover(), mutation=Metaheuristics.SlightMutation())
+    # points01 = Metaheuristics.optimize(_opt, bounds, ga)
+
+    # Note: Evolutionary and Metaheuristics return Vector, so reshaping is required (5th row in _opt funciton)
 
     num_rows = length(MATRYOSHKA)
 
@@ -157,11 +168,9 @@ function optimize()
     # @pywith concurrent.futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers, mp_context=multiprocessing.get_context("fork")) as executor begin
     #     recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=false)
     # end
-
     recommendation = OPTIMIZER.minimize(_opt, batch_mode=false)
-
     points01 = convert(Array{Float64,2}, recommendation.args[1])
-    # points01 = reshape(Evolutionary.minimizer(res), (length(MATRYOSHKA), 2))
+
 
     points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points01))]
 
@@ -186,7 +195,7 @@ function _opt(points)
     global VALID_POINTS, CRITERION_ARGS, INTERPOLATOR_ARGS, PENALIZER_ARGS
     global MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
 
-    points = convert(Array{Float64, 2}, points)
+    points = convert(Array{Float64,2}, points)
     # points = reshape(points, (length(MATRYOSHKA), 2))
 
     # Transform points
