@@ -137,6 +137,12 @@ function optimizer_init(; points,
     end
 end
 
+using VideoIO
+import FileIO
+using FixedPointNumbers
+
+WRITER = nothing
+
 function plot_population(population, state)
     n = length(MATRYOSHKA)
     @gp tit="Best value: $(value(state))" "set size ratio -1" :-
@@ -148,6 +154,8 @@ function plot_population(population, state)
         @gp :- _points[:, 1] _points[:, 2] "w l notitle" :-
     end
     @gp :- ""
+    save(term="pngcairo size 1280, 720 fontscale 0.8", output="frame.png")
+    write(WRITER, FileIO.load("frame.png"))
 end
 
 function Evolutionary.trace!(record::Dict{String,Any}, objfun, state, population, method::Evolutionary.GA, options)
@@ -210,6 +218,12 @@ end
 function optimize()
     global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS
 
+    encoder_options = (crf=23, preset="medium")
+
+    global WRITER
+    WRITER = open_video_out("video.mp4", RGB{N0f8}, (720, 1280),
+                            framerate=2, encoder_options=encoder_options)
+
     points01 = optimize_evolutionary()
 
     points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points01))]
@@ -224,6 +238,7 @@ function optimize()
     @gp VALID_POINTS[:, 1] VALID_POINTS[:, 2] "w p pt 1 lc rgbcolor '0xeeeeee' notitle" :-
     @gp :- _points[:, 1] _points[:, 2] "w l notitle" :-
     @gp :- "set size ratio -1"
+    close_video_out!(WRITER)
 
     lock(FILELOCK) do
         if VERBOSITY > 0
