@@ -137,16 +137,37 @@ function optimizer_init(; points,
     end
 end
 
+function plot_population(population)
+    n = length(MATRYOSHKA)
+    @gp VALID_POINTS[:, 1] VALID_POINTS[:, 2] "w p pt 1 lc rgbcolor '0xeeeeee'" :-
+    foreach(population) do p
+        points01 = reshape(p, (n, 2))
+        points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points01))]
+        _points = interpolate(mapreduce(permutedims, vcat, points))
+        @gp :- _points[:, 1] _points[:, 2] "w l notitle" :-
+    end
+    @gp :- "set size ratio -1"
+end
+
+function Evolutionary.trace!(record::Dict{String,Any}, objfun, state, population, method::Evolutionary.GA, options)
+    plot_population(population)
+end
+
+function Evolutionary.trace!(record::Dict{String,Any}, objfun, state, population, method::Evolutionary.CMAES, options)
+    plot_population(population)
+end
+
 function optimize_evolutionary()
     global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS
     n = length(MATRYOSHKA)
     constr = BoxConstraints(zeros(2n), ones(2n))
     x0 = fill(0.5, 2n)
     res = Evolutionary.optimize(_opt, constr, x0,
-                                Evolutionary.GA(populationSize=50,
-                                                selection=uniformranking(10),
-                                                mutation=gaussian(0.1),
-                                                crossover=SPX),
+#                                 Evolutionary.GA(populationSize=30,
+#                                                 selection=uniformranking(10),
+#                                                 mutation=gaussian(0.1),
+#                                                 crossover=TPX),
+                                Evolutionary.CMAES(sigma0=0.1),
                                 Evolutionary.Options(iterations=100,
                                                      parallelization=:thread,
                                                      show_trace=true,
@@ -199,6 +220,10 @@ function optimize()
     # It is expected that they are unique and sorted.
     _points = interpolate(mapreduce(permutedims, vcat, points))
 
+    @gp VALID_POINTS[:, 1] VALID_POINTS[:, 2] "w p pt 1 lc rgbcolor '0xeeeeee'" :-
+    @gp :- _points[:, 1] _points[:, 2] "w l notitle" :-
+    @gp :- "set size ratio -1"
+
     lock(FILELOCK) do
         if VERBOSITY > 0
             @printf(LOGFILE, "solution:%s\n", string(points))
@@ -221,9 +246,6 @@ function _opt(points)
     # Transform points
     points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points))]
     _points = interpolate(mapreduce(permutedims, vcat, points); INTERPOLATOR_ARGS...)
-
-    # @gp VALID_POINTS[:, 1] VALID_POINTS[:, 2] "w p pt 1 lc rgbcolor '0xeeeeee'" :-
-    # @gp :- _points[:, 1] _points[:, 2] "w l"
 
     # Check the correctness of the points and compute penalty
     penalty = penalize(_points, VALID_POINTS, GRID, PENALTY; PENALIZER_ARGS...)
