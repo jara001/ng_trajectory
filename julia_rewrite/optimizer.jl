@@ -210,9 +210,11 @@ function optimize_evolutionary()
 #                                                 mutation=gaussian(0.1),
 #                                                 crossover=TPX),
                                 Evolutionary.CMAES(sigma0=0.1),
-                                Evolutionary.Options(iterations=50,
+                                Evolutionary.Options(iterations=100,
                                                      parallelization=:thread,
                                                      show_trace=true,
+                                                     reltol=1e-3,
+                                                     successive_f_tol=3,
                                                      ))
     points01 = reshape(Evolutionary.minimizer(res), (n, 2))
 end
