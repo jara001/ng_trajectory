@@ -137,24 +137,25 @@ function optimizer_init(; points,
     end
 end
 
-function plot_population(population)
+function plot_population(population, state)
     n = length(MATRYOSHKA)
-    @gp VALID_POINTS[:, 1] VALID_POINTS[:, 2] "w p pt 1 lc rgbcolor '0xeeeeee'" :-
+    @gp tit="Best value: $(value(state))" "set size ratio -1" :-
+    @gp :- VALID_POINTS[:, 1] VALID_POINTS[:, 2] "w p pt 1 lc rgbcolor '0xeeeeee' notitle" :-
     foreach(population) do p
         points01 = reshape(p, (n, 2))
         points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points01))]
         _points = interpolate(mapreduce(permutedims, vcat, points))
         @gp :- _points[:, 1] _points[:, 2] "w l notitle" :-
     end
-    @gp :- "set size ratio -1"
+    @gp :- ""
 end
 
 function Evolutionary.trace!(record::Dict{String,Any}, objfun, state, population, method::Evolutionary.GA, options)
-    plot_population(population)
+    plot_population(population, state)
 end
 
 function Evolutionary.trace!(record::Dict{String,Any}, objfun, state, population, method::Evolutionary.CMAES, options)
-    plot_population(population)
+    plot_population(population, state)
 end
 
 function optimize_evolutionary()
@@ -168,7 +169,7 @@ function optimize_evolutionary()
 #                                                 mutation=gaussian(0.1),
 #                                                 crossover=TPX),
                                 Evolutionary.CMAES(sigma0=0.1),
-                                Evolutionary.Options(iterations=100,
+                                Evolutionary.Options(iterations=50,
                                                      parallelization=:thread,
                                                      show_trace=true,
                                                      ))
@@ -220,7 +221,7 @@ function optimize()
     # It is expected that they are unique and sorted.
     _points = interpolate(mapreduce(permutedims, vcat, points))
 
-    @gp VALID_POINTS[:, 1] VALID_POINTS[:, 2] "w p pt 1 lc rgbcolor '0xeeeeee'" :-
+    @gp VALID_POINTS[:, 1] VALID_POINTS[:, 2] "w p pt 1 lc rgbcolor '0xeeeeee' notitle" :-
     @gp :- _points[:, 1] _points[:, 2] "w l notitle" :-
     @gp :- "set size ratio -1"
 
