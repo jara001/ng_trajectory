@@ -1,7 +1,7 @@
 using Statistics
 using Dierckx
 using Printf
-# using Evolutionary
+using Evolutionary
 using Metaheuristics
 using Gnuplot
 using PyCall
@@ -137,22 +137,35 @@ function optimizer_init(; points,
     end
 end
 
-function optimize()
+function optimize_evolutionary()
     global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS
+    n = length(MATRYOSHKA)
+    constr = BoxConstraints(zeros(2n), ones(2n))
+    x0 = fill(0.5, 2n)
+    res = Evolutionary.optimize(_opt, constr, x0,
+                                Evolutionary.GA(populationSize=50,
+                                                selection=uniformranking(10),
+                                                mutation=gaussian(0.1),
+                                                crossover=SPX),
+                                Evolutionary.Options(iterations=100,
+                                                     parallelization=:thread,
+                                                     show_trace=true,
+                                                     ))
+    points01 = reshape(Evolutionary.minimizer(res), (n, 2))
+end
 
-    # Evolutionary
-    # constr = BoxConstraints(zeros(length(MATRYOSHKA) * 2), ones(length(MATRYOSHKA) * 2))
-    # x0 = [0.5 for _ in 1:length(MATRYOSHKA)*2]
-    # res = Evolutionary.optimize(_opt, constr, x0, GA(selection=uniformranking(3), mutation=uniform(0.1), crossover=DC), Evolutionary.Options(iterations=10))
-    # points01 = reshape(Evolutionary.minimizer(res), (length(MATRYOSHKA), 2))
+function optimize_metaheuristics()
+    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS
+    x0 = [0.5 for _ in 1:length(MATRYOSHKA)*2]
+    bounds = repeat([0.0, 1.0], 1, length(MATRYOSHKA) * 2)
+    ga = Metaheuristics.GA(;
+                           crossover=Metaheuristics.OrderCrossover(),
+                           mutation=Metaheuristics.SlightMutation())
+    points01 = Metaheuristics.optimize(_opt, bounds, ga)
+end
 
-    # Metaheuristics
-    # x0 = [0.5 for _ in 1:length(MATRYOSHKA)*2]
-    # bounds = repeat([0.0, 1.0], 1, length(MATRYOSHKA) * 2)
-    # ga = Metaheuristics.GA(; crossover=Metaheuristics.OrderCrossover(), mutation=Metaheuristics.SlightMutation())
-    # points01 = Metaheuristics.optimize(_opt, bounds, ga)
-
-    # Note: Evolutionary and Metaheuristics return Vector, so reshaping is required (5th row in _opt funciton)
+function optimize_nevergrad()
+    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS
 
     num_rows = length(MATRYOSHKA)
 
@@ -170,12 +183,17 @@ function optimize()
     # end
     recommendation = OPTIMIZER.minimize(_opt, batch_mode=false)
     points01 = convert(Array{Float64,2}, recommendation.args[1])
+end
 
+function optimize()
+    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS
+
+    points01 = optimize_evolutionary()
 
     points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points01))]
 
     PENALIZER_ARGS[:optimization] = false
-    final = _opt(recommendation.args[1])
+    final = _opt(points01)
 
     # Interpolate received points
     # It is expected that they are unique and sorted.
@@ -188,15 +206,17 @@ function optimize()
         end
     end
 
-    return (final, points, recommendation.args[1], _points)
+    return (final, points, _points)
 end
+
+prepare_points(points::Array{Float64, 2}, matr_len) = convert(Array{Float64,2}, points) # Nevergrad
+prepare_points(points::Vector{Float64}, matr_len) = reshape(points, (matr_len, 2)) # Evolutionary
 
 function _opt(points)
     global VALID_POINTS, CRITERION_ARGS, INTERPOLATOR_ARGS, PENALIZER_ARGS
     global MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
 
-    points = convert(Array{Float64,2}, points)
-    # points = reshape(points, (length(MATRYOSHKA), 2))
+    points = prepare_points(points, length(MATRYOSHKA))
 
     # Transform points
     points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points))]
@@ -209,16 +229,17 @@ function _opt(points)
     penalty = penalize(_points, VALID_POINTS, GRID, PENALTY; PENALIZER_ARGS...)
 
     if penalty != 0
-        lock(FILELOCK) do
-            if VERBOSITY > 2
-                @printf(LOGFILE, "pointsA:%s\n", string(points))
-                @printf(LOGFILE, "pointsT:%s\n", string(_points))
+        if VERBOSITY > 0
+            lock(FILELOCK) do
+                if VERBOSITY > 2
+                    @printf(LOGFILE, "pointsA:%s\n", string(points))
+                    @printf(LOGFILE, "pointsT:%s\n", string(_points))
+                end
+                if VERBOSITY > 1
+                    @printf(LOGFILE, "penalty:%f\n", penalty)
+                end
+                flush(LOGFILE)
             end
-            if VERBOSITY > 1
-                @printf(LOGFILE, "penalty:%f\n", penalty)
-            end
-            flush(LOGFILE)
-
         end
         return Float64(penalty)
     end
