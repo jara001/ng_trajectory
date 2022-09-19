@@ -6,7 +6,7 @@ using Printf
 ######################
 
 function grid_compute(points)
-    minimum(minimum(u[2:length(u)] - u[1:length(u)-1] for u in [unique!(sort(c[:])) for c in eachcol(points)]))
+    minimum(minimum(diff(u) for u in [unique!(sort(c)) for c in eachcol(points)]))
 end
 
 function map_create(points::Array{Float64,2}, origin=nothing, size=nothing, grid=nothing)
