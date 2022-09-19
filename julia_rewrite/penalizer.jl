@@ -16,15 +16,15 @@ function penalize(points, valid_points::Array{Float64, 2}, grid, penalty = 100; 
     _grid = grid === nothing ? grid_compute(points) : grid
 
     invalid = 0
-    empty!(INVALID_POINTS)
+    # We cannot access INVALID_POINTS in parallel!
+    #empty!(INVALID_POINTS)
 
     for _p in eachrow(points)
 
         if any(all(abs.(valid_points .- _p[1:2]') .< _grid, dims = 2)) == false
             invalid += 1
-            
             # Store invalid point
-            push!(INVALID_POINTS, _p)
+            #push!(INVALID_POINTS, _p)
         end
     end
 
