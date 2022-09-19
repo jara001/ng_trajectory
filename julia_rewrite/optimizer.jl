@@ -35,6 +35,30 @@ PLOT = nothing
 BUDGET = nothing
 NUM_WORKERS = Sys.CPU_THREADS
 
+mutable struct TrackBitmap
+    const p_min::Vector{Float64} # const here needs Julia 1.8
+    const p_max::Vector{Float64}
+    const p_step::Vector{Float64}
+    bitmap::BitArray{2}
+    TrackBitmap(p_min, p_max, p_step) = new(p_min, p_max, p_step,
+                                            falses((cld.(p_max .- p_min, p_step) .|> Int) + [1, 1] |> Tuple))
+end
+
+function index(tb::TrackBitmap, point)
+    idx = ((point .- tb.p_min) .÷ tb.p_step .|> Int) + [1, 1]
+end
+
+Base.setindex!(tb::TrackBitmap, x, pt) = tb.bitmap[index(tb, pt)...] = x
+function Base.getindex(tb::TrackBitmap, pt)
+    idx = index(tb, pt)
+    if any(idx .< (1,1)) || any(idx .> size(tb.bitmap))
+        return false
+    end
+    return tb.bitmap[idx...]
+end
+
+TRACK_BITMAP = nothing
+
 P = ParameterList()
 
 add_parameter!(P, Parameter("budget", 100, 100, Int, "Budget parameter for the genetic algorithm.", "init (general)"))
@@ -81,6 +105,7 @@ function optimizer_init(; points,
 
     global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE, PLOT, BUDGET, NUM_WORKERS
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER, PENALIZER_INIT, PENALIZER_ARGS
+    global TRACK_BITMAP
 
     # Local to global variables
     CRITERION_ARGS = criterion_args
@@ -134,6 +159,14 @@ function optimizer_init(; points,
         if GRID === nothing
             GRID = grid_compute(points)
         end
+
+        TRACK_BITMAP = TrackBitmap([minimum(VALID_POINTS, dims = 1)...],
+                                   [maximum(VALID_POINTS, dims = 1)...],
+                                   [GRID,GRID])
+        foreach(eachrow(VALID_POINTS)) do p
+            TRACK_BITMAP[p] = true
+        end
+        @gp :map Gnuplot.palette(:gray1) "set size ratio -1" TRACK_BITMAP.bitmap' "w image notitle"
     end
 end
 

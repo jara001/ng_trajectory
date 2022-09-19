@@ -11,24 +11,9 @@ function penalizer_init()
 end
 
 function penalize(points, valid_points::Array{Float64, 2}, grid, penalty = 100; overflown...)
-
-    # Use the grid or compute it
-    _grid = grid === nothing ? grid_compute(points) : grid
-
-    invalid = 0
-    # We cannot access INVALID_POINTS in parallel!
-    #empty!(INVALID_POINTS)
-
-    for _p in eachrow(points)
-
-        if any(all(abs.(valid_points .- _p[1:2]') .< _grid, dims = 2)) == false
-            invalid += 1
-            # Store invalid point
-            #push!(INVALID_POINTS, _p)
-        end
-    end
-
-    # invalid = sum(.!any(all(abs.(valid_points .- _p[1:2]') .< _grid, dims = 2)) for _p in eachrow(points))
+    invalid = sum(map(eachrow(points)) do p
+                      TRACK_BITMAP[p[1:2]] ? 0 : 1
+                  end)
     invalid * penalty
 end
 
