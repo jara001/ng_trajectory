@@ -105,7 +105,6 @@ function optimizer_init(; points,
 
     global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE, PLOT, BUDGET, NUM_WORKERS
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER, PENALIZER_INIT, PENALIZER_ARGS
-    global TRACK_BITMAP
 
     # Local to global variables
     CRITERION_ARGS = criterion_args
@@ -159,14 +158,6 @@ function optimizer_init(; points,
         if GRID === nothing
             GRID = grid_compute(points)
         end
-
-        TRACK_BITMAP = TrackBitmap([minimum(VALID_POINTS, dims = 1)...],
-                                   [maximum(VALID_POINTS, dims = 1)...],
-                                   [GRID,GRID])
-        foreach(eachrow(VALID_POINTS)) do p
-            TRACK_BITMAP[p] = true
-        end
-        @gp :map Gnuplot.palette(:gray1) "set size ratio -1" TRACK_BITMAP.bitmap' "w image notitle"
     end
 end
 
