@@ -201,7 +201,7 @@ function optimize_evolutionary()
 #                                                 mutation=gaussian(0.1),
 #                                                 crossover=TPX),
                                 Evolutionary.CMAES(sigma0=0.1),
-                                Evolutionary.Options(iterations=100,
+                                Evolutionary.Options(iterations=1000,
                                                      #parallelization=:thread,
                                                      show_trace=true,
                                                      reltol=1e-3,
