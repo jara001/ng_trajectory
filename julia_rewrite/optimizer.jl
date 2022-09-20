@@ -196,7 +196,7 @@ function Evolutionary.trace!(record::Dict{String,Any}, objfun, state, population
 end
 
 function Evolutionary.trace!(record::Dict{String,Any}, objfun, state, population, method::Evolutionary.CMAES, options)
-    plot_population(population, state)
+    #plot_population(population, state)
 end
 
 function optimize_evolutionary()
@@ -211,7 +211,7 @@ function optimize_evolutionary()
 #                                                 crossover=TPX),
                                 Evolutionary.CMAES(sigma0=0.1),
                                 Evolutionary.Options(iterations=100,
-                                                     parallelization=:thread,
+                                                     #parallelization=:thread,
                                                      show_trace=true,
                                                      reltol=1e-3,
                                                      successive_f_tol=3,
