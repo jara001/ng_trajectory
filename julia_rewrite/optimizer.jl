@@ -186,6 +186,9 @@ function Evolutionary.trace!(record::Dict{String,Any}, objfun, state, population
     #plot_population(population, value(state), video=true)
 end
 
+function Evolutionary.after_while!(objfun, state, method, options)
+    global STATE = state # allow investigating the internal state
+                         # after the optimization ends
 end
 
 function optimize_evolutionary()
@@ -202,8 +205,14 @@ function optimize_evolutionary()
                                 Evolutionary.Options(iterations=1000,
                                                      #parallelization=:thread,
                                                      show_trace=true,
+                                                     store_trace=true,
                                                      reltol=1e-6,
                                                      ))
+    println(res)
+    global RESULT = res
+    trace = Evolutionary.trace(res)
+    @gp :trace value.(trace)[10:end] "w l" "set grid"
+
     points01 = reshape(Evolutionary.minimizer(res), (n, 2))
 end
 
