@@ -196,12 +196,10 @@ function optimize_evolutionary()
     n = length(MATRYOSHKA)
     constr = BoxConstraints(zeros(2n), ones(2n))
     x0 = fill(0.5, 2n)
-    res = Evolutionary.optimize(opt, constr, x0,
-#                                 Evolutionary.GA(populationSize=30,
-#                                                 selection=uniformranking(10),
-#                                                 mutation=gaussian(0.1),
-#                                                 crossover=TPX),
-                                Evolutionary.CMAES(sigma0=0.1),
+    #method = Evolutionary.GA(populationSize=30, selection=uniformranking(10), mutation=gaussian(0.1), crossover=TPX),
+    #method = Evolutionary.CMAES(sigma0=0.1, c_1=0.01, c_mu=0.001, c_sigma=0.02)
+    method = Evolutionary.CMAES(sigma0=0.1)
+    res = Evolutionary.optimize(opt, constr, x0, method,
                                 Evolutionary.Options(iterations=1000,
                                                      #parallelization=:thread,
                                                      show_trace=true,
