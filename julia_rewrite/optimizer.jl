@@ -204,8 +204,7 @@ function optimize_evolutionary()
                                 Evolutionary.Options(iterations=1000,
                                                      #parallelization=:thread,
                                                      show_trace=true,
-                                                     reltol=1e-3,
-                                                     successive_f_tol=3,
+                                                     reltol=1e-4,
                                                      ))
     points01 = reshape(Evolutionary.minimizer(res), (n, 2))
 end
@@ -248,7 +247,7 @@ function optimize()
 
     global WRITER
     WRITER = open_video_out("video.mp4", RGB{N0f8}, (720, 1280),
-                            framerate=2, encoder_options=encoder_options)
+                            framerate=4, encoder_options=encoder_options)
 
     points01 = optimize_evolutionary()
 
