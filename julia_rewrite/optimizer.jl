@@ -204,7 +204,7 @@ function optimize_evolutionary()
     n = length(MATRYOSHKA)
     constr = BoxConstraints(zeros(2n), ones(2n))
     x0 = fill(0.5, 2n)
-    res = Evolutionary.optimize(_opt, constr, x0,
+    res = Evolutionary.optimize(opt, constr, x0,
 #                                 Evolutionary.GA(populationSize=30,
 #                                                 selection=uniformranking(10),
 #                                                 mutation=gaussian(0.1),
@@ -287,6 +287,11 @@ end
 
 prepare_points(points::Array{Float64, 2}, matr_len) = convert(Array{Float64,2}, points) # Nevergrad
 prepare_points(points::Vector{Float64}, matr_len) = reshape(points, (matr_len, 2)) # Evolutionary
+
+function opt(points)
+    #@time _opt(points)
+    _opt(points)
+end
 
 function _opt(points)
     global VALID_POINTS, CRITERION_ARGS, INTERPOLATOR_ARGS, PENALIZER_ARGS
