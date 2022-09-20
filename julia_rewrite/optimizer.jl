@@ -252,7 +252,8 @@ function optimize()
 
     global WRITER
     WRITER = open_video_out("video.mp4", RGB{N0f8}, (720, 1280),
-                            framerate=4, encoder_options=encoder_options)
+                            framerate=4, encoder_options=encoder_options,
+                            target_pix_fmt=VideoIO.AV_PIX_FMT_YUV420P)
 
     points01 = optimize_evolutionary()
 
