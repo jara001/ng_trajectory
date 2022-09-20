@@ -204,7 +204,7 @@ function optimize_evolutionary()
                                 Evolutionary.Options(iterations=1000,
                                                      #parallelization=:thread,
                                                      show_trace=true,
-                                                     reltol=1e-4,
+                                                     reltol=1e-6,
                                                      ))
     points01 = reshape(Evolutionary.minimizer(res), (n, 2))
 end
