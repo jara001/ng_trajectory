@@ -1,14 +1,14 @@
 
-_mu = 0.2           # Friction coeficient
-_g = 9.81           # Gravity acceleration coeficient
-_m = 3.68           # Vehicle mass
-_ro = 1.2           # Air density
-_A = 0.3            # Frontal reference aerodynamic area
-_cl = 1             # Drag coeficient
-v_0 = 0             # Initial speed [m.s^-1]
-v_lim = 4.5         # Maximum forward speed [m.s^-1]
-a_acc_max = 0.8     # Maximum longitudal acceleration [m.s^-2]
-a_break_max = 4.5   # Maximum longitudal decceleration [m.s^-2]
+const _mu = 0.2           # Friction coeficient
+const _g = 9.81           # Gravity acceleration coeficient
+const _m = 3.68           # Vehicle mass
+const _ro = 1.2           # Air density
+const _A = 0.3            # Frontal reference aerodynamic area
+const _cl = 1             # Drag coeficient
+const v_0 = 0             # Initial speed [m.s^-1]
+const v_lim = 4.5         # Maximum forward speed [m.s^-1]
+const a_acc_max = 0.8     # Maximum longitudal acceleration [m.s^-2]
+const a_break_max = 4.5   # Maximum longitudal decceleration [m.s^-2]
 
 function criterion_init()
     # TODO: update globals
