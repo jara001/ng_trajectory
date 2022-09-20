@@ -167,9 +167,9 @@ using FixedPointNumbers
 
 WRITER = nothing
 
-function plot_population(population, state)
+function plot_population(population, value; video=false)
     n = length(MATRYOSHKA)
-    @gp tit="Best value: $(value(state))" "set size ratio -1" :-
+    @gp tit="Best value: $(value)" "set size ratio -1" :-
     @gp :- VALID_POINTS[:, 1] VALID_POINTS[:, 2] "w p pt 1 lc rgbcolor '0xeeeeee' notitle" :-
     foreach(population) do p
         points01 = reshape(p, (n, 2))
@@ -182,12 +182,10 @@ function plot_population(population, state)
     write(WRITER, FileIO.load("frame.png"))
 end
 
-function Evolutionary.trace!(record::Dict{String,Any}, objfun, state, population, method::Evolutionary.GA, options)
-    plot_population(population, state)
+function Evolutionary.trace!(record::Dict{String,Any}, objfun, state, population, method, options)
+    #plot_population(population, value(state), video=true)
 end
 
-function Evolutionary.trace!(record::Dict{String,Any}, objfun, state, population, method::Evolutionary.CMAES, options)
-    #plot_population(population, state)
 end
 
 function optimize_evolutionary()
@@ -255,14 +253,13 @@ function optimize()
 
     PENALIZER_ARGS[:optimization] = false
     final = _opt(points01)
+    plot_population([points01], final)
 
     # Interpolate received points
     # It is expected that they are unique and sorted.
     _points = interpolate(mapreduce(permutedims, vcat, points))
 
-    @gp VALID_POINTS[:, 1] VALID_POINTS[:, 2] "w p pt 1 lc rgbcolor '0xeeeeee' notitle" :-
-    @gp :- _points[:, 1] _points[:, 2] "w l notitle" :-
-    @gp :- "set size ratio -1"
+
     close_video_out!(WRITER)
 
     lock(FILELOCK) do
