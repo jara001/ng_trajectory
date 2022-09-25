@@ -45,7 +45,11 @@ function map_create(points::Array{Float64,2}, origin=nothing, size=nothing, grid
         TRACK_BITMAP[_p] = true;
     end
 
-    @gp :map Gnuplot.palette(:gray1) "set size ratio -1" TRACK_BITMAP.bitmap' "w image notitle"
+    let tb = TRACK_BITMAP
+        img = map(tb.bitmap') do p p ? colorant"#eed" : colorant"white" end
+        @gp :map Gnuplot.palette(:gray1) "set size ratio -1" :-
+        @gp :- :map recipe(img, "dx=$(tb.p_step[1]) dy=$(tb.p_step[2]) origin=($(tb.p_min[1]), $(tb.p_min[2]))")
+    end
 
     MAP = _m
     MAP_ORIGIN = _origin

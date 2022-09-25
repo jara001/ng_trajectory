@@ -5,6 +5,7 @@ using Evolutionary
 using Metaheuristics
 using Gnuplot
 using PyCall
+using Colors
 
 include("utils.jl")
 include("interpolator.jl")
@@ -167,23 +168,65 @@ using FixedPointNumbers
 
 WRITER = nothing
 
-function plot_population(population, value; video=false)
+function plot_population_gp(population, value; video=false)
     n = length(MATRYOSHKA)
-    @gp tit="Best value: $(value)" "set size ratio -1" :-
-    @gp :- VALID_POINTS[:, 1] VALID_POINTS[:, 2] "w p pt 1 lc rgbcolor '0xeeeeee' notitle" :-
+    @gp tit="Best value: $(@sprintf "%5.3f" value)" "set size ratio -1" :-
+    #@gp :- VALID_POINTS[:, 1] VALID_POINTS[:, 2] "w p pt 1 lc rgbcolor '0xeeeeee' notitle" :-
+    let tb = TRACK_BITMAP
+        img = map(tb.bitmap') do p p ? colorant"#eed" : colorant"white" end
+        @gp :- Gnuplot.palette(:gray1) "set size ratio -1" :-
+        @gp :- recipe(img, "dx=$(tb.p_step[1]) dy=$(tb.p_step[2]) origin=($(tb.p_min[1]), $(tb.p_min[2]))") :-
+    end
+
     foreach(population) do p
         points01 = reshape(p, (n, 2))
-        points = [matryoshka_map(MATRYOSHKA[i], [p])[1] for (i, p) in enumerate(eachrow(points01))]
-        _points = interpolate(mapreduce(permutedims, vcat, points))
+        points = zeros(n, 2)
+        for (i, p) in enumerate(eachrow(points01))
+            points[i, :] .= matryoshka_map(MATRYOSHKA[i], [p])[1]
+        end
+        _points = interpolate(points)
         @gp :- _points[:, 1] _points[:, 2] "w l notitle" :-
+        @gp :- points[:, 1] points[:, 2] "w p pt 1 lc -1 notitle" :-
     end
     @gp :- ""
     save(term="pngcairo size 1280, 720 fontscale 0.8", output="frame.png")
     write(WRITER, FileIO.load("frame.png"))
 end
 
+function plot_population(population, value; video=false)
+    n = length(MATRYOSHKA)
+    plot(plot_title="Best value: $(@sprintf "%5.3f" value)")
+    video && plot!(size=(1280, 720))
+    let tb = TRACK_BITMAP
+        img = map(tb.bitmap') do p
+            p ? colorant"#eed" : colorant"white"
+        end
+        plot!(xlims=[tb.p_min[1], tb.p_max[1]], ylims=[tb.p_min[2], tb.p_max[2]])
+        plot!([tb.p_min[1], tb.p_max[1]], [tb.p_min[2], tb.p_max[2]],
+              img, yflip=false)
+    end
+
+    foreach(population) do p
+        points01 = reshape(p, (n, 2))
+        points = zeros(n, 2)
+        for (i, p) in enumerate(eachrow(points01))
+            points[i, :] .= matryoshka_map(MATRYOSHKA[i], [p])[1]
+        end
+        _points = interpolate(points)
+        plot!(_points[:, 1], _points[:, 2], legend=false)
+        plot!(points[:, 1], points[:, 2], seriestype=:scatter, shape=:+, mc=:black)
+    end
+
+    if video
+        Plots.png("frame.png")
+        write(WRITER, FileIO.load("frame.png"))
+    else
+        plot!(show=true)
+    end
+end
+
 function Evolutionary.trace!(record::Dict{String,Any}, objfun, state, population, method, options)
-    #plot_population(population, value(state), video=true)
+    plot_population(population, value(state), video=false)
 end
 
 function Evolutionary.after_while!(objfun, state, method, options)
@@ -197,8 +240,8 @@ function optimize_evolutionary()
     constr = BoxConstraints(zeros(2n), ones(2n))
     x0 = fill(0.5, 2n)
     #method = Evolutionary.GA(populationSize=30, selection=uniformranking(10), mutation=gaussian(0.1), crossover=TPX)
-    #method = Evolutionary.CMAES(sigma0=0.1, c_1=0.01, c_mu=0.001, c_sigma=0.02)
-    method = Evolutionary.CMAES(sigma0=0.1)
+    method = Evolutionary.CMAES(sigma0=0.1, c_1=0.01, c_mu=0.001, c_sigma=0.02)
+    #method = Evolutionary.CMAES(sigma0=0.1)
     res = Evolutionary.optimize(opt, constr, x0, method,
                                 Evolutionary.Options(iterations=1000,
                                                      #parallelization=:thread,
@@ -252,7 +295,7 @@ function optimize()
 
     global WRITER
     WRITER = open_video_out("video.mp4", RGB{N0f8}, (720, 1280),
-                            framerate=4, encoder_options=encoder_options,
+                            framerate=10, encoder_options=encoder_options,
                             target_pix_fmt=VideoIO.AV_PIX_FMT_YUV420P)
 
     points01 = optimize_evolutionary()
@@ -261,7 +304,7 @@ function optimize()
 
     PENALIZER_ARGS[:optimization] = false
     final = _opt(points01)
-    plot_population([points01], final)
+    plot_population_gp([points01], final)
 
     # Interpolate received points
     # It is expected that they are unique and sorted.
