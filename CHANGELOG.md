@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Fixed
 - Interpolators
     - Argument `from_left` is properly handled inside `trajectoryClosest()`.
+- Selectors
+    - _Uniform_time_
+        - A proper exception is raised when passing negative `remain` value.
 
 ## 1.7.1 - 2022-08-09
 ### Added
