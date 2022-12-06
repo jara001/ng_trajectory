@@ -186,7 +186,7 @@ def trajectoryClosest(points: numpy.ndarray, reference: numpy.ndarray, *, from_l
     Returns:
     closest -- point on the trajectory closest to the reference, 1x(>=2) numpy.ndarray
     """
-    return points[trajectoryClosestIndex(points, reference, from_left), :]
+    return points[trajectoryClosestIndex(points, reference, from_left = from_left), :]
 
 
 def trajectoryClosestIndex(points: numpy.ndarray, reference: numpy.ndarray, *, from_left: bool = False) -> int:
