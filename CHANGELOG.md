@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Criterions
+    - [**NEW**] _Jazar_model_
+        - Criterion 'Jazar_model' computes speed profile using model from Jazar's book.
+
 ## 1.7.2 - 2023-01-05
 ### Fixed
 - Interpolators
