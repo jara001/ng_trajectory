@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - [**NEW**] _Jazar_model_
         - Criterion 'Jazar_model' computes speed profile using model from Jazar's book.
 
+### Changed
+- 'ng_graph'
+    - Logs described by JSON files are looked for inside the folder of configuration file instead of the current folder.
+
 ### Fixed
 - 'ng_graph'
     - Parameter `-r` is now shown in the correct group.

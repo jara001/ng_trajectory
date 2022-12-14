@@ -785,7 +785,10 @@ if __name__ == "__main__":
 
                 for _li, loop in enumerate(log_names[x]):
                     for _i, step in enumerate(log_names[x][loop]):
-                        _logname = log_names[x][loop][step]
+                        _logname = os.path.join(
+                            os.path.dirname(input_file.name),
+                            log_names[x][loop][step]
+                        )
                         if not args.recursive_find:
                             if not os.path.exists(_logname):
                                 continue
