@@ -402,6 +402,14 @@ class Log(object):
 
 
     def load_data(self, f: TextIO):
+        # Hasten the process when '--merged-min' is used.
+        # Note: This potentially breaks some options, but they were not used?
+        if self.__merged_min:
+            self.__parts["correct"] = [
+                line.split(":")[1] for line in f if line.startswith("correct:")
+            ]
+            return
+
         for _li, line in enumerate(f):
 
             # Configuration
