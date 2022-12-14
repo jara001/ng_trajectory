@@ -207,7 +207,7 @@ LOG_MODE_PARSER.add_argument("-p",
     action = "store_true",
 )
 
-LOG_MODE_PARSER.add_argument("-r",
+PARSER.add_argument("-r",
     dest = "recursive_find",
     help = "Look for the log files in subfolders as well.",
     action = "store_true",

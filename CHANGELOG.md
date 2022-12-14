@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - [**NEW**] _Jazar_model_
         - Criterion 'Jazar_model' computes speed profile using model from Jazar's book.
 
+### Fixed
+- 'ng_graph'
+    - Parameter `-r` is now shown in the correct group.
+
 ## 1.7.2 - 2023-01-05
 ### Fixed
 - Interpolators
