@@ -199,6 +199,14 @@ GRAPH_PARSER.add_argument("--show-legend",
     action = "store_true",
 )
 
+GRAPH_PARSER.add_argument("--loc-legend",
+    nargs = "?",
+    choices = list(matplotlib.offsetbox.AnchoredOffsetbox.codes.keys()),
+    dest = "loc_legend",
+    help = "Location of the legend. Same as 'loc' for 'matplotlib.legend'.",
+    type = str,
+)
+
 PARSER.add_argument("--step",
     nargs = 1,
     dest = "step",
@@ -379,10 +387,11 @@ class Graph(object):
         )
 
 
-    def show_legend(self):
+    def show_legend(self, loc = None):
         """Shows the legend in the figure with created handles."""
         self.__axes.legend(
             handles = self.__legend_handles,
+            **{"loc": loc} if loc is not None else {}
         )
 
 
@@ -856,7 +865,7 @@ if __name__ == "__main__":
                 g.add_legend_handle(label = os.path.basename(input_file.name), dataset = _if)
 
         if args.show_legend:
-            g.show_legend()
+            g.show_legend(loc = args.loc_legend)
 
         g.reduce_xticks()
         g.set_ylim(ymin = args.ymin, ymax = args.ymax)

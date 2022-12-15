@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Criterion 'Jazar_model' computes speed profile using model from Jazar's book.
 - 'ng_graph'
     - Parameter `--show-legend` to display figure legend.
+    - Parameter `--loc-legend` to set position of shown legend.
 
 ### Changed
 - 'ng_graph'
