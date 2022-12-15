@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - 'ng_graph'
     - Parameter `--show-legend` to display figure legend.
     - Parameter `--loc-legend` to set position of shown legend.
+    - Parameter `--label` to set legend labels for each dataset.
 
 ### Changed
 - 'ng_graph'

@@ -207,6 +207,14 @@ GRAPH_PARSER.add_argument("--loc-legend",
     type = str,
 )
 
+GRAPH_PARSER.add_argument("--label",
+    nargs = 1,
+    dest = "label",
+    help = "Label of dataset to be displayed in the legend. (Use multiple times to set labels for other configuration files.)",
+    action = "append",
+    type = str,
+)
+
 PARSER.add_argument("--step",
     nargs = 1,
     dest = "step",
@@ -862,7 +870,10 @@ if __name__ == "__main__":
                     g.plot_log(logs[args.step[0]], variate = x, dataset = _if)
 
             if args.show_legend:
-                g.add_legend_handle(label = os.path.basename(input_file.name), dataset = _if)
+                g.add_legend_handle(
+                    label = args.label[_if][0] if args.label is not None and len(args.label) > _if else os.path.basename(input_file.name),
+                    dataset = _if
+                )
 
         if args.show_legend:
             g.show_legend(loc = args.loc_legend)
