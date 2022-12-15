@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Criterions
     - [**NEW**] _Jazar_model_
         - Criterion 'Jazar_model' computes speed profile using model from Jazar's book.
+- 'ng_graph'
+    - Parameter `--show-legend` to display figure legend.
 
 ### Changed
 - 'ng_graph'

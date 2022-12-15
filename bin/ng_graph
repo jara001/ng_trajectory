@@ -193,6 +193,12 @@ GRAPH_PARSER.add_argument("--markersize",
     type = float,
 )
 
+GRAPH_PARSER.add_argument("--show-legend",
+    dest = "show_legend",
+    help = "Show the legend in the figure.",
+    action = "store_true",
+)
+
 PARSER.add_argument("--step",
     nargs = 1,
     dest = "step",
@@ -256,6 +262,8 @@ class Graph(object):
 
         self.__marker = marker
         self.__markersize = markersize
+
+        self.__legend_handles = []
 
         # Category10 Tableau colors
         # https://matplotlib.org/3.5.0/users/prev_whats_new/dflt_style_changes.html
@@ -355,6 +363,27 @@ class Graph(object):
     def set_ylim(self, ymin = None, ymax = None):
         """Set ymin and ymax in the figure."""
         self.__axes.set_ylim(ymin = ymin, ymax = ymax)
+
+
+    def add_legend_handle(self, label, dataset = 0):
+        """Registers a legend handle to be displayed inside the legend."""
+        self.__legend_handles.append(
+            matplotlib.pyplot.Line2D(
+                [0], [0],
+                label = label,
+                color = "white",
+                marker = "o",
+                markerfacecolor = self.__colors[dataset],
+                markersize = 8,
+            )
+        )
+
+
+    def show_legend(self):
+        """Shows the legend in the figure with created handles."""
+        self.__axes.legend(
+            handles = self.__legend_handles,
+        )
 
 
 ######################
@@ -822,6 +851,12 @@ if __name__ == "__main__":
                         pass
 
                     g.plot_log(logs[args.step[0]], variate = x, dataset = _if)
+
+            if args.show_legend:
+                g.add_legend_handle(label = os.path.basename(input_file.name), dataset = _if)
+
+        if args.show_legend:
+            g.show_legend()
 
         g.reduce_xticks()
         g.set_ylim(ymin = args.ymin, ymax = args.ymax)
