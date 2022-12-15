@@ -210,7 +210,7 @@ GRAPH_PARSER.add_argument("--loc-legend",
 GRAPH_PARSER.add_argument("--label",
     nargs = 1,
     dest = "label",
-    help = "Label of dataset to be displayed in the legend. (Use multiple times to set labels for other configuration files.)",
+    help = "Label of dataset to be displayed in the legend. Overwrites value of '_label' inside of the configuration. (Use multiple times to set labels for other configuration files.)",
     action = "append",
     type = str,
 )
@@ -826,6 +826,9 @@ if __name__ == "__main__":
             # Load configuration
             configuration = json.loads(input_file.read())
 
+            # Store label
+            _label = args.label[_if][0] if args.label is not None and len(args.label) > _if else configuration.get("_label", os.path.basename(input_file.name))
+
             # Construct names of all expected files
             if "_version" in configuration and configuration.get("_version") > 1:
                 log_names = construct_log_names(configuration)
@@ -871,7 +874,7 @@ if __name__ == "__main__":
 
             if args.show_legend:
                 g.add_legend_handle(
-                    label = args.label[_if][0] if args.label is not None and len(args.label) > _if else os.path.basename(input_file.name),
+                    label = _label,
                     dataset = _if
                 )
 
