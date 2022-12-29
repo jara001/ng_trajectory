@@ -1,8 +1,6 @@
 using Printf
 using LinearAlgebra
 
-include("utils.jl")
-include("parameter.jl")
 
 # using .ParameterListClass.ParameterClass
 # using .ParameterListClass
@@ -18,6 +16,14 @@ add_parameter!(P_seg, Parameter("reserve_width", false, false, Bool, "When true,
 add_parameter!(P_seg, Parameter("reserve_selected", [], [], Array, "IDs of segments that should use the reservation method, when empty, use all.", ""))
 add_parameter!(P_seg, Parameter("reserve_distance", 2.0, 2.0, float, "Distance from the line segment that is reserved to the segment.", ""))
 add_parameter!(P_seg, Parameter("plot_flood", false, false, Bool, "Whether the flooded areas should be plotted.", ""))
+
+function set_maps(map, map_origin, map_grid)
+    global MAP, MAP_ORIGIN, MAP_GRID
+
+    MAP = map
+    MAP_ORIGIN = map_origin
+    MAP_GRID = map_grid
+end
 
 function segmentator_init(track; kwargs...)
     global MAP, MAP_ORIGIN, MAP_GRID

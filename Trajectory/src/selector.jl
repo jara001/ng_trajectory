@@ -1,16 +1,13 @@
-include("utils.jl")
-include("interpolator.jl")
-include("parameter.jl")
-include("criterions.jl")
 
 # using .ParameterListClass.ParameterClass
 # using .ParameterListClass
 
 P_sel = ParameterList()
 add_parameter!(P_sel, Parameter("sampling_distance", 1.0, 1.0, float, "[m] Distance of super-sampling before the interpolation, skipped when 0.", "init"))
-add_parameter!(P_sel, Parameter("distance", 0, 0, float, "[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.", "init"))
+add_parameter!(P_sel, Parameter("distance", 0.05, 0.05, float, "[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.", "init"))
 add_parameter!(P_sel, Parameter("rotate", 0, 0, float, "Parameter for rotating the input path. 0 is not rotated. <0, 1)", "init"))
 add_parameter!(P_sel, Parameter("fixed_points", [], [], Array, "Points to be used in the selection upon calling 'select'.", "init"))
+add_parameter!(P_sel, Parameter("overlap", 100, 0, float, "Size of the trajectory overlap. 0 disables this.", "init"))
 
 #curvature2
 
@@ -25,12 +22,20 @@ function select(points, remain::Int; overflown...)
         throw(ArgumentError("Negative selection requires set 'distance' parameter for 'uniform_distance' selector."))
     end
 
-    rpoints = trajectory_resample(points, remain)
+    if true
+        rpoints = trajectory_resample(points, remain)
 
-    # !Force number of points
-    if remain > 0 && size(rpoints, 1) != remain
-        return trajectory_resample(points, remain - 1)
+        # !Force number of points
+        if remain > 0 && size(rpoints, 1) != remain
+            return trajectory_resample(points, remain - 1)
+        end
+    else
+        rpoints = trajectory_time_resample(points, remain)
     end
+
+    println(size(rpoints))
+    println(typeof(rpoints))
+    #println(rpoints)
 
     return rpoints
 end
@@ -138,9 +143,26 @@ function trajectory_resample(points, remain)
 end
 
 function trajectory_time_resample(points, remain)
+    if remain < 0
+        throw(
+            ArgumentError("Negative selection is not supported by 'uniform_time' selector.")
+        )
+    end
+
+    if get_value(P_sel, "distance") <= 0
+        throw(
+            ArgumentError("Selector 'uniform_time' requires 'distance' parameter to be set '>0.0'.")
+        )
+    end
+
+    if get_value(P_sel, "overlap") <= 0
+        println(stderr, "Warning: Consider setting 'overlap' parameter, as otherwise, the initial conditions affect the results.")
+    end
+
+
     resampled_trajectory = trajectory_resample(vcat(points), -1)
 
-    _, _, _t = profile_compute(resampled_trajectory)
+    _, _, _t = jazar_profile_compute(resampled_trajectory, get_value(P_sel, "overlap"))
 
     # TODO: Rotate is not supported as it needs to be done in 'trajectory_resample' first.
     #function trajectoryRotate(points, npi, rotation = 0.0)
@@ -155,15 +177,17 @@ function trajectory_time_resample(points, remain)
         [ 
             rotated_points[argmin(broadcast(abs, _t .- i))[1], :] 
             for i in range(0, _t[end], remain+1)[1:end-1]
-        ]
+        ]...
     )'
 
-    return hcat(
-        [
-            points[trajectory_closest_index(hcat(points), resampled_point), :]
-            for resampled_point in eachrow(equidistant_trajectory)
-        ]
-    )'
+    return vcat(
+        hcat(
+            [
+                points[trajectory_closest_index(hcat(points), resampled_point), :]
+                for resampled_point in eachrow(equidistant_trajectory)
+            ]...
+        )'
+    )
 end
 
 function xxx()

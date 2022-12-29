@@ -1,5 +1,7 @@
 using JSON
 using Printf
+using Colors
+using Gnuplot
 
 ######################
 # Utilities (segmentator)
@@ -83,8 +85,9 @@ function points_distance(points)
 end
 
 function trajectory_closest_index(points, reference; from_left::Bool=false)
+
     _distances = points[:, 1:2] .- reference[1:2]'
-    index = argmin(hypot.(_distances[:, 1], _distances[:2]), dims=1)[1]
+    index = argmin(hypot.(_distances[:, 1], _distances[:, 2]), dims=1)[1]
 
     if from_left == false
         return index
@@ -160,22 +163,24 @@ function trajectory_sort(points; verify_sort::Bool=false)
                 _oi = findall(_dists .> sqrt(2) * _grid)
 
                 # Find group sizes
-                _groups = (
-                    [(_oi[_i] + 1, _oi[_i+1], _oi[_i+1] - _oi[_i]) for _i in 1:(length(_oi)-1)]
-                ) # start id, end id (both inclusive), size of the group
+                _groups = #(
+                    [(_oi[_i][1] + 1, _oi[_i+1][1], _oi[_i+1][1] - _oi[_i][1]) for _i in 1:(length(_oi)-1)]
+                #) # start id, end id (both inclusive), size of the group
 
 
-                _groups = (groups..., (_oi[end] + 1, _oi[1], _oi[1] + length(spoints) - _oi[end])...)
+                _groups = [_groups..., (_oi[end][1] + 1, _oi[1][1], _oi[1][1] + length(spoints) - _oi[end][1])]
+
                 # Sort the groups in order to find the largest group
-                _groups = sort(_groups, by=last, rev=true)
+                _groups = sort(_groups, by=x->(x[end]), rev=true)
 
                 # Delete outlier
-                spoints = _points[1:end.!=_groups%length(spoints), :]
+                spoints = spoints[1:end.!=_groups[1][2]%length(spoints), :]
             else
                 break
             end
         end
     end
+    println(size(spoints))
     return spoints
 end
 

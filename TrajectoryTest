@@ -1,0 +1,395 @@
+### A Pluto.jl notebook ###
+# v0.19.16
+
+using Markdown
+using InteractiveUtils
+
+# ╔═╡ c8808eb0-bd59-4b5f-8b56-859e02baf877
+import Pkg
+
+# ╔═╡ 2d1fdafc-ae32-4ecc-9757-c1aadaedb01e
+Pkg.activate("/home/klapajar/Stažené/julia-1.8.2/bin/ng_trajectory")
+
+# ╔═╡ 8c117de2-7950-472b-8e52-08ec8ac3ed34
+using NPZ, Revise, Gnuplot, Trajectory, PlutoUI
+
+# ╔═╡ 1571e25f-5fc2-46a7-a571-d310d75506cd
+using Plots
+
+# ╔═╡ 5edd439d-1c05-4daf-a0cb-56ac04dd9b67
+begin
+	cd("/home/klapajar/Stažené/julia-1.8.2/bin/ng_trajectory/Trajectory/src")
+	pwd()
+end
+
+# ╔═╡ 18d5a461-a6fa-4ca9-9ae4-8d3607388c98
+START_POINTS = npzread("configuration/ng_start_points_torino2.npy");
+
+# ╔═╡ a208634e-61cd-49dc-b6f1-b41844c052e0
+VALID_POINTS = npzread("configuration/ng_valid_points_torino2.npy")
+
+# ╔═╡ 3fc3e332-ae2c-484e-b92c-d58db98ac12a
+function ingredients(path::String)
+	# this is from the Julia source code (evalfile in base/loading.jl)
+	# but with the modification that it returns the module instead of the last object
+	name = Symbol(basename(path))
+	m = Module(name)
+	Core.eval(m,
+        Expr(:toplevel,
+             :(eval(x) = $(Expr(:core, :eval))($name, x)),
+             :(include(x) = $(Expr(:top, :include))($name, x)),
+             :(include(mapexpr::Function, x) = $(Expr(:top, :include))(mapexpr, $name, x)),
+             :(include($path))))
+	m
+end
+
+# ╔═╡ 943b6681-aed4-42fc-abaf-fc9c841eb86f
+res = trajectory_resample(vcat(START_POINTS), 20)
+
+# ╔═╡ ad789b81-8c7e-4635-b2bc-d779d4f5ed8d
+@gp res[:,1] res[:,2] "with lp"
+
+# ╔═╡ 1b31c446-7493-4348-8790-4b071587feda
+println(res)
+
+# ╔═╡ 8301361a-2b8b-4824-98cf-8bec2a262a85
+println(size(res, 1))
+
+# ╔═╡ 57d3d472-0189-406c-864b-285697d012f4
+begin
+	P_sel.parameters["distance"].value = 0.1;
+	P_sel.parameters["overlap"].value = 100;
+	remain = 20;
+	overlap = 100;
+end
+
+# ╔═╡ 12d0e24d-0950-4248-bdd4-58353dac3d85
+resample = trajectory_resample(vcat(START_POINTS), -1)
+
+# ╔═╡ abc47aa7-2f90-40a7-a4fe-26374bf9c580
+_, _, _t = profile_compute(resample, overlap);
+
+# ╔═╡ 47d895da-be83-4fbe-980b-926abde8026a
+_t
+
+# ╔═╡ cf6f8a91-971d-47ad-a242-d6377913e9dd
+function trajectoryRotate(points, npi, rotation = 0.0)
+	# Tohle stejně není v té jl implementaci podporované.
+	return circshift(points, -floor(npi * rotation))
+end
+
+# ╔═╡ 56195683-3787-4eb1-9d28-31e68ac7d4aa
+# Time sample
+begin
+	# 1. Rotate the trajectory
+	#rotated_points = utils.trajectoryRotate(
+    #    resampled_points,
+    #    numpy.abs(
+    #        numpy.subtract(
+    #            time_vector,
+    #            time_vector[-1] / remain
+    #        )
+    #    ).argmin(),
+    #    P.getValue("rotate")
+    #)
+	next_point_index = argmin(broadcast(abs, _t .- (_t[end] / remain)))[1]
+	rotated_points = trajectoryRotate(resample, next_point_index, 0.0)
+
+	# 2. Time sample
+	#return numpy.asarray(
+    #    [
+    #        rotated_points[
+    #            numpy.abs(
+    #                numpy.subtract(
+    #                    time_vector,
+    #                    time
+    #                )
+    #            ).argmin(),
+    #        :]
+    #        for time in numpy.linspace(0.0, time_vector[-1], remain, endpoint = False)
+    #    ]
+    #)
+	#for i in range(0, _t[end], remain+1)[1:end-1]
+		#println(rotated_points[argmin(broadcast(abs, _t .- i))[1], :])
+	#end
+	rpoints = [ rotated_points[argmin(broadcast(abs, _t .- i))[1], :] for i in range(0, _t[end], remain+1)[1:end-1] ]
+end
+
+# ╔═╡ f2a6f67a-2592-415b-8850-8245a21022e4
+rpoints_ = hcat(rpoints...)'
+
+# ╔═╡ f86bb7b3-b805-4587-8ce9-a079f90b03e2
+[ trajectory_closest_index(hcat(START_POINTS), _p) for _p in eachrow(rpoints_) ]
+
+# ╔═╡ dfe7d1c7-ec22-42da-853f-2a9bed3e30b9
+tpoints = [ START_POINTS[trajectory_closest_index(hcat(START_POINTS), _p), :] for _p in eachrow(rpoints_) ];
+
+# ╔═╡ eeee565d-df07-47a2-987c-a4c742e02e9e
+tpoints_ = hcat(tpoints...)'
+
+# ╔═╡ 85f83e42-474f-4abf-b24d-6cbb9407a3c0
+@gp tpoints_[:,1] tpoints_[:,2] "with lp"
+
+# ╔═╡ defe77cf-adaa-4b24-a6af-c9c9cf8daefe
+npoints = vcat(trajectory_time_resample(vcat(START_POINTS), remain))
+
+# ╔═╡ cfb418f0-f8f6-42b1-aeb8-3242edd9b96b
+@gp npoints[:,1] npoints[:,2] "with lp"
+
+# ╔═╡ ff11e1c8-bcda-4abb-9222-2f0323179f30
+a = trajectory_resample(npoints, 400)
+
+# ╔═╡ 184e2ab1-8df3-4638-8079-e778b629d48e
+@gp a[:, 1] a[:, 2] "with lp"
+
+# ╔═╡ 3b1a9af9-efd4-4a7b-9b81-5ddd1182ec15
+jv, ja, jt = jazar_profile_compute(a)
+
+# ╔═╡ 9409e2d3-bf65-48ee-aec4-bde20d6a9aa5
+Trajectory.segmentator_init(VALID_POINTS)
+
+# ╔═╡ cbbdc272-ba5a-436b-88ac-a6a256782582
+optimizer_init(points = VALID_POINTS, group_centers = [], group_centerline = START_POINTS)
+
+# ╔═╡ b82a1559-72b6-459c-9ea6-1f0811332728
+let
+	points = VALID_POINTS
+	group_centerline = START_POINTS
+	groups = 12
+	layers = 5
+	OPTIMIZER = nothing
+	MATRYOSHKA = nothing
+	CRITERION_ARGS = nothing
+	INTERPOLATOR_ARGS = ()
+	SEGMENTATOR_ARGS = ()
+	SELECTOR_ARGS = ()
+	PENALIZER_INIT = nothing
+	PENALIZER_ARGS = ()
+	LOGFILE = nothing
+	GRID = Trajectory.MAP_GRID
+	plot = false
+	
+	    #global penalizeZ
+	    #penalizeZ = penalize
+
+	
+	    if MATRYOSHKA === nothing || _holdmatryoshka == false
+	        # Note: In version <=1.3.0 the group_centerline passed to the SELECTOR was sorted using
+	        #       ng_trajectory.interpolators.utils.trajectorySort, but it sometimes rotated the
+	        #       already sorted centerline; interestingly, the result was counterclockwise at all
+	        #       times (or at least very very often).
+	
+	        group_centers = Trajectory.select(group_centerline, groups; SELECTOR_ARGS...)
+	
+	        if plot == true
+	            # TODO: plot
+	        end
+	
+	        # Matryoshka construction
+	        _groups = Trajectory.segmentate(points, group_centers; SEGMENTATOR_ARGS...)
+	        # println(size(_groups))
+	        # for _i in range(1, size(_groups, 1))
+	        #     println(size(_groups[_i]))
+	        # end
+	
+	        grouplayers = Trajectory.groups_border_obtain(_groups)
+	        grouplayers = Trajectory.groups_border_beautify(grouplayers, 400)
+	
+	        if plot == true
+	            # TODO: plot
+	        end
+	
+	        layers_center = Trajectory.groups_center_compute(_groups)
+	        layers_count = [layers for _ in 1:length(grouplayers)]
+	
+	        MATRYOSHKA = [Trajectory.matryoshka_create(grouplayers[_i], layers_center[_i], layers_count[_i]) for _i in 1:length(_groups)]
+	        # println(length(MATRYOSHKA[1]))
+	        # TODO: plot
+	
+	        println("Matryoshka mapping constructed.")
+	
+	        if GRID === nothing
+	            GRID = Trajectory.grid_compute(points)
+	        end
+	    end
+end
+
+# ╔═╡ 45820b6e-8130-444e-88f5-330a5efb3cad
+Trajectory.execute()
+
+# ╔═╡ 1a569c00-69e3-4489-99df-7605e5a1b16a
+Trajectory.plot_population([Trajectory.RESULT.minimizer], 0)
+
+# ╔═╡ 066e1ebc-8d52-4db3-bceb-d0287221c319
+md"# Trajectory sort debug"
+
+# ╔═╡ 409e8333-f3f6-4e70-8c49-3687ad037d2e
+group_centers = Trajectory.select(START_POINTS, 14)
+
+# ╔═╡ f713abbc-36b1-4470-9042-9a616e491cc9
+_groups = Trajectory.segmentate(VALID_POINTS, group_centers)
+
+# ╔═╡ fc8bb619-6c86-4a3b-9fa4-f0f817d19caf
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+	@gp "" :-
+	for g in _groups
+		@gp :- g[:,1] g[:,2] "w p ps 0.3"
+	end
+	@gp :- ""
+end
+  ╠═╡ =#
+
+# ╔═╡ b40aea3b-997a-49a2-9502-d4114d3a4f29
+function groups_border_obtain(groups, grid=nothing)
+
+    _borders = []
+
+    for (_i, _g) in enumerate(groups)
+        _border = Array{Float64}(undef, 0, 2)
+
+        # Obtain grid size if not set
+        _grid = grid !== nothing ? grid : minimum(minimum(u[2:end] - u[1:end-1] for u in [unique(sort(_g[:, d])) for d in 1:size(_g)[2]]))
+
+        # Go through all dimensions
+        for _d in 1:ndims(_g)
+
+            # Find unique values in that dimension
+            for _u in unique(sort(_g[:, _d]))
+	            _v = _g[findall(_g[:, _d] .== _u), :]
+                # Append points with max / min values in another dimension
+                _border = vcat(_border, minimum(_v, dims=1))
+                _border = vcat(_border, maximum(_v, dims=1))
+
+                # Append inner borders
+                # Obtain values in the dimension
+                _v = _g[findall(_g[:, _d] .== _u), :]
+
+                # Sort them
+                # Enforce the axis as otherwise it is not sorted in ascending order everytime.
+                _v = _v[sortperm(_v[:, 3 - _d]), :]
+
+                # Find distances between neighbouring points
+				_dists = map(maximum, eachrow(_v[2:end, :] .- _v[1:end-1, :]))
+				# Find points in the distance larger than 1.5x _grid
+                _bords = findall(_dists .> (_grid * 1.5))
+
+				for _b in _bords
+                    _border = vcat(_border, _v[[_b], :])
+                    _border = vcat(_border, _v[[_b+1], :])
+                end
+            end
+
+        end
+        push!(_borders, _border)
+    end
+    [unique(sortslices(b, dims=1, by=x -> (x[1], x[2])), dims=1) for b in _borders]
+end
+
+
+# ╔═╡ ca830927-870b-46b6-9c3c-7f6fbd866319
+grouplayers1 = groups_border_obtain(_groups)[9:9]
+
+# ╔═╡ d8f21e2a-a7ce-4fdf-82ab-3cd0c70bce02
+begin
+	for g in grouplayers1
+		@gp :- g[:,1] g[:,2] "w p ps 0.3"
+	end
+	@gp :- ""
+end
+
+# ╔═╡ ebe10ebd-bb22-4dde-9a00-ab0210cb7eb7
+grouplayers = Trajectory.groups_border_beautify(grouplayers1, 400)
+
+# ╔═╡ e661445f-926f-4101-9173-b9adc2e18828
+begin
+	@gp "" :-			
+	for gl in grouplayers[7:7] 
+		@gp :- gl[:, 1] gl[:, 2] "w lp" :-
+	end
+	@gp :- ""
+end
+
+# ╔═╡ 1ac267f1-975e-4882-9ec0-12e9a7670934
+layers_center = Trajectory.groups_center_compute(_groups)
+
+# ╔═╡ 0f075dfa-9ef8-4d21-91f8-165f44b1ecfd
+layers_count = [5 for _ in 1:length(grouplayers)]
+
+# ╔═╡ e585ad3b-0f82-4803-b2c4-d2634d39e16d
+MATRYOSHKA = [Trajectory.matryoshka_create(grouplayers[_i], layers_center[_i], layers_count[_i]) for _i in 1:length(_groups)]
+
+# ╔═╡ 5973a966-28cb-4097-9987-24d89d6ef638
+begin
+	i = Trajectory.MATRYOSHKA[1]
+	x = i[1](0.5, 0.5)
+	y = i[2](0.5, 0.5)
+end
+
+# ╔═╡ 5702e760-3bbc-4dd3-9575-292409c5f5f3
+PlutoUI.TableOfContents()
+
+# ╔═╡ 126f4843-5d9b-4cca-8f73-b50eaa195848
+Base.@kwdef struct Foo
+            a::Int = 1         # specified default
+            b::String = "Hello"         # required keyword
+end
+
+# ╔═╡ bcf2fe70-fd30-4e69-97cb-8c7d37291258
+Foo(a=2)
+
+# ╔═╡ f44a0002-af0c-48a4-98fe-28e0abadaa4a
+plot(rand(10), rand(10))
+
+# ╔═╡ Cell order:
+# ╠═c8808eb0-bd59-4b5f-8b56-859e02baf877
+# ╠═2d1fdafc-ae32-4ecc-9757-c1aadaedb01e
+# ╠═8c117de2-7950-472b-8e52-08ec8ac3ed34
+# ╠═5edd439d-1c05-4daf-a0cb-56ac04dd9b67
+# ╠═18d5a461-a6fa-4ca9-9ae4-8d3607388c98
+# ╠═a208634e-61cd-49dc-b6f1-b41844c052e0
+# ╟─3fc3e332-ae2c-484e-b92c-d58db98ac12a
+# ╠═943b6681-aed4-42fc-abaf-fc9c841eb86f
+# ╠═ad789b81-8c7e-4635-b2bc-d779d4f5ed8d
+# ╠═1b31c446-7493-4348-8790-4b071587feda
+# ╠═8301361a-2b8b-4824-98cf-8bec2a262a85
+# ╠═57d3d472-0189-406c-864b-285697d012f4
+# ╠═12d0e24d-0950-4248-bdd4-58353dac3d85
+# ╠═abc47aa7-2f90-40a7-a4fe-26374bf9c580
+# ╠═47d895da-be83-4fbe-980b-926abde8026a
+# ╠═cf6f8a91-971d-47ad-a242-d6377913e9dd
+# ╠═56195683-3787-4eb1-9d28-31e68ac7d4aa
+# ╠═f2a6f67a-2592-415b-8850-8245a21022e4
+# ╠═f86bb7b3-b805-4587-8ce9-a079f90b03e2
+# ╠═dfe7d1c7-ec22-42da-853f-2a9bed3e30b9
+# ╠═eeee565d-df07-47a2-987c-a4c742e02e9e
+# ╠═85f83e42-474f-4abf-b24d-6cbb9407a3c0
+# ╠═defe77cf-adaa-4b24-a6af-c9c9cf8daefe
+# ╠═cfb418f0-f8f6-42b1-aeb8-3242edd9b96b
+# ╠═ff11e1c8-bcda-4abb-9222-2f0323179f30
+# ╠═184e2ab1-8df3-4638-8079-e778b629d48e
+# ╠═3b1a9af9-efd4-4a7b-9b81-5ddd1182ec15
+# ╠═9409e2d3-bf65-48ee-aec4-bde20d6a9aa5
+# ╠═cbbdc272-ba5a-436b-88ac-a6a256782582
+# ╠═b82a1559-72b6-459c-9ea6-1f0811332728
+# ╟─e661445f-926f-4101-9173-b9adc2e18828
+# ╠═45820b6e-8130-444e-88f5-330a5efb3cad
+# ╠═1a569c00-69e3-4489-99df-7605e5a1b16a
+# ╟─066e1ebc-8d52-4db3-bceb-d0287221c319
+# ╠═409e8333-f3f6-4e70-8c49-3687ad037d2e
+# ╠═f713abbc-36b1-4470-9042-9a616e491cc9
+# ╟─fc8bb619-6c86-4a3b-9fa4-f0f817d19caf
+# ╟─b40aea3b-997a-49a2-9502-d4114d3a4f29
+# ╠═ca830927-870b-46b6-9c3c-7f6fbd866319
+# ╠═d8f21e2a-a7ce-4fdf-82ab-3cd0c70bce02
+# ╟─ebe10ebd-bb22-4dde-9a00-ab0210cb7eb7
+# ╠═1ac267f1-975e-4882-9ec0-12e9a7670934
+# ╠═0f075dfa-9ef8-4d21-91f8-165f44b1ecfd
+# ╠═e585ad3b-0f82-4803-b2c4-d2634d39e16d
+# ╟─5973a966-28cb-4097-9987-24d89d6ef638
+# ╠═5702e760-3bbc-4dd3-9575-292409c5f5f3
+# ╠═126f4843-5d9b-4cca-8f73-b50eaa195848
+# ╠═bcf2fe70-fd30-4e69-97cb-8c7d37291258
+# ╠═1571e25f-5fc2-46a7-a571-d310d75506cd
+# ╠═f44a0002-af0c-48a4-98fe-28e0abadaa4a

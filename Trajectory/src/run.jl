@@ -4,12 +4,6 @@ using Printf
 using Plots
 using Gnuplot
 
-include("selector.jl")
-include("interpolator.jl")
-include("segmentator.jl")
-include("criterions.jl")
-include("optimizer.jl")
-
 f_helper(x) = x
 f_helper(x::Vector) = [f_helper(e) for e in x]
 f_helper(d::Dict) = Dict(Symbol(k) => f_helper(v) for (k, v) in d)
@@ -137,7 +131,9 @@ end
 
 function execute(START_POINTS=nothing, VALID_POINTS=nothing)
 
-    CONFIGURATION = JSON.parsefile(length(ARGS) >= 1 ? ARGS[1] : "configuration/matryoshka_ex_torino.json")
+    global CONFIGURATION
+
+    CONFIGURATION = JSON.parsefile(length(ARGS) >= 1 ? ARGS[1] : "/home/klapajar/Stažené/julia-1.8.2/bin/ng_trajectory/Trajectory/src/configuration/matryoshka_ex_torino.json")
 
     CONFIGURATION = symbol_dict(CONFIGURATION)
 

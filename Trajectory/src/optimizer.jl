@@ -7,13 +7,10 @@ using Gnuplot
 using PyCall
 using Colors
 
-include("utils.jl")
-include("interpolator.jl")
-include("segmentator.jl")
-include("selector.jl")
-include("criterions.jl")
-include("parameter.jl")
-include("penalizer.jl")
+f_helper(x) = x
+f_helper(x::Vector) = [f_helper(e) for e in x]
+f_helper(d::Dict) = Dict(Symbol(k) => f_helper(v) for (k, v) in d)
+symbol_dict(d::Dict) = f_helper(d)
 
 # Global variables
 OPTIMIZER = nothing
@@ -96,25 +93,26 @@ function optimizer_init(; points,
     selector_args::Dict=Dict(),
     penalizer_init::Dict=Dict(),
     penalizer_args::Dict=Dict(),
-    logfile::IO=stdout,
+    logfile=stdout,
     logging_verbosity::Int=2,
     hold_matryoshka::Bool=false,
     plot::Bool=false,
     grid::Vector=[],
     figure=nothing,
+    #penalize = nothing,
     kwargs...)
 
     global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE, PLOT, BUDGET, NUM_WORKERS
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER, PENALIZER_INIT, PENALIZER_ARGS
 
     # Local to global variables
-    CRITERION_ARGS = criterion_args
-    INTERPOLATOR_ARGS = interpolator_args
-    SEGMENTATOR_ARGS = segmentator_args
-    SELECTOR_ARGS = selector_args
-    PENALIZER_INIT = penalizer_init
-    PENALIZER_ARGS = penalizer_args
-    LOGFILE = logfile
+    CRITERION_ARGS = symbol_dict(criterion_args)
+    INTERPOLATOR_ARGS = symbol_dict(interpolator_args)
+    SEGMENTATOR_ARGS = symbol_dict(segmentator_args)
+    SELECTOR_ARGS = symbol_dict(selector_args)
+    PENALIZER_INIT = symbol_dict(penalizer_init)
+    PENALIZER_ARGS = symbol_dict(penalizer_args)
+    LOGFILE = logfile#stdout#logfile
     VERBOSITY = logging_verbosity
     _holdmatryoshka = hold_matryoshka
     PENALTY = penalty
@@ -123,6 +121,10 @@ function optimizer_init(; points,
     BUDGET = budget
     NUM_WORKERS = workers
 
+    #global penalizeZ
+    #penalizeZ = penalize
+
+    println(typeof(points), size(points), typeof(group_centerline), size(group_centerline), typeof(group_centers), size(group_centers))
 
     VALID_POINTS = points
     if MATRYOSHKA === nothing || _holdmatryoshka == false
@@ -139,6 +141,10 @@ function optimizer_init(; points,
 
         # Matryoshka construction
         _groups = segmentate(points, group_centers; SEGMENTATOR_ARGS...)
+        println(size(_groups))
+        for _i in range(1, size(_groups, 1))
+            println(size(_groups[_i]))
+        end
 
         grouplayers = groups_border_obtain(_groups)
         grouplayers = groups_border_beautify(grouplayers, 400)
@@ -151,7 +157,7 @@ function optimizer_init(; points,
         layers_count = [layers for _ in 1:length(grouplayers)]
 
         MATRYOSHKA = [matryoshka_create(grouplayers[_i], layers_center[_i], layers_count[_i]) for _i in 1:length(_groups)]
-
+        println(length(MATRYOSHKA[1]))
         # TODO: plot
 
         println("Matryoshka mapping constructed.")
@@ -172,11 +178,13 @@ function plot_population_gp(population, value; video=false)
     n = length(MATRYOSHKA)
     @gp tit="Best value: $(@sprintf "%5.3f" value)" "set size ratio -1" :-
     #@gp :- VALID_POINTS[:, 1] VALID_POINTS[:, 2] "w p pt 1 lc rgbcolor '0xeeeeee' notitle" :-
-    let tb = TRACK_BITMAP
-        img = map(tb.bitmap') do p p ? colorant"#eed" : colorant"white" end
-        @gp :- Gnuplot.palette(:gray1) "set size ratio -1" :-
-        @gp :- recipe(img, "dx=$(tb.p_step[1]) dy=$(tb.p_step[2]) origin=($(tb.p_min[1]), $(tb.p_min[2]))") :-
-    end
+    #let tb = TRACK_BITMAP
+    #    img = map(tb.bitmap') do p p ? colorant"#eed" : colorant"white" end
+    #let tb = VALID_POINTS
+    #    img = foreach(tb) do p p ? colorant"#eed" : colorant"white" end
+    #    @gp :- Gnuplot.palette(:gray1) "set size ratio -1" :-
+    #    @gp :- recipe(img, "dx=$(tb.p_step[1]) dy=$(tb.p_step[2]) origin=($(tb.p_min[1]), $(tb.p_min[2]))") :-
+    #end
 
     foreach(population) do p
         points01 = reshape(p, (n, 2))
@@ -226,7 +234,7 @@ function plot_population(population, value; video=false)
 end
 
 function Evolutionary.trace!(record::Dict{String,Any}, objfun, state, population, method, options)
-    plot_population(population, value(state), video=false)
+    #plot_population(population, value(state), video=false)
 end
 
 function Evolutionary.after_while!(objfun, state, method, options)
@@ -243,7 +251,7 @@ function optimize_evolutionary()
     method = Evolutionary.CMAES(sigma0=0.1, c_1=0.01, c_mu=0.001, c_sigma=0.02)
     #method = Evolutionary.CMAES(sigma0=0.1)
     res = Evolutionary.optimize(opt, constr, x0, method,
-                                Evolutionary.Options(iterations=1000,
+                                Evolutionary.Options(iterations=BUDGET,
                                                      #parallelization=:thread,
                                                      show_trace=true,
                                                      store_trace=true,
@@ -304,7 +312,7 @@ function optimize()
 
     PENALIZER_ARGS[:optimization] = false
     final = _opt(points01)
-    plot_population_gp([points01], final)
+    #plot_population_gp([points01], final)
 
     # Interpolate received points
     # It is expected that they are unique and sorted.
@@ -315,12 +323,16 @@ function optimize()
 
     lock(FILELOCK) do
         if VERBOSITY > 0
+            #@printf("solution:%s\n", string(points))
             @printf(LOGFILE, "solution:%s\n", string(points))
+            #LOGFILE.write("solution:" * string(points) * "\n")
+            #@printf("final:%f\n", final)
             @printf(LOGFILE, "final:%f\n", final)
+            #LOGFILE.write("final:" * string(points) * "\n")
         end
     end
 
-    return (final, points, _points)
+    return (final, points, points01, _points)
 end
 
 prepare_points(points::Array{Float64, 2}, matr_len) = convert(Array{Float64,2}, points) # Nevergrad
@@ -333,7 +345,7 @@ end
 
 function _opt(points)
     global VALID_POINTS, CRITERION_ARGS, INTERPOLATOR_ARGS, PENALIZER_ARGS
-    global MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
+    global MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY, penalizeZ
 
     points = prepare_points(points, length(MATRYOSHKA))
 
@@ -342,19 +354,23 @@ function _opt(points)
     _points = interpolate(mapreduce(permutedims, vcat, points); INTERPOLATOR_ARGS...)
 
     # Check the correctness of the points and compute penalty
+    #penalty = penalizeZ(_points, VALID_POINTS, GRID, PENALTY; PENALIZER_ARGS...)
+    # Předat py funkci jde, ale pak je to děsně pomalé.
     penalty = penalize(_points, VALID_POINTS, GRID, PENALTY; PENALIZER_ARGS...)
 
     if penalty != 0
         if VERBOSITY > 0
             lock(FILELOCK) do
                 if VERBOSITY > 2
-                    @printf(LOGFILE, "pointsA:%s\n", string(points))
-                    @printf(LOGFILE, "pointsT:%s\n", string(_points))
+                    @printf("pointsA:%s\n", string(points)) #LOGFILE, 
+                    @printf("pointsT:%s\n", string(_points)) #LOGFILE, 
                 end
                 if VERBOSITY > 1
+                    #@printf("penalty:%f\n", penalty)
                     @printf(LOGFILE, "penalty:%f\n", penalty)
+                    #LOGFILE.write("penalty:" * string(penalty) * "\n")
                 end
-                flush(LOGFILE)
+                #flush(LOGFILE)
             end
         end
         return Float64(penalty)
@@ -363,13 +379,15 @@ function _opt(points)
     _c = compute(_points; CRITERION_ARGS...)
     lock(FILELOCK) do
         if VERBOSITY > 2
-            @printf(LOGFILE, "pointsA:%s\n", string(points))
-            @printf(LOGFILE, "pointsT:%s\n", string(_points))
+            @printf("pointsA:%s\n", string(points)) #LOGFILE, 
+            @printf("pointsT:%s\n", string(_points)) #LOGFILE, 
         end
         if VERBOSITY > 1
+            #@printf("correct:%f\n", _c)
             @printf(LOGFILE, "correct:%f\n", _c)
+            #LOGFILE.write("correct:" * string(_c) * "\n")
         end
-        flush(LOGFILE)
+        #flush(LOGFILE)
     end
     return _c
 end
@@ -514,32 +532,30 @@ function groups_border_obtain(groups, grid=nothing)
 
             # Find unique values in that dimension
             for _u in unique(sort(_g[:, _d]))
-                temp = _g[findall(_g[:, _d] .== _u), :]
+                _v = _g[findall(_g[:, _d] .== _u), :]
+
                 # Append points with max / min values in another dimension
-                _border = vcat(_border, minimum(temp, dims=1))
-                _border = vcat(_border, maximum(temp, dims=1))
+                _border = vcat(_border, minimum(_v, dims=1))
+                _border = vcat(_border, maximum(_v, dims=1))
 
                 # Append inner borders
                 # Obtain values in the dimension
                 _v = _g[findall(_g[:, _d] .== _u), :]
-                _v = _v[:, 1:end.!=_d]
 
                 # Sort them
                 # Enforce the axis as otherwise it is not sorted in ascending order everytime.
-                _v = _v[sortperm(_v[:, 1]), :]
+                _v = _v[sortperm(_v[:, 3 - _d]), :]
 
-                # Find distances between concurrent points
-                _dists = circshift(_v, (1, 0))[2:end, :] .- _v[1:end-1, :]
-
-                # Find points in the distance larger than 1.5x _grid
+                # Find distances between neighbouring points
+				_dists = map(maximum, eachrow(_v[2:end, :] .- _v[1:end-1, :]))
+				# Find points in the distance larger than 1.5x _grid
                 _bords = findall(_dists .> (_grid * 1.5))
 
-                for _b in _bords
-                    _border = vcat(_border, _d == 1 ? [_u] .+ _v[_b] : _v[_b] .+ [_u])
-                    _border = vcat(_border, _d == 1 ? [_u] .+ _v[_b+1] : _v[_b+1] .+ [_u])
+				for _b in _bords
+                    _border = vcat(_border, _v[[_b], :])
+                    _border = vcat(_border, _v[[_b+1], :])
                 end
             end
-
         end
         push!(_borders, _border)
     end

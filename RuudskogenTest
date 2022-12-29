@@ -1,0 +1,132 @@
+### A Pluto.jl notebook ###
+# v0.19.16
+
+using Markdown
+using InteractiveUtils
+
+# ╔═╡ a2f206ec-7a18-11ed-1a13-954420dc92b4
+# Initial steps
+begin
+	import Pkg
+	Pkg.activate("/home/klapajar/Stažené/julia-1.8.2/bin/ng_trajectory");
+	using NPZ, Revise, Gnuplot, Trajectory, PlutoUI, Evolutionary, Printf
+	cd("/home/klapajar/Stažené/julia-1.8.2/bin/ng_trajectory/Trajectory/src");
+	PlutoUI.TableOfContents();
+end	
+
+# ╔═╡ c2be7da3-17e9-46dd-8aa1-88fb8f4cb016
+md"# Load data"
+
+# ╔═╡ 98437502-4df7-4797-adcc-d0bcd2083884
+VALID_POINTS = npzread("configuration/ng_valid_points_ruudskogen.npy");
+
+# ╔═╡ 58044baf-4169-48f7-95a8-dcd90f42dcc2
+START_POINTS = npzread("configuration/ng_start_points_ruudskogen.npy");
+
+# ╔═╡ 6927bc5a-a736-4a4c-8bb1-24cd3565c0d6
+md"# Configuration"
+
+# ╔═╡ a9c5b223-8dc3-4c8e-9ed0-445119fb9fbd
+# ╠═╡ disabled = true
+#=╠═╡
+C = Dict(
+	:budget => 10,
+	:groups => 15,
+	:logfile => stdout
+)
+  ╠═╡ =#
+
+# ╔═╡ 0a02f30f-431f-4f2c-840f-4dae2f5eb16c
+md"# Initialize variables"
+
+# ╔═╡ 1d663447-b1a2-4cf8-85b9-15755de88d3a
+begin
+	Trajectory.selector_init();
+	Trajectory.segmentator_init(VALID_POINTS);
+	Trajectory.criterion_init();
+end
+
+# ╔═╡ 66703382-4a6a-461c-894f-9c6408087c37
+# ╠═╡ disabled = true
+#=╠═╡
+Trajectory.optimizer_init(
+	points = VALID_POINTS,
+	group_centers = [],
+	group_centerline = START_POINTS;
+	C...
+)
+  ╠═╡ =#
+
+# ╔═╡ 70a1bcb9-99a9-4311-b252-a6d2a4c66620
+md"# Run optimization"
+
+# ╔═╡ 47467f87-edf1-43b8-84a4-c378a3da7ad9
+begin
+	fitnesses = Dict();
+	fileformat = "ruudskogen_time_profiler_long"
+	for groups in 15:50
+		fitnesses[groups] = [];
+		ff2 = fileformat * @sprintf("-%02d", groups)
+		for loop in 1:10
+			ff3 = ff2 * @sprintf("-%02d-1-matryoshka_julia.log", loop)
+			budget = 2000; # this results into budget * 20 calls
+			#groups = 15;
+			
+			#Trajectory.selector_init();
+			#Trajectory.segmentator_init(VALID_POINTS);
+			#Trajectory.criterion_init();
+			log = open(ff3, "w+")
+			Trajectory.optimizer_init(
+				points = VALID_POINTS,
+				group_centers = [],
+				group_centerline = START_POINTS;
+				verbosity = 0,
+				budget = budget,
+				groups = groups,
+				logfile = log
+			)
+			
+			 # Note: LOGFILE is not working and writing 'IOError: stream is closed or unusable'.
+			fitness, rpoints, tpoints, traj = Trajectory.optimize();
+			close(log)
+			fitnesses[groups] = vcat(fitnesses[groups], fitness);
+		end
+	end
+end
+
+# ╔═╡ dec20510-826c-46b7-8c6b-4ee8e043a246
+Revise.retry()
+
+# ╔═╡ e9ca2c37-7281-411e-b48c-88fe5f39ad80
+md"# Show results"
+
+# ╔═╡ 3c52607b-f7a4-4196-bdce-cc52afc51a4b
+fitnesses
+
+# ╔═╡ e238563c-9892-4ba7-9e8d-4fb6b8938765
+md"# Debug zone"
+
+# ╔═╡ a959f619-88dd-4244-b0fe-bd4d938aca28
+Trajectory.CONFIGURATION
+
+# ╔═╡ 0e169060-9fb9-42e1-bf5d-b8fc8ab5a25b
+Trajectory.LOGFILE  = stdout
+
+# ╔═╡ Cell order:
+# ╠═a2f206ec-7a18-11ed-1a13-954420dc92b4
+# ╟─c2be7da3-17e9-46dd-8aa1-88fb8f4cb016
+# ╠═98437502-4df7-4797-adcc-d0bcd2083884
+# ╠═58044baf-4169-48f7-95a8-dcd90f42dcc2
+# ╟─6927bc5a-a736-4a4c-8bb1-24cd3565c0d6
+# ╠═a9c5b223-8dc3-4c8e-9ed0-445119fb9fbd
+# ╟─0a02f30f-431f-4f2c-840f-4dae2f5eb16c
+# ╠═1d663447-b1a2-4cf8-85b9-15755de88d3a
+# ╠═66703382-4a6a-461c-894f-9c6408087c37
+# ╟─70a1bcb9-99a9-4311-b252-a6d2a4c66620
+# ╠═47467f87-edf1-43b8-84a4-c378a3da7ad9
+# ╠═dec20510-826c-46b7-8c6b-4ee8e043a246
+# ╟─e9ca2c37-7281-411e-b48c-88fe5f39ad80
+# ╠═3c52607b-f7a4-4196-bdce-cc52afc51a4b
+# ╟─e238563c-9892-4ba7-9e8d-4fb6b8938765
+# ╠═a959f619-88dd-4244-b0fe-bd4d938aca28
+# ╠═0e169060-9fb9-42e1-bf5d-b8fc8ab5a25b
