@@ -215,6 +215,14 @@ GRAPH_PARSER.add_argument("--label",
     type = str,
 )
 
+GRAPH_PARSER.add_argument("--title",
+    nargs = 1,
+    dest = "title",
+    help = "Title of the figure. (Hidden when not set.)",
+    default = [""],
+    type = str,
+)
+
 PARSER.add_argument("--step",
     nargs = 1,
     dest = "step",
@@ -880,6 +888,9 @@ if __name__ == "__main__":
 
         if args.show_legend:
             g.show_legend(loc = args.loc_legend)
+
+        if args.title != "":
+            matplotlib.pyplot.title(args.title[0])
 
         g.reduce_xticks()
         g.set_ylim(ymin = args.ymin, ymax = args.ymax)
