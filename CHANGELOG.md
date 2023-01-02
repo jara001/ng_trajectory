@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Fixed
 - 'ng_graph'
     - Parameter `-r` is now shown in the correct group.
+    - Parameters are now set properly and should not "eat" more values than expected.
 
 ## 1.7.2 - 2023-01-05
 ### Fixed

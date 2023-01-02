@@ -138,7 +138,6 @@ PARSER.add_argument("-j",
 )
 
 GRAPH_PARSER.add_argument("--dpi",
-    nargs = "?",
     dest = "dpi",
     help = "DPI value used for exporting the figures.",
     default = 300,
@@ -176,21 +175,18 @@ JSON_MODE_PARSER.add_argument("--merged-min",
 )
 
 GRAPH_PARSER.add_argument("--ymin",
-    nargs = "?",
     dest = "ymin",
     help = "Minimum value on y-axis to be shown in the figure.",
     type = float,
 )
 
 GRAPH_PARSER.add_argument("--ymax",
-    nargs = "?",
     dest = "ymax",
     help = "Maximum value on y-axis to be shown in the figure.",
     type = float,
 )
 
 GRAPH_PARSER.add_argument("--marker",
-    nargs = "?",
     choices = list(matplotlib.markers.MarkerStyle.markers.keys()),
     dest = "marker",
     help = "Marker style used in the figure. Same as 'matplotlib.markers'.",
@@ -199,10 +195,9 @@ GRAPH_PARSER.add_argument("--marker",
 )
 
 GRAPH_PARSER.add_argument("--markersize",
-    nargs = 1,
     dest = "markersize",
     help = "Marker size used in the figure.",
-    default = [10.0],
+    default = 10.0,
     type = float,
 )
 
@@ -213,7 +208,6 @@ GRAPH_PARSER.add_argument("--show-legend",
 )
 
 GRAPH_PARSER.add_argument("--loc-legend",
-    nargs = "?",
     choices = list(matplotlib.offsetbox.AnchoredOffsetbox.codes.keys()),
     dest = "loc_legend",
     help = "Location of the legend. Same as 'loc' for 'matplotlib.legend'.",
@@ -221,7 +215,6 @@ GRAPH_PARSER.add_argument("--loc-legend",
 )
 
 GRAPH_PARSER.add_argument("--label",
-    nargs = 1,
     dest = "label",
     help = "Label of dataset to be displayed in the legend. Overwrites value of '_label' inside of the configuration. (Use multiple times to set labels for other configuration files.)",
     action = "append",
@@ -229,18 +222,16 @@ GRAPH_PARSER.add_argument("--label",
 )
 
 GRAPH_PARSER.add_argument("--title",
-    nargs = 1,
     dest = "title",
     help = "Title of the figure. (Hidden when not set.)",
-    default = [""],
+    default = "",
     type = str,
 )
 
 PARSER.add_argument("--step",
-    nargs = 1,
     dest = "step",
     help = "Zero-based index of cascade step to used.",
-    default = [0],
+    default = 0,
     type = int,
 )
 
@@ -263,7 +254,6 @@ LOG_MODE_PARSER.add_argument("-g",
 )
 
 LOG_MODE_PARSER.add_argument("--segments",
-    nargs = 1,
     dest = "segments",
     help = "Numbers of segments to be used for x-axis, e.g., 1,2,1,6-9,3.",
     action = store_selection,
@@ -879,14 +869,14 @@ if __name__ == "__main__":
     args = PARSER.parse_args()
 
     if not args.logfile:
-        g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize[0])
+        g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize)
 
         for _if, input_file in enumerate(tqdm.tqdm(args.input_file, desc = "JSON")):
             # Load configuration
             configuration = json.loads(input_file.read())
 
             # Store label
-            _label = args.label[_if][0] if args.label is not None and len(args.label) > _if else configuration.get("_label", os.path.basename(input_file.name))
+            _label = args.label[_if] if args.label is not None and len(args.label) > _if else configuration.get("_label", os.path.basename(input_file.name))
 
             # Construct names of all expected files
             if "_version" in configuration and configuration.get("_version") > 1:
@@ -906,14 +896,14 @@ if __name__ == "__main__":
                         total = len(log_names.keys()),
                     ):
 
-                        if args.step[0] in logs:
+                        if args.step in logs:
 
                             try:
                                 x = float(x)
                             except:
                                 pass
 
-                            g.plot_log(logs[args.step[0]], variate = x, dataset = _if)
+                            g.plot_log(logs[args.step], variate = x, dataset = _if)
 
             else: # Run sequentially
                 for x in tqdm.tqdm(log_names.keys(), desc = "Logs", leave = False):
@@ -943,14 +933,14 @@ if __name__ == "__main__":
                                 _log = Log(_logname, show_quantiles = args.quantiles, merged_min = args.merged_min)
                                 logs[_i].add(_log)
 
-                    if args.step[0] in logs:
+                    if args.step in logs:
 
                         try:
                             x = float(x)
                         except:
                             pass
 
-                        g.plot_log(logs[args.step[0]], variate = x, dataset = _if)
+                        g.plot_log(logs[args.step], variate = x, dataset = _if)
 
             if args.show_legend:
                 g.add_legend_handle(
@@ -962,7 +952,7 @@ if __name__ == "__main__":
             g.show_legend(loc = args.loc_legend)
 
         if args.title != "":
-            matplotlib.pyplot.title(args.title[0])
+            matplotlib.pyplot.title(args.title)
 
         g.reduce_xticks()
         g.set_ylim(ymin = args.ymin, ymax = args.ymax)
@@ -985,7 +975,7 @@ if __name__ == "__main__":
             matplotlib.pyplot.savefig(outfile + ".png", format = "png", dpi = args.dpi)
     else:
         if args.show_graph:
-            g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize[0])
+            g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize)
 
             _n = 0
 
