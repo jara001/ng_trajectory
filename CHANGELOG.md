@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Parameter `--loc-legend` to set position of shown legend.
     - Parameter `--label` to set legend labels for each dataset.
     - Parameter `--title` to set the title of generated figure.
+    - Parameter `-j %d` to enable parallel processing of log files.
 - Field `_label` in a configuration file is used when `--label` not given.
 
 ### Changed
