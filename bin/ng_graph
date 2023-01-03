@@ -718,7 +718,7 @@ def process_logs(
         for _i, step in enumerate(log_names[loop]):
 
             _logname = os.path.join(
-                os.path.dirname(input_file.name),
+                os.path.dirname(input_file),
                 log_names[loop][step]
             )
             if not args.get("recursive_find"):
@@ -916,10 +916,11 @@ if __name__ == "__main__":
 
         for _if, input_file in enumerate(tqdm.tqdm(args.input_file, desc = "JSON")):
             # Load configuration
-            configuration = json.loads(input_file.read())
+            with open(input_file, "r") as f:
+                configuration = json.loads(f.read())
 
             # Store label
-            _label = args.label[_if] if args.label is not None and len(args.label) > _if else configuration.get("_label", os.path.basename(input_file.name))
+            _label = args.label[_if] if args.label is not None and len(args.label) > _if else configuration.get("_label", os.path.basename(input_file))
 
             # Construct names of all expected files
             if "_version" in configuration and configuration.get("_version") > 1:
