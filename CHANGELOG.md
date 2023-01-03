@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Logs described by JSON files are looked for inside the folder of configuration file instead of the current folder.
     - Data loading with '--merged-min' skips some steps to make the process faster.
     - Input files are not opened right away, but only when actually used.
+    - Progress is shown when processing logs with `-g`.
 
 ### Fixed
 - 'ng_graph'

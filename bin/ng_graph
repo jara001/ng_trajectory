@@ -986,18 +986,33 @@ if __name__ == "__main__":
         if args.show_graph:
             g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize)
 
-            _n = 0
+            if args.jobs > 0:
+                def process_log(_nf):
+                    return _nf[0], Log(filename = _nf[1], show_quantiles = args.quantiles)
 
-            for f in args.input_file:
-                l = Log(filename = f, show_quantiles = args.quantiles)
+                with futures.ProcessPoolExecutor(max_workers=args.jobs) as executor:
+                    for _n, l in tqdm.tqdm(
+                        executor.map(process_log, enumerate(args.input_file)),
+                        desc = "Logs",
+                        total = len(args.input_file),
+                    ):
 
-                g.plot_log(l, variate =
-                    _n if len(args.segments) == 0 else (
-                        args.segments[_n] if _n < len(args.segments) else args.segments[-1]
+                        g.plot_log(l, variate =
+                            _n if len(args.segments) == 0 else (
+                                args.segments[_n] if _n < len(args.segments) else args.segments[-1]
+                            )
+                        )
+
+            else: # Run sequentially
+                for _n, f in enumerate(tqdm.tqdm(args.input_file, desc = "Logs")):
+                    l = Log(filename = f, show_quantiles = args.quantiles)
+
+                    g.plot_log(l, variate =
+                        _n if len(args.segments) == 0 else (
+                            args.segments[_n] if _n < len(args.segments) else args.segments[-1]
+                        )
                     )
-                )
 
-                _n += 1
 
             if args.title != "":
                 matplotlib.pyplot.title(args.title)
@@ -1013,14 +1028,30 @@ if __name__ == "__main__":
         else:
             _header_shown = False
 
-            for f in args.input_file:
-                l = Log(filename = f, show_quantiles = args.quantiles)
+            if args.jobs > 0:
+                def process_log(f):
+                    return Log(filename = f, show_quantiles = args.quantiles)
 
-                if not args.plot_friendly:
-                    print(l)
-                else:
-                    if not _header_shown:
-                        print (",".join(["len,rate,min,avg,max,std"] + ["Q%02d" % _q for _q in l.quantile_show_list]))
-                        _header_shown = True
+                with futures.ProcessPoolExecutor(max_workers=args.jobs) as executor:
+                    for l in executor.map(process_log, args.input_file):
+                        if not args.plot_friendly:
+                            print(l)
+                        else:
+                            if not _header_shown:
+                                print (",".join(["len,rate,min,avg,max,std"] + ["Q%02d" % _q for _q in l.quantile_show_list]))
+                                _header_shown = True
 
-                    print (",".join(["%s" % s for s in [l.length, l.rate, l.min, l.mean, l.max, l.std] + [l.quantile(_q) for _q in l.quantile_show_list]]))
+                            print (",".join(["%s" % s for s in [l.length, l.rate, l.min, l.mean, l.max, l.std] + [l.quantile(_q) for _q in l.quantile_show_list]]))
+
+            else: # Run sequentially
+                for f in args.input_file:
+                    l = Log(filename = f, show_quantiles = args.quantiles)
+
+                    if not args.plot_friendly:
+                        print(l)
+                    else:
+                        if not _header_shown:
+                            print (",".join(["len,rate,min,avg,max,std"] + ["Q%02d" % _q for _q in l.quantile_show_list]))
+                            _header_shown = True
+
+                        print (",".join(["%s" % s for s in [l.length, l.rate, l.min, l.mean, l.max, l.std] + [l.quantile(_q) for _q in l.quantile_show_list]]))
