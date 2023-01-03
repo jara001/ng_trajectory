@@ -67,7 +67,7 @@ class store_selection(argparse.Action):
     def __call__(self, parser, namespace, values, option_string = None):
         _numbers = []
 
-        for num in values[0].split(","):
+        for num in values.split(","):
             try:
                 if "-" in num:
                     _n1 = int(num[:num.index("-")])
@@ -80,7 +80,7 @@ class store_selection(argparse.Action):
                 else:
                     _numbers.append(int(num))
             except:
-                raise argparse.ArgumentError("Unable to parse '%s' for '%s'." % (num, option_string))
+                raise parser.error("argument %s: unable to parse '%s'" % (option_string, num))
 
         setattr(namespace, self.dest, _numbers)
 
