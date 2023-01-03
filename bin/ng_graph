@@ -85,6 +85,27 @@ class store_selection(argparse.Action):
         setattr(namespace, self.dest, _numbers)
 
 
+# Custom types
+class ReadableFile(object):
+    """Object the check whether argument is a file that exists and is readable.
+
+    Source:
+    https://baoshangu.medium.com/python-argparse-custom-action-and-custom-type-8c8fa1e8ccb8
+    """
+
+    def __init__(self):
+        super(ReadableFile, self).__init__()
+
+    def __call__(self, filename):
+
+        if not os.access(filename, os.R_OK):
+            raise argparse.ArgumentTypeError(
+                ("permission denied '%s'" if os.access(filename, os.F_OK) else "no such file '%s'") % filename
+            )
+
+        return filename
+
+
 # Argument groups
 GRAPH_PARSER = PARSER.add_argument_group("graph arguments", "Arguments controlling displayed/saved graph.")
 JSON_MODE_PARSER = PARSER.add_argument_group("json optional arguments", "Arguments used only when working with jsons (without '-l').")
@@ -94,7 +115,7 @@ LOG_MODE_PARSER = PARSER.add_argument_group("log optional arguments", "Arguments
 PARSER.add_argument("input_file",
     nargs = "+",
     help = "Path to the ng_trajectory file.",
-    type = argparse.FileType("r"),
+    type = ReadableFile(),
 )
 
 PARSER.add_argument("-v",
@@ -957,7 +978,7 @@ if __name__ == "__main__":
             _n = 0
 
             for f in args.input_file:
-                l = Log(filestream = f, show_quantiles = args.quantiles)
+                l = Log(filename = f, show_quantiles = args.quantiles)
 
                 g.plot_log(l, variate =
                     _n if len(args.segments) == 0 else (
@@ -991,7 +1012,7 @@ if __name__ == "__main__":
             _header_shown = False
 
             for f in args.input_file:
-                l = Log(filestream = f, show_quantiles = args.quantiles)
+                l = Log(filename = f, show_quantiles = args.quantiles)
 
                 if not args.plot_friendly:
                     print(l)

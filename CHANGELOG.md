@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - 'ng_graph'
     - Logs described by JSON files are looked for inside the folder of configuration file instead of the current folder.
     - Data loading with '--merged-min' skips some steps to make the process faster.
+    - Input files are not opened right away, but only when actually used.
 
 ### Fixed
 - 'ng_graph'
