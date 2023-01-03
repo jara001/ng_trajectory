@@ -881,6 +881,28 @@ def construct_log_names_legacy(
 
 
 ######################
+# Figures
+######################
+
+def save_figure(args):
+    """Saves current figure."""
+
+    if not args.outfile:
+        outfile = args.input_file[0].name
+
+        if outfile.endswith(".json"):
+            outfile = outfile[:-5]
+
+        if len(args.input_file) > 1:
+            outfile += "-multiple%d" % len(args.input_file)
+    else:
+        outfile = args.outfile
+
+    matplotlib.pyplot.savefig(outfile + ".pdf", format = "pdf", dpi = args.dpi)
+    matplotlib.pyplot.savefig(outfile + ".png", format = "png", dpi = args.dpi)
+
+
+######################
 # Main
 ######################
 
@@ -958,19 +980,8 @@ if __name__ == "__main__":
         if not args.save:
             matplotlib.pyplot.show()
         else:
-            if not args.outfile:
-                outfile = args.input_file[0].name
+            save_figure(args)
 
-                if outfile.endswith(".json"):
-                    outfile = outfile[:-5]
-
-                if len(args.input_file) > 1:
-                    outfile += "-multiple%d" % len(args.input_file)
-            else:
-                outfile = args.outfile
-
-            matplotlib.pyplot.savefig(outfile + ".pdf", format = "pdf", dpi = args.dpi)
-            matplotlib.pyplot.savefig(outfile + ".png", format = "png", dpi = args.dpi)
     else:
         if args.show_graph:
             g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize)
@@ -997,19 +1008,7 @@ if __name__ == "__main__":
             if not args.save:
                 matplotlib.pyplot.show()
             else:
-                if not args.outfile:
-                    outfile = args.input_file[0].name
-
-                    if outfile.endswith(".log"):
-                        outfile = outfile[:-4]
-
-                    if len(args.input_file) > 1:
-                        outfile += "-multiple%d" % len(args.input_file)
-                else:
-                    outfile = args.outfile
-
-                matplotlib.pyplot.savefig(outfile + ".pdf", format = "pdf", dpi = args.dpi)
-                matplotlib.pyplot.savefig(outfile + ".png", format = "png", dpi = args.dpi)
+                save_figure(args)
 
         else:
             _header_shown = False
