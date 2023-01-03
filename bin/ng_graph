@@ -988,6 +988,9 @@ if __name__ == "__main__":
 
                 _n += 1
 
+            if args.title != "":
+                matplotlib.pyplot.title(args.title)
+
             g.reduce_xticks()
             g.set_ylim(ymin = args.ymin, ymax = args.ymax)
 
