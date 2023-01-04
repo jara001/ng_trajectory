@@ -42,6 +42,21 @@ def parallel(real_function):
     Note: Because of pickle, we have to actually decorate different
     function then the one that is used for ProcessPoolExecutor.
 
+    Therefore, the expected usage is as follows:
+    ```
+    def _real_function():
+        # Do something.
+        pass
+
+    @parallel(_real_function)
+    def called_function(*args, **kwargs):
+        # This can be empty, as it is not used.
+        pass
+
+    # Run it as
+    called_function()
+    ```
+
     Source:
     https://stackoverflow.com/questions/642762/is-it-possible-to-replace-a-python-function-method-decorator-at-runtime
     https://stackoverflow.com/questions/63473520/cannot-use-processpoolexecutor-if-in-a-decorator
@@ -57,7 +72,7 @@ def parallel(real_function):
 
             def run_sequentially(*a, **kwargs):
                 for x in a[0].items():
-                    yield f(x)
+                    yield real_function(x)
 
             return run_parallely(*a, **kwargs) if args.jobs > 0 else run_sequentially(*a, **kwargs)
 
