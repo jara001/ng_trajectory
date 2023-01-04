@@ -750,9 +750,31 @@ def scale_lightness(rgb: Tuple[float], scale_l: float):
 # Log files
 ######################
 
-def process_logs(
-    log_set: Tuple[str, Dict[str, Dict[str, str]]]):
-    """Process a dict of log names. Used as target for parallel log processing.
+def _process_log(
+    log_set: Tuple[int, str]
+    ):
+    """Process a log. Used to support parallel computing.
+
+    Arguments:
+    log_set -- tuple of value and filename
+
+    Returns:
+    value, log
+    """
+    global args
+
+    return log_set[0], Log(filename = log_set[1], show_quantiles = args.quantiles)
+
+
+def _process_logs(
+    log_set: Tuple[str, Dict[str, Dict[str, str]]]) -> Tuple[str, Dict[str, object]]:
+    """Process a dict of log names.
+
+    Arguments:
+    log_set -- tuple of variate and dict of log_names
+
+    Returns:
+    variate, logs
     """
     global args
 
@@ -786,6 +808,21 @@ def process_logs(
                 logs[_i].add(_log)
 
     return variate, logs
+
+
+"""
+Conditional parallelization.
+Decorated function is run as sequential, for parallel execution
+we run the function passed to the decorator.
+"""
+@parallel(_process_log)
+def process_log(*args, **kwargs):
+    pass
+
+
+@parallel(_process_logs)
+def process_logs(*args, **kwargs):
+    pass
 
 
 def construct_log_names(
@@ -976,39 +1013,22 @@ if __name__ == "__main__":
             else:
                 log_names = construct_log_names_legacy(configuration)
 
-            # Create a ProcessPoolExecutor if requested
-            if args.jobs > 0:
+            # Process the logs
+            for x, logs in tqdm.tqdm(
+                process_logs(log_names.items()),
+                desc = "Logs",
+                leave = False,
+                total = len(log_names.keys()),
+            ):
 
-                with futures.ProcessPoolExecutor(max_workers=args.jobs) as executor:
-                    for x, logs in tqdm.tqdm(
-                        executor.map(process_logs, log_names.items()),
-                        desc = "Logs",
-                        leave = False,
-                        total = len(log_names.keys()),
-                    ):
+                if args.step in logs:
 
-                        if args.step in logs:
+                    try:
+                        x = float(x)
+                    except:
+                        pass
 
-                            try:
-                                x = float(x)
-                            except:
-                                pass
-
-                            g.plot_log(logs[args.step], variate = x, dataset = _if)
-
-            else: # Run sequentially
-                for x in tqdm.tqdm(log_names.keys(), desc = "Logs", leave = False):
-
-                    _, logs = process_logs((x, log_names[x]))
-
-                    if args.step in logs:
-
-                        try:
-                            x = float(x)
-                        except:
-                            pass
-
-                        g.plot_log(logs[args.step], variate = x, dataset = _if)
+                    g.plot_log(logs[args.step], variate = x, dataset = _if)
 
             if args.show_legend:
                 g.add_legend_handle(
@@ -1034,33 +1054,17 @@ if __name__ == "__main__":
         if args.show_graph:
             g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize)
 
-            if args.jobs > 0:
-                def process_log(_nf):
-                    return _nf[0], Log(filename = _nf[1], show_quantiles = args.quantiles)
-
-                with futures.ProcessPoolExecutor(max_workers=args.jobs) as executor:
-                    for _n, l in tqdm.tqdm(
-                        executor.map(process_log, enumerate(args.input_file)),
-                        desc = "Logs",
-                        total = len(args.input_file),
-                    ):
-
-                        g.plot_log(l, variate =
-                            _n if len(args.segments) == 0 else (
-                                args.segments[_n] if _n < len(args.segments) else args.segments[-1]
-                            )
-                        )
-
-            else: # Run sequentially
-                for _n, f in enumerate(tqdm.tqdm(args.input_file, desc = "Logs")):
-                    l = Log(filename = f, show_quantiles = args.quantiles)
-
-                    g.plot_log(l, variate =
-                        _n if len(args.segments) == 0 else (
-                            args.segments[_n] if _n < len(args.segments) else args.segments[-1]
-                        )
+            # Process the logs
+            for _n, l in tqdm.tqdm(
+                process_log(enumerate(args.input_file)),
+                desc = "Logs",
+                total = len(args.input_file),
+            ):
+                g.plot_log(l, variate =
+                    _n if len(args.segments) == 0 else (
+                        args.segments[_n] if _n < len(args.segments) else args.segments[-1]
                     )
-
+                )
 
             if args.title != "":
                 matplotlib.pyplot.title(args.title)
@@ -1076,30 +1080,12 @@ if __name__ == "__main__":
         else:
             _header_shown = False
 
-            if args.jobs > 0:
-                def process_log(f):
-                    return Log(filename = f, show_quantiles = args.quantiles)
+            for _, l in process_log(enumerate(args.input_file)):
+                if not args.plot_friendly:
+                    print(l)
+                else:
+                    if not _header_shown:
+                        print (",".join(["len,rate,min,avg,max,std"] + ["Q%02d" % _q for _q in l.quantile_show_list]))
+                        _header_shown = True
 
-                with futures.ProcessPoolExecutor(max_workers=args.jobs) as executor:
-                    for l in executor.map(process_log, args.input_file):
-                        if not args.plot_friendly:
-                            print(l)
-                        else:
-                            if not _header_shown:
-                                print (",".join(["len,rate,min,avg,max,std"] + ["Q%02d" % _q for _q in l.quantile_show_list]))
-                                _header_shown = True
-
-                            print (",".join(["%s" % s for s in [l.length, l.rate, l.min, l.mean, l.max, l.std] + [l.quantile(_q) for _q in l.quantile_show_list]]))
-
-            else: # Run sequentially
-                for f in args.input_file:
-                    l = Log(filename = f, show_quantiles = args.quantiles)
-
-                    if not args.plot_friendly:
-                        print(l)
-                    else:
-                        if not _header_shown:
-                            print (",".join(["len,rate,min,avg,max,std"] + ["Q%02d" % _q for _q in l.quantile_show_list]))
-                            _header_shown = True
-
-                        print (",".join(["%s" % s for s in [l.length, l.rate, l.min, l.mean, l.max, l.std] + [l.quantile(_q) for _q in l.quantile_show_list]]))
+                    print (",".join(["%s" % s for s in [l.length, l.rate, l.min, l.mean, l.max, l.std] + [l.quantile(_q) for _q in l.quantile_show_list]]))
