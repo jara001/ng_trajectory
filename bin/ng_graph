@@ -32,6 +32,39 @@ from typing import List, Tuple, Dict, Generator, TextIO
 from concurrent import futures
 
 
+# Decorators
+def parallel(real_function):
+    """Decorator to support parallelization of given function.
+
+    When `args.jobs > 0` the ProcessPoolExecutor is created.
+    Otherwise, function is run sequentially.
+
+    Note: Because of pickle, we have to actually decorate different
+    function then the one that is used for ProcessPoolExecutor.
+
+    Source:
+    https://stackoverflow.com/questions/642762/is-it-possible-to-replace-a-python-function-method-decorator-at-runtime
+    https://stackoverflow.com/questions/63473520/cannot-use-processpoolexecutor-if-in-a-decorator
+    """
+    def decorate(f):
+        def cond_parallel(*a, **kwargs):
+            global args
+
+            def run_parallely(*a, **kwargs):
+                with futures.ProcessPoolExecutor(max_workers=args.jobs) as executor:
+                    for x in executor.map(real_function, a[0].items()):
+                        yield x
+
+            def run_sequentially(*a, **kwargs):
+                for x in a[0].items():
+                    yield f(x)
+
+            return run_parallely(*a, **kwargs) if args.jobs > 0 else run_sequentially(*a, **kwargs)
+
+        return cond_parallel
+    return decorate
+
+
 # Global variables
 PARSER = argparse.ArgumentParser(
     prog = "ng_graph",
