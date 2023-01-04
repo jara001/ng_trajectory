@@ -36,6 +36,8 @@ from concurrent import futures
 def parallel(real_function):
     """Decorator to support parallelization of given function.
 
+    We expect that first parameter of the function is iterable.
+
     When `args.jobs > 0` the ProcessPoolExecutor is created.
     Otherwise, function is run sequentially.
 
@@ -67,11 +69,11 @@ def parallel(real_function):
 
             def run_parallely(*a, **kwargs):
                 with futures.ProcessPoolExecutor(max_workers=args.jobs) as executor:
-                    for x in executor.map(real_function, a[0].items()):
+                    for x in executor.map(real_function, a[0]):
                         yield x
 
             def run_sequentially(*a, **kwargs):
-                for x in a[0].items():
+                for x in a[0]:
                     yield real_function(x)
 
             return run_parallely(*a, **kwargs) if args.jobs > 0 else run_sequentially(*a, **kwargs)
