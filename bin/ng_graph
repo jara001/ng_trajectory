@@ -31,9 +31,6 @@ from typing import List, Tuple, Dict, Generator, TextIO
 # Parallel computing of steps
 from concurrent import futures
 
-# Partial function
-from functools import partial
-
 
 # Global variables
 PARSER = argparse.ArgumentParser(
@@ -704,10 +701,10 @@ def scale_lightness(rgb: Tuple[float], scale_l: float):
 ######################
 
 def process_logs(
-    log_set: Tuple[str, Dict[str, Dict[str, str]]],
-    **args):
+    log_set: Tuple[str, Dict[str, Dict[str, str]]]):
     """Process a dict of log names. Used as target for parallel log processing.
     """
+    global args
 
     variate = log_set[0]
     log_names = log_set[1]
@@ -721,7 +718,7 @@ def process_logs(
                 os.path.dirname(input_file),
                 log_names[loop][step]
             )
-            if not args.get("recursive_find"):
+            if not args.recursive_find:
                 if not os.path.exists(_logname):
                     continue
             else:
@@ -733,9 +730,9 @@ def process_logs(
                     continue
 
             if _i not in logs:
-                logs[_i] = Log(_logname, show_quantiles = args.get("quantiles"), merged_min = args.get("merged_min"))
+                logs[_i] = Log(_logname, show_quantiles = args.quantiles, merged_min = args.merged_min)
             else:
-                _log = Log(_logname, show_quantiles = args.get("quantiles"), merged_min = args.get("merged_min"))
+                _log = Log(_logname, show_quantiles = args.quantiles, merged_min = args.merged_min)
                 logs[_i].add(_log)
 
     return variate, logs
@@ -884,8 +881,9 @@ def construct_log_names_legacy(
 # Figures
 ######################
 
-def save_figure(args):
+def save_figure():
     """Saves current figure."""
+    global args
 
     if not args.outfile:
         outfile = args.input_file[0].name
@@ -930,11 +928,10 @@ if __name__ == "__main__":
 
             # Create a ProcessPoolExecutor if requested
             if args.jobs > 0:
-                _process_logs = partial(process_logs, **{ _arg: getattr(args, _arg) for _arg in ["recursive_find", "quantiles", "merged_min"] } )#**vars(args))
 
                 with futures.ProcessPoolExecutor(max_workers=args.jobs) as executor:
                     for x, logs in tqdm.tqdm(
-                        executor.map(_process_logs, log_names.items()),
+                        executor.map(process_logs, log_names.items()),
                         desc = "Logs",
                         leave = False,
                         total = len(log_names.keys()),
@@ -952,7 +949,7 @@ if __name__ == "__main__":
             else: # Run sequentially
                 for x in tqdm.tqdm(log_names.keys(), desc = "Logs", leave = False):
 
-                    _, logs = process_logs((x, log_names[x]), **vars(args))
+                    _, logs = process_logs((x, log_names[x]))
 
                     if args.step in logs:
 
@@ -981,7 +978,7 @@ if __name__ == "__main__":
         if not args.save:
             matplotlib.pyplot.show()
         else:
-            save_figure(args)
+            save_figure()
 
     else:
         if args.show_graph:
@@ -1024,7 +1021,7 @@ if __name__ == "__main__":
             if not args.save:
                 matplotlib.pyplot.show()
             else:
-                save_figure(args)
+                save_figure()
 
         else:
             _header_shown = False
