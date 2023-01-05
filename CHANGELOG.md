@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.7.2 - 2023-01-05
+### Fixed
+- Interpolators
+    - Argument `from_left` is properly handled inside `trajectoryClosest()`.
+- Selectors
+    - _Uniform_time_
+        - A proper exception is raised when passing negative `remain` value.
+
 ## 1.7.1 - 2022-08-09
 ### Added
 - Parameter `-r` for 'ng_graph' to recursively dig through the subfolders when looking for the log files.

@@ -105,6 +105,10 @@ def select(points: numpy.ndarray, remain: int, **overflown) -> numpy.ndarray:
     Note: When 'remain' is negative the function raises an Exception.
     """
 
+    if remain < 0:
+        # Raise an exception, as we cannot guess number of points.
+        raise ValueError("Negative selection is not supported by 'uniform_time' selector.")
+
     if P.getValue("distance") <= 0:
         # Raise an exception, as we cannot proceed without further information.
         raise ValueError("Selector 'uniform_time' requires 'distance' parameter to be set '>0.0'.")
