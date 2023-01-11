@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Parameter `-j %d` to enable parallel processing of log files.
     - Parameters `--width` and `--height` to set the size of the generated figure.
     - Parameter `--tight` to adjust figure padding.
+    - Parameter `--variates` to select which 'x' values should be displayed in the figure.
 - Field `_label` in a configuration file is used when `--label` not given.
 
 ### Changed
