@@ -366,6 +366,13 @@ JSON_MODE_PARSER.add_argument("--variates",
     default = [],
 )
 
+JSON_MODE_PARSER.add_argument("--datasets",
+    dest = "datasets",
+    help = "Zero-based indices indicating to which dataset the configuration file belongs. Supports ranges '-'.",
+    action = store_selection,
+    default = [],
+)
+
 
 ######################
 # Graph class
@@ -1050,6 +1057,10 @@ if __name__ == "__main__":
                 log_names = construct_log_names(configuration)
             else:
                 log_names = construct_log_names_legacy(configuration)
+
+            # Change the dataset value if requested (changes the data appearance)
+            if len(args.datasets) > 0:
+                  _if = args.datasets[_if] if _if < len(args.datasets) else args.datasets[-1]
 
             # Process the logs
             for x, logs in tqdm.tqdm(
