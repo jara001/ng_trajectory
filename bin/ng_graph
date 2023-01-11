@@ -96,9 +96,15 @@ are in the same location.
 
 # Custom actions
 class store_selection(argparse.Action):
-    """Custom action to handle numbers selection (e.g., pages from a document).
+    """Custom action to handle values selection (e.g., pages from a document).
 
+    The behaviour is controlled by parameter 'action_style', defaults to 'numeric'.
+
+    - numeric:
     All numbers are delimited by ','. May contain ranges, defined by '-'.
+
+    - numeric_mixed:
+    Same as numeric, but also allows strings.
 
     Example:
     > 1,3,5-9,4-2,2
@@ -108,11 +114,12 @@ class store_selection(argparse.Action):
     https://stackoverflow.com/questions/8632354/python-argparse-custom-actions-with-additional-arguments-passed
     """
 
-    def __init__(self, option_strings, *args, **kwargs):
+    def __init__(self, option_strings, action_style = "numeric", *args, **kwargs):
         super(store_selection, self).__init__(option_strings = option_strings, *args, **kwargs)
+        self.action_style = action_style
 
     def __call__(self, parser, namespace, values, option_string = None):
-        _numbers = []
+        _values = []
 
         for num in values.split(","):
             try:
@@ -121,15 +128,18 @@ class store_selection(argparse.Action):
                     _n2 = int(num[num.index("-")+1:])
 
                     if _n2 > _n1:
-                        _numbers += list(range(_n1, _n2+1))
+                        _values += list(range(_n1, _n2+1))
                     else:
-                        _numbers += list(range(_n2, _n1-1, -1))
+                        _values += list(range(_n2, _n1-1, -1))
                 else:
-                    _numbers.append(int(num))
+                    if self.action_style == "numeric_mixed":
+                        _values.append(int(num) if num.isdecimal() else num)
+                    else:
+                        _values.append(int(num))
             except:
                 raise parser.error("argument %s: unable to parse '%s'" % (option_string, num))
 
-        setattr(namespace, self.dest, _numbers)
+        setattr(namespace, self.dest, _values)
 
 
 # Custom types
