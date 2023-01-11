@@ -212,6 +212,20 @@ GRAPH_PARSER.add_argument("--dpi",
     type = int,
 )
 
+GRAPH_PARSER.add_argument("--width",
+    dest = "width",
+    help = "Width of the figure in inches. Defaults to 'matplotlib.rcParams[figure.figsize]'.",
+    default = matplotlib.rcParams.get("figure.figsize", [6.4, 4.8])[0],
+    type = float,
+)
+
+GRAPH_PARSER.add_argument("--height",
+    dest = "height",
+    help = "Height of the figure in inches. Defaults to 'matplotlib.rcParams[figure.figsize]'.",
+    default = matplotlib.rcParams.get("figure.figsize", [6.4, 4.8])[1],
+    type = float,
+)
+
 GRAPH_PARSER.add_argument("--hide-min",
     dest = "show_min",
     help = "Hide minimum value cap in the figure.",
@@ -335,10 +349,10 @@ LOG_MODE_PARSER.add_argument("--segments",
 
 class Graph(object):
 
-    def __init__(self, xlabel = "", ylabel = "", grid = True, show_min: bool = True, show_max: bool = True, show_avg: bool = True, show_bar: bool = True, marker: str = "_", markersize: float = 10.0):
+    def __init__(self, xlabel = "", ylabel = "", grid = True, show_min: bool = True, show_max: bool = True, show_avg: bool = True, show_bar: bool = True, marker: str = "_", markersize: float = 10.0, width: float = 6.4, height: float = 4.8):
         super(Graph, self).__init__()
 
-        self.__figure = matplotlib.pyplot.figure()
+        self.__figure = matplotlib.pyplot.figure(figsize = (width, height))
         self.__axes = self.__figure.add_subplot(111)
 
         if xlabel != "":
@@ -997,7 +1011,7 @@ if __name__ == "__main__":
     args = PARSER.parse_args()
 
     if not args.logfile:
-        g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize)
+        g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize, width = args.width, height = args.height)
 
         for _if, input_file in enumerate(tqdm.tqdm(args.input_file, desc = "JSON")):
             # Load configuration
@@ -1052,7 +1066,7 @@ if __name__ == "__main__":
 
     else:
         if args.show_graph:
-            g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize)
+            g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize, width = args.width, height = args.height)
 
             # Process the logs
             for _n, l in tqdm.tqdm(
