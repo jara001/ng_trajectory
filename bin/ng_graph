@@ -602,7 +602,7 @@ class Log(object):
 
     @property
     def std(self):
-        if len(self.observed_list) == 0:
+        if len(self.observed_list) <= 1:
             return None
 
         return statistics.stdev(self.observed_list)
