@@ -226,6 +226,12 @@ GRAPH_PARSER.add_argument("--height",
     type = float,
 )
 
+GRAPH_PARSER.add_argument("--tight",
+    dest = "tight",
+    help = "Adjusts the padding around the figure.",
+    action = "store_true",
+)
+
 GRAPH_PARSER.add_argument("--hide-min",
     dest = "show_min",
     help = "Hide minimum value cap in the figure.",
@@ -1059,6 +1065,9 @@ if __name__ == "__main__":
         g.reduce_xticks()
         g.set_ylim(ymin = args.ymin, ymax = args.ymax)
 
+        if args.tight:
+            matplotlib.pyplot.tight_layout()
+
         if not args.save:
             matplotlib.pyplot.show()
         else:
@@ -1085,6 +1094,9 @@ if __name__ == "__main__":
 
             g.reduce_xticks()
             g.set_ylim(ymin = args.ymin, ymax = args.ymax)
+
+            if args.tight:
+                matplotlib.pyplot.tight_layout()
 
             if not args.save:
                 matplotlib.pyplot.show()

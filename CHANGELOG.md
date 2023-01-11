@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Parameter `--title` to set the title of generated figure.
     - Parameter `-j %d` to enable parallel processing of log files.
     - Parameters `--width` and `--height` to set the size of the generated figure.
+    - Parameter `--tight` to adjust figure padding.
 - Field `_label` in a configuration file is used when `--label` not given.
 
 ### Changed
