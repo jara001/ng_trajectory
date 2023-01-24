@@ -119,7 +119,13 @@ class store_selection(argparse.Action):
         self.action_style = action_style
 
     def __call__(self, parser, namespace, values, option_string = None):
-        _values = []
+        class listA(list):
+            """Advanced list subclass that is more suited for our use-case."""
+            def get(self, index):
+                """Return the element at index if possible, otherwise return the last element."""
+                return self.__getitem__(index) if index < self.__len__() else self.__getitem__(-1)
+
+        _values = listA()
 
         for num in values.split(","):
             try:
@@ -1072,7 +1078,7 @@ if __name__ == "__main__":
 
             # Change the dataset value if requested (changes the data appearance)
             if len(args.datasets) > 0:
-                  _if = args.datasets[_if] if _if < len(args.datasets) else args.datasets[-1]
+                  _if = args.datasets.get(_if)
 
             # Process the logs
             for x, logs in tqdm.tqdm(
@@ -1130,7 +1136,7 @@ if __name__ == "__main__":
             ):
                 g.plot_log(l, variate =
                     _n if len(args.segments) == 0 else (
-                        args.segments[_n] if _n < len(args.segments) else args.segments[-1]
+                        args.segments.get(_n)
                     )
                 )
 
