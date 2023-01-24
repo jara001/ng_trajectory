@@ -379,6 +379,11 @@ JSON_MODE_PARSER.add_argument("--datasets",
     default = [],
 )
 
+LOG_MODE_PARSER.add_argument("--no-header",
+    dest = "no_header",
+    help = "Do not print out the header when using '-p'.",
+    action = "store_true",
+)
 
 ######################
 # Graph class
@@ -1155,7 +1160,7 @@ if __name__ == "__main__":
                 save_figure()
 
         else:
-            _header_shown = False
+            _header_shown = args.no_header
 
             for _, l in process_log(enumerate(args.input_file)):
                 if not args.plot_friendly:

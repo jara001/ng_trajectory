@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Parameter `--tight` to adjust figure padding.
     - Parameter `--variates` to select which 'x' values should be displayed in the figure.
     - Parameter `--datasets` to determine dataset indices for configuration files.
+    - Parameter `--no-header` to skip header when using `-p`.
 - Field `_label` in a configuration file is used when `--label` not given.
 
 ### Changed
