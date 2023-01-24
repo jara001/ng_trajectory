@@ -662,11 +662,15 @@ class Log(object):
         if self.length == 0:
             return None
 
-        return len(self.__correct) / (len(self.__penalty) + len(self.__correct))
+        return (self.successful_length) / (self.length)
+
+    @property
+    def successful_length(self):
+        return len(self.__correct) if not self.__merged_min else len(self.__mins)
 
     @property
     def length(self):
-        return len(self.__correct) + len(self.__penalty)
+        return len(self.__correct) + len(self.__penalty) if not self.__merged_min else self.__logs
 
     @property
     def failed(self):
@@ -713,12 +717,12 @@ class Log(object):
         # Success rate
         s += "Success rate: %f%% (%d out of %d)\n" % (
             100.0 * self.rate,
-            len(self.__correct),
+            self.successful_length,
             self.length
         )
 
         # Statistics
-        if len(self.__correct) > 0:
+        if self.successful_length > 0:
             s += "Solution statistics:\n\t"
             s += "Min: %f\n\t" % self.min
 

@@ -26,6 +26,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Data loading with '--merged-min' skips some steps to make the process faster.
     - Input files are not opened right away, but only when actually used.
     - Progress is shown when processing logs with `-g`.
+    - When using `--merged-min`, statistics of a merged log show:
+        - Rate: Success rate of individual runs (% of finding a solution).
+        - Length: Number of successful runs.
 
 ### Fixed
 - 'ng_graph'
