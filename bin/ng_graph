@@ -272,9 +272,9 @@ GRAPH_PARSER.add_argument("--hide-bar",
     action = "store_false",
 )
 
-JSON_MODE_PARSER.add_argument("--merged-min",
+PARSER.add_argument("--merged-min",
     dest = "merged_min",
-    help = "Merge the minimum of loops and draw a graph of that. (IROS-like graph.)",
+    help = "Merge the minimum of loops and draw a graph of that. (IROS-like graph.)\nWhen used with '-l' merge the logs together.",
     action = "store_true",
 )
 
@@ -831,7 +831,7 @@ def _process_log(
     """
     global args
 
-    return log_set[0], Log(filename = log_set[1], show_quantiles = args.quantiles)
+    return log_set[0], Log(filename = log_set[1], show_quantiles = args.quantiles, merged_min = args.merged_min)
 
 
 def _process_logs(
@@ -1133,12 +1133,26 @@ if __name__ == "__main__":
         if args.show_graph:
             g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize, width = args.width, height = args.height)
 
+            _log = None
+
             # Process the logs
             for _n, l in tqdm.tqdm(
                 process_log(enumerate(args.input_file)),
                 desc = "Logs",
                 total = len(args.input_file),
             ):
+                if args.merged_min:
+                    if _n == 0:
+                        _log = l
+                        continue
+
+                    _log.add(l)
+
+                    if _n == len(args.input_file) - 1:
+                        l = _log
+                    else:
+                        continue
+
                 g.plot_log(l, variate =
                     _n if len(args.segments) == 0 else (
                         args.segments.get(_n)
@@ -1162,7 +1176,21 @@ if __name__ == "__main__":
         else:
             _header_shown = args.no_header
 
-            for _, l in process_log(enumerate(args.input_file)):
+            _log = None
+
+            for _n, l in process_log(enumerate(args.input_file)):
+                if args.merged_min:
+                    if _n == 0:
+                        _log = l
+                        continue
+
+                    _log.add(l)
+
+                    if _n == len(args.input_file) - 1:
+                        l = _log
+                    else:
+                        continue
+
                 if not args.plot_friendly:
                     print(l)
                 else:
