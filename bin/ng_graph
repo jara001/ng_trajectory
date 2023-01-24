@@ -570,6 +570,9 @@ class Log(object):
         # And minimum stack
         self.__mins = [] if len(self.__correct) == 0 else [min(self.__correct)]
 
+        # Track number of logs this is composed of
+        self.__logs = 1
+
 
     def load_data(self, f: TextIO):
         # Hasten the process when '--merged-min' is used.
@@ -613,6 +616,8 @@ class Log(object):
             self.__mins.append(other.min)
 
         self.__is_dirty = True
+
+        self.__logs += 1
 
 
     # Statistics
