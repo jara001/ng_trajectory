@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Parameter `--datasets` to determine dataset indices for configuration files.
     - Parameter `--no-header` to skip header when using `-p`.
     - When using `--merged-min` with `-l` logs are merged together (and output new "merged-min" statistics).
+    - Show segment value when using `--segments` together with `-lp`.
 - Field `_label` in a configuration file is used when `--label` not given.
 
 ### Changed

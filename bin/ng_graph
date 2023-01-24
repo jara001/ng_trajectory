@@ -1195,7 +1195,7 @@ if __name__ == "__main__":
                     print(l)
                 else:
                     if not _header_shown:
-                        print (",".join(["len,rate,min,avg,max,std"] + ["Q%02d" % _q for _q in l.quantile_show_list]))
+                        print (",".join((["seg"] if len(args.segments) > 0 else []) + ["len,rate,min,avg,max,std"] + ["Q%02d" % _q for _q in l.quantile_show_list]))
                         _header_shown = True
 
-                    print (",".join(["%s" % s for s in [l.length, l.rate, l.min, l.mean, l.max, l.std] + [l.quantile(_q) for _q in l.quantile_show_list]]))
+                    print (",".join(["%s" % s for s in ([args.segments.get(_n)] if len(args.segments) > 0 else []) + [l.length, l.rate, l.min, l.mean, l.max, l.std] + [l.quantile(_q) for _q in l.quantile_show_list]]))
