@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Parameters are now set properly and should not "eat" more values than expected.
     - Parameter `--segments` is now properly handled.
     - Standard deviation is not computed when only one log is obtained.
+    - Success rate of a log is not computed when empty.
 
 ## 1.7.2 - 2023-01-05
 ### Fixed

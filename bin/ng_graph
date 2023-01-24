@@ -654,6 +654,9 @@ class Log(object):
 
     @property
     def rate(self):
+        if self.length == 0:
+            return None
+
         return len(self.__correct) / (len(self.__penalty) + len(self.__correct))
 
     @property
