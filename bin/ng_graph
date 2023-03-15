@@ -32,6 +32,13 @@ from typing import List, Tuple, Dict, Generator, TextIO
 from concurrent import futures
 
 
+# Custom types
+class listA(list):
+    """Advanced list subclass that is more suited for our use-case."""
+    def get(self, index):
+        """Return the element at index if possible, otherwise return the last element."""
+        return self.__getitem__(index) if index < self.__len__() else self.__getitem__(-1)
+
 # Decorators
 def parallel(real_function):
     """Decorator to support parallelization of given function.
@@ -119,11 +126,6 @@ class store_selection(argparse.Action):
         self.action_style = action_style
 
     def __call__(self, parser, namespace, values, option_string = None):
-        class listA(list):
-            """Advanced list subclass that is more suited for our use-case."""
-            def get(self, index):
-                """Return the element at index if possible, otherwise return the last element."""
-                return self.__getitem__(index) if index < self.__len__() else self.__getitem__(-1)
 
         _values = listA()
 
