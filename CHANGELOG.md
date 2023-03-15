@@ -8,6 +8,39 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Criterions
     - [**NEW**] _Jazar_model_
         - Criterion 'Jazar_model' computes speed profile using model from Jazar's book.
+- 'ng_graph'
+    - Parameter `--show-legend` to display figure legend.
+    - Parameter `--loc-legend` to set position of shown legend.
+    - Parameter `--label` to set legend labels for each dataset.
+    - Parameter `--title` to set the title of generated figure.
+    - Parameter `-j %d` to enable parallel processing of log files.
+    - Parameters `--width` and `--height` to set the size of the generated figure.
+    - Parameter `--tight` to adjust figure padding.
+    - Parameter `--variates` to select which 'x' values should be displayed in the figure.
+    - Parameter `--datasets` to determine dataset indices for configuration files.
+    - Parameter `--no-header` to skip header when using `-p`.
+    - When using `--merged-min` with `-l` logs are merged together (and output new "merged-min" statistics).
+    - Show segment value when using `--segments` together with `-lp`.
+    - Parameter `--marker-avg` to set the marker style of dataset averages.
+- Field `_label` in a configuration file is used when `--label` not given.
+
+### Changed
+- 'ng_graph'
+    - Logs described by JSON files are looked for inside the folder of configuration file instead of the current folder.
+    - Data loading with '--merged-min' skips some steps to make the process faster.
+    - Input files are not opened right away, but only when actually used.
+    - Progress is shown when processing logs with `-g`.
+    - When using `--merged-min`, statistics of a merged log show:
+        - Rate: Success rate of individual runs (% of finding a solution).
+        - Length: Number of successful runs.
+
+### Fixed
+- 'ng_graph'
+    - Parameter `-r` is now shown in the correct group.
+    - Parameters are now set properly and should not "eat" more values than expected.
+    - Parameter `--segments` is now properly handled.
+    - Standard deviation is not computed when only one log is obtained.
+    - Success rate of a log is not computed when empty.
 
 ## 1.7.2 - 2023-01-05
 ### Fixed
