@@ -170,7 +170,7 @@ def forward_pass(points: numpy.ndarray):
     beta = 0
     _ca = 0.5 * P.getValue("ro") * P.getValue("cl") * P.getValue("A")
     v_fwd[0] = min(
-        P.getValue("v_lim"),
+        P.getValue("v_0"),
         math.sqrt(
             math.sqrt(
                 ((min(P.getValue("C_sf"), P.getValue("C_sr")) * P.getValue("s_s"))**2 * P.getValue("m")**2 * P.getValue("g")**2)/(_ca**2 - 2 * _ca * P.getValue("m") * abs(points[0, 2]) * math.tan(beta) + P.getValue("m")**2 * points[0, 2]**2 * math.tan(beta)**2 + P.getValue("m")**2 * points[0, 2]**2)
