@@ -300,6 +300,15 @@ GRAPH_PARSER.add_argument("--marker",
     type = str,
 )
 
+GRAPH_PARSER.add_argument("--marker-avg",
+    choices = list(matplotlib.markers.MarkerStyle.markers.keys()),
+    dest = "marker_avg",
+    help = "Marker style used for averages in the figure. Same as 'matplotlib.markers'.",
+    type = str,
+    action = "append",
+    default = listA("o")
+)
+
 GRAPH_PARSER.add_argument("--markersize",
     dest = "markersize",
     help = "Marker size used in the figure.",
@@ -446,7 +455,7 @@ class Graph(object):
         )
 
 
-    def plot_log(self, log, variate = 0, dataset = 0):
+    def plot_log(self, log, variate = 0, dataset = 0, marker = "o"):
 
         # Skip when all failed
         if log.mean is None:
@@ -455,7 +464,7 @@ class Graph(object):
         dataset = dataset % len(self.__colors)
 
         if self.__show_avg:
-            matplotlib.pyplot.scatter(variate, log.mean, color = self.__colors[dataset], s = 50,
+            matplotlib.pyplot.scatter(variate, log.mean, color = self.__colors[dataset], s = 50, marker = marker,
                 **{"facecolors": "none"} if log.failed else {} )
 
         for _q in log.quantile_show_list:
@@ -518,14 +527,14 @@ class Graph(object):
         self.__axes.set_ylim(ymin = ymin, ymax = ymax)
 
 
-    def add_legend_handle(self, label, dataset = 0):
+    def add_legend_handle(self, label, dataset = 0, marker = "o"):
         """Registers a legend handle to be displayed inside the legend."""
         self.__legend_handles.append(
             matplotlib.pyplot.Line2D(
                 [0], [0],
                 label = label,
                 color = "white",
-                marker = "o",
+                marker = marker,
                 markerfacecolor = self.__colors[dataset % len(self.__colors)],
                 markersize = 8,
             )
@@ -1106,12 +1115,13 @@ if __name__ == "__main__":
                     except:
                         pass
 
-                    g.plot_log(logs[args.step], variate = x, dataset = _if)
+                    g.plot_log(logs[args.step], variate = x, dataset = _if, marker = args.marker_avg.get(_if))
 
             if args.show_legend:
                 g.add_legend_handle(
                     label = _label,
-                    dataset = _if
+                    dataset = _if,
+                    marker = args.marker_avg.get(_if),
                 )
 
         if args.show_legend:
@@ -1158,7 +1168,8 @@ if __name__ == "__main__":
                 g.plot_log(l, variate =
                     _n if len(args.segments) == 0 else (
                         args.segments.get(_n)
-                    )
+                    ),
+                    marker = args.marker_avg.get(_if),
                 )
 
             if args.title != "":
