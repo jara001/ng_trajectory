@@ -28,6 +28,66 @@ import tqdm
 
 from typing import List, Tuple, Dict, Generator, TextIO
 
+# Parallel computing of steps
+from concurrent import futures
+
+
+# Custom types
+class listA(list):
+    """Advanced list subclass that is more suited for our use-case."""
+    def get(self, index):
+        """Return the element at index if possible, otherwise return the last element."""
+        return self.__getitem__(index) if index < self.__len__() else self.__getitem__(-1)
+
+# Decorators
+def parallel(real_function):
+    """Decorator to support parallelization of given function.
+
+    We expect that first parameter of the function is iterable.
+
+    When `args.jobs > 0` the ProcessPoolExecutor is created.
+    Otherwise, function is run sequentially.
+
+    Note: Because of pickle, we have to actually decorate different
+    function then the one that is used for ProcessPoolExecutor.
+
+    Therefore, the expected usage is as follows:
+    ```
+    def _real_function():
+        # Do something.
+        pass
+
+    @parallel(_real_function)
+    def called_function(*args, **kwargs):
+        # This can be empty, as it is not used.
+        pass
+
+    # Run it as
+    called_function()
+    ```
+
+    Source:
+    https://stackoverflow.com/questions/642762/is-it-possible-to-replace-a-python-function-method-decorator-at-runtime
+    https://stackoverflow.com/questions/63473520/cannot-use-processpoolexecutor-if-in-a-decorator
+    """
+    def decorate(f):
+        def cond_parallel(*a, **kwargs):
+            global args
+
+            def run_parallely(*a, **kwargs):
+                with futures.ProcessPoolExecutor(max_workers=args.jobs) as executor:
+                    for x in executor.map(real_function, a[0]):
+                        yield x
+
+            def run_sequentially(*a, **kwargs):
+                for x in a[0]:
+                    yield real_function(x)
+
+            return run_parallely(*a, **kwargs) if args.jobs > 0 else run_sequentially(*a, **kwargs)
+
+        return cond_parallel
+    return decorate
+
 
 # Global variables
 PARSER = argparse.ArgumentParser(
@@ -43,9 +103,15 @@ are in the same location.
 
 # Custom actions
 class store_selection(argparse.Action):
-    """Custom action to handle numbers selection (e.g., pages from a document).
+    """Custom action to handle values selection (e.g., pages from a document).
 
+    The behaviour is controlled by parameter 'action_style', defaults to 'numeric'.
+
+    - numeric:
     All numbers are delimited by ','. May contain ranges, defined by '-'.
+
+    - numeric_mixed:
+    Same as numeric, but also allows strings.
 
     Example:
     > 1,3,5-9,4-2,2
@@ -55,28 +121,54 @@ class store_selection(argparse.Action):
     https://stackoverflow.com/questions/8632354/python-argparse-custom-actions-with-additional-arguments-passed
     """
 
-    def __init__(self, option_strings, *args, **kwargs):
+    def __init__(self, option_strings, action_style = "numeric", *args, **kwargs):
         super(store_selection, self).__init__(option_strings = option_strings, *args, **kwargs)
+        self.action_style = action_style
 
     def __call__(self, parser, namespace, values, option_string = None):
-        _numbers = []
 
-        for num in values[0].split(","):
+        _values = listA()
+
+        for num in values.split(","):
             try:
                 if "-" in num:
                     _n1 = int(num[:num.index("-")])
                     _n2 = int(num[num.index("-")+1:])
 
                     if _n2 > _n1:
-                        _numbers += list(range(_n1, _n2+1))
+                        _values += list(range(_n1, _n2+1))
                     else:
-                        _numbers += list(range(_n2, _n1-1, -1))
+                        _values += list(range(_n2, _n1-1, -1))
                 else:
-                    _numbers.append(int(num))
+                    if self.action_style == "numeric_mixed":
+                        _values.append(int(num) if num.isdecimal() else num)
+                    else:
+                        _values.append(int(num))
             except:
-                raise argparse.ArgumentError("Unable to parse '%s' for '%s'." % (num, option_string))
+                raise parser.error("argument %s: unable to parse '%s'" % (option_string, num))
 
-        setattr(namespace, self.dest, _numbers)
+        setattr(namespace, self.dest, _values)
+
+
+# Custom types
+class ReadableFile(object):
+    """Object the check whether argument is a file that exists and is readable.
+
+    Source:
+    https://baoshangu.medium.com/python-argparse-custom-action-and-custom-type-8c8fa1e8ccb8
+    """
+
+    def __init__(self):
+        super(ReadableFile, self).__init__()
+
+    def __call__(self, filename):
+
+        if not os.access(filename, os.R_OK):
+            raise argparse.ArgumentTypeError(
+                ("permission denied '%s'" if os.access(filename, os.F_OK) else "no such file '%s'") % filename
+            )
+
+        return filename
 
 
 # Argument groups
@@ -88,7 +180,7 @@ LOG_MODE_PARSER = PARSER.add_argument_group("log optional arguments", "Arguments
 PARSER.add_argument("input_file",
     nargs = "+",
     help = "Path to the ng_trajectory file.",
-    type = argparse.FileType("r"),
+    type = ReadableFile(),
 )
 
 PARSER.add_argument("-v",
@@ -124,12 +216,38 @@ PARSER.add_argument("-O",
     type = str,
 )
 
+PARSER.add_argument("-j",
+    dest = "jobs",
+    help = "Set the number of threads used for log processing. (Defaults to 0, which omits the ProcessPoolExecutor entirely.)",
+    default = 0,
+    type = int,
+)
+
 GRAPH_PARSER.add_argument("--dpi",
-    nargs = "?",
     dest = "dpi",
     help = "DPI value used for exporting the figures.",
     default = 300,
     type = int,
+)
+
+GRAPH_PARSER.add_argument("--width",
+    dest = "width",
+    help = "Width of the figure in inches. Defaults to 'matplotlib.rcParams[figure.figsize]'.",
+    default = matplotlib.rcParams.get("figure.figsize", [6.4, 4.8])[0],
+    type = float,
+)
+
+GRAPH_PARSER.add_argument("--height",
+    dest = "height",
+    help = "Height of the figure in inches. Defaults to 'matplotlib.rcParams[figure.figsize]'.",
+    default = matplotlib.rcParams.get("figure.figsize", [6.4, 4.8])[1],
+    type = float,
+)
+
+GRAPH_PARSER.add_argument("--tight",
+    dest = "tight",
+    help = "Adjusts the padding around the figure.",
+    action = "store_true",
 )
 
 GRAPH_PARSER.add_argument("--hide-min",
@@ -156,28 +274,25 @@ GRAPH_PARSER.add_argument("--hide-bar",
     action = "store_false",
 )
 
-JSON_MODE_PARSER.add_argument("--merged-min",
+PARSER.add_argument("--merged-min",
     dest = "merged_min",
-    help = "Merge the minimum of loops and draw a graph of that. (IROS-like graph.)",
+    help = "Merge the minimum of loops and draw a graph of that. (IROS-like graph.)\nWhen used with '-l' merge the logs together.",
     action = "store_true",
 )
 
 GRAPH_PARSER.add_argument("--ymin",
-    nargs = "?",
     dest = "ymin",
     help = "Minimum value on y-axis to be shown in the figure.",
     type = float,
 )
 
 GRAPH_PARSER.add_argument("--ymax",
-    nargs = "?",
     dest = "ymax",
     help = "Maximum value on y-axis to be shown in the figure.",
     type = float,
 )
 
 GRAPH_PARSER.add_argument("--marker",
-    nargs = "?",
     choices = list(matplotlib.markers.MarkerStyle.markers.keys()),
     dest = "marker",
     help = "Marker style used in the figure. Same as 'matplotlib.markers'.",
@@ -185,19 +300,53 @@ GRAPH_PARSER.add_argument("--marker",
     type = str,
 )
 
+GRAPH_PARSER.add_argument("--marker-avg",
+    choices = list(matplotlib.markers.MarkerStyle.markers.keys()),
+    dest = "marker_avg",
+    help = "Marker style used for averages in the figure. Same as 'matplotlib.markers'.",
+    type = str,
+    action = "append",
+    default = listA("o")
+)
+
 GRAPH_PARSER.add_argument("--markersize",
-    nargs = 1,
     dest = "markersize",
     help = "Marker size used in the figure.",
-    default = [10.0],
+    default = 10.0,
     type = float,
 )
 
+GRAPH_PARSER.add_argument("--show-legend",
+    dest = "show_legend",
+    help = "Show the legend in the figure.",
+    action = "store_true",
+)
+
+GRAPH_PARSER.add_argument("--loc-legend",
+    choices = list(matplotlib.offsetbox.AnchoredOffsetbox.codes.keys()),
+    dest = "loc_legend",
+    help = "Location of the legend. Same as 'loc' for 'matplotlib.legend'.",
+    type = str,
+)
+
+GRAPH_PARSER.add_argument("--label",
+    dest = "label",
+    help = "Label of dataset to be displayed in the legend. Overwrites value of '_label' inside of the configuration. (Use multiple times to set labels for other configuration files.)",
+    action = "append",
+    type = str,
+)
+
+GRAPH_PARSER.add_argument("--title",
+    dest = "title",
+    help = "Title of the figure. (Hidden when not set.)",
+    default = "",
+    type = str,
+)
+
 PARSER.add_argument("--step",
-    nargs = 1,
     dest = "step",
     help = "Zero-based index of cascade step to used.",
-    default = [0],
+    default = 0,
     type = int,
 )
 
@@ -207,7 +356,7 @@ LOG_MODE_PARSER.add_argument("-p",
     action = "store_true",
 )
 
-LOG_MODE_PARSER.add_argument("-r",
+PARSER.add_argument("-r",
     dest = "recursive_find",
     help = "Look for the log files in subfolders as well.",
     action = "store_true",
@@ -220,13 +369,32 @@ LOG_MODE_PARSER.add_argument("-g",
 )
 
 LOG_MODE_PARSER.add_argument("--segments",
-    nargs = 1,
     dest = "segments",
     help = "Numbers of segments to be used for x-axis, e.g., 1,2,1,6-9,3.",
     action = store_selection,
     default = [],
 )
 
+JSON_MODE_PARSER.add_argument("--variates",
+    dest = "variates",
+    help = "Values of variates to show in the graph, delimited by commas. Supports ranges '-'.",
+    action = store_selection,
+    action_style = "numeric_mixed",
+    default = [],
+)
+
+JSON_MODE_PARSER.add_argument("--datasets",
+    dest = "datasets",
+    help = "Zero-based indices indicating to which dataset the configuration file belongs. Supports ranges '-'.",
+    action = store_selection,
+    default = [],
+)
+
+LOG_MODE_PARSER.add_argument("--no-header",
+    dest = "no_header",
+    help = "Do not print out the header when using '-p'.",
+    action = "store_true",
+)
 
 ######################
 # Graph class
@@ -234,10 +402,10 @@ LOG_MODE_PARSER.add_argument("--segments",
 
 class Graph(object):
 
-    def __init__(self, xlabel = "", ylabel = "", grid = True, show_min: bool = True, show_max: bool = True, show_avg: bool = True, show_bar: bool = True, marker: str = "_", markersize: float = 10.0):
+    def __init__(self, xlabel = "", ylabel = "", grid = True, show_min: bool = True, show_max: bool = True, show_avg: bool = True, show_bar: bool = True, marker: str = "_", markersize: float = 10.0, width: float = 6.4, height: float = 4.8):
         super(Graph, self).__init__()
 
-        self.__figure = matplotlib.pyplot.figure()
+        self.__figure = matplotlib.pyplot.figure(figsize = (width, height))
         self.__axes = self.__figure.add_subplot(111)
 
         if xlabel != "":
@@ -256,6 +424,8 @@ class Graph(object):
 
         self.__marker = marker
         self.__markersize = markersize
+
+        self.__legend_handles = []
 
         # Category10 Tableau colors
         # https://matplotlib.org/3.5.0/users/prev_whats_new/dflt_style_changes.html
@@ -285,7 +455,7 @@ class Graph(object):
         )
 
 
-    def plot_log(self, log, variate = 0, dataset = 0):
+    def plot_log(self, log, variate = 0, dataset = 0, marker = "o"):
 
         # Skip when all failed
         if log.mean is None:
@@ -294,7 +464,7 @@ class Graph(object):
         dataset = dataset % len(self.__colors)
 
         if self.__show_avg:
-            matplotlib.pyplot.scatter(variate, log.mean, color = self.__colors[dataset], s = 50,
+            matplotlib.pyplot.scatter(variate, log.mean, color = self.__colors[dataset], s = 50, marker = marker,
                 **{"facecolors": "none"} if log.failed else {} )
 
         for _q in log.quantile_show_list:
@@ -357,6 +527,28 @@ class Graph(object):
         self.__axes.set_ylim(ymin = ymin, ymax = ymax)
 
 
+    def add_legend_handle(self, label, dataset = 0, marker = "o"):
+        """Registers a legend handle to be displayed inside the legend."""
+        self.__legend_handles.append(
+            matplotlib.pyplot.Line2D(
+                [0], [0],
+                label = label,
+                color = "white",
+                marker = marker,
+                markerfacecolor = self.__colors[dataset % len(self.__colors)],
+                markersize = 8,
+            )
+        )
+
+
+    def show_legend(self, loc = None):
+        """Shows the legend in the figure with created handles."""
+        self.__axes.legend(
+            handles = self.__legend_handles,
+            **{"loc": loc} if loc is not None else {}
+        )
+
+
 ######################
 # Log class
 ######################
@@ -400,8 +592,19 @@ class Log(object):
         # And minimum stack
         self.__mins = [] if len(self.__correct) == 0 else [min(self.__correct)]
 
+        # Track number of logs this is composed of
+        self.__logs = 1
+
 
     def load_data(self, f: TextIO):
+        # Hasten the process when '--merged-min' is used.
+        # Note: This potentially breaks some options, but they were not used?
+        if self.__merged_min:
+            self.__parts["correct"] = [
+                line.split(":")[1] for line in f if line.startswith("correct:")
+            ]
+            return
+
         for _li, line in enumerate(f):
 
             # Configuration
@@ -436,6 +639,8 @@ class Log(object):
 
         self.__is_dirty = True
 
+        self.__logs += 1
+
 
     # Statistics
     def recompute_statistics(self):
@@ -469,18 +674,25 @@ class Log(object):
 
     @property
     def std(self):
-        if len(self.observed_list) == 0:
+        if len(self.observed_list) <= 1:
             return None
 
         return statistics.stdev(self.observed_list)
 
     @property
     def rate(self):
-        return len(self.__correct) / (len(self.__penalty) + len(self.__correct))
+        if self.length == 0:
+            return None
+
+        return (self.successful_length) / (self.length)
+
+    @property
+    def successful_length(self):
+        return len(self.__correct) if not self.__merged_min else len(self.__mins)
 
     @property
     def length(self):
-        return len(self.__correct) + len(self.__penalty)
+        return len(self.__correct) + len(self.__penalty) if not self.__merged_min else self.__logs
 
     @property
     def failed(self):
@@ -527,12 +739,12 @@ class Log(object):
         # Success rate
         s += "Success rate: %f%% (%d out of %d)\n" % (
             100.0 * self.rate,
-            len(self.__correct),
+            self.successful_length,
             self.length
         )
 
         # Statistics
-        if len(self.__correct) > 0:
+        if self.successful_length > 0:
             s += "Solution statistics:\n\t"
             s += "Min: %f\n\t" % self.min
 
@@ -616,6 +828,81 @@ def scale_lightness(rgb: Tuple[float], scale_l: float):
 ######################
 # Log files
 ######################
+
+def _process_log(
+    log_set: Tuple[int, str]
+    ):
+    """Process a log. Used to support parallel computing.
+
+    Arguments:
+    log_set -- tuple of value and filename
+
+    Returns:
+    value, log
+    """
+    global args
+
+    return log_set[0], Log(filename = log_set[1], show_quantiles = args.quantiles, merged_min = args.merged_min)
+
+
+def _process_logs(
+    log_set: Tuple[str, Dict[str, Dict[str, str]]]) -> Tuple[str, Dict[str, object]]:
+    """Process a dict of log names.
+
+    Arguments:
+    log_set -- tuple of variate and dict of log_names
+
+    Returns:
+    variate, logs
+    """
+    global args
+
+    variate = log_set[0]
+    log_names = log_set[1]
+
+    logs = {}
+
+    for _li, loop in enumerate(log_names):
+        for _i, step in enumerate(log_names[loop]):
+
+            _logname = os.path.join(
+                os.path.dirname(input_file),
+                log_names[loop][step]
+            )
+            if not args.recursive_find:
+                if not os.path.exists(_logname):
+                    continue
+            else:
+                for dirpath, _, filenames in os.walk("."):
+                    if _logname in filenames:
+                        _logname = os.path.join(dirpath, _logname)
+                        break
+                else:
+                    continue
+
+            if _i not in logs:
+                logs[_i] = Log(_logname, show_quantiles = args.quantiles, merged_min = args.merged_min)
+            else:
+                _log = Log(_logname, show_quantiles = args.quantiles, merged_min = args.merged_min)
+                logs[_i].add(_log)
+
+    return variate, logs
+
+
+"""
+Conditional parallelization.
+Decorated function is run as sequential, for parallel execution
+we run the function passed to the decorator.
+"""
+@parallel(_process_log)
+def process_log(*args, **kwargs):
+    pass
+
+
+@parallel(_process_logs)
+def process_logs(*args, **kwargs):
+    pass
+
 
 def construct_log_names(
     configuration: Dict[str, any]
@@ -757,6 +1044,29 @@ def construct_log_names_legacy(
 
 
 ######################
+# Figures
+######################
+
+def save_figure():
+    """Saves current figure."""
+    global args
+
+    if not args.outfile:
+        outfile = args.input_file[0].name
+
+        if outfile.endswith(".json"):
+            outfile = outfile[:-5]
+
+        if len(args.input_file) > 1:
+            outfile += "-multiple%d" % len(args.input_file)
+    else:
+        outfile = args.outfile
+
+    matplotlib.pyplot.savefig(outfile + ".pdf", format = "pdf", dpi = args.dpi)
+    matplotlib.pyplot.savefig(outfile + ".png", format = "png", dpi = args.dpi)
+
+
+######################
 # Main
 ######################
 
@@ -766,11 +1076,15 @@ if __name__ == "__main__":
     args = PARSER.parse_args()
 
     if not args.logfile:
-        g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize[0])
+        g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize, width = args.width, height = args.height)
 
         for _if, input_file in enumerate(tqdm.tqdm(args.input_file, desc = "JSON")):
             # Load configuration
-            configuration = json.loads(input_file.read())
+            with open(input_file, "r") as f:
+                configuration = json.loads(f.read())
+
+            # Store label
+            _label = args.label[_if] if args.label is not None and len(args.label) > _if else configuration.get("_label", os.path.basename(input_file))
 
             # Construct names of all expected files
             if "_version" in configuration and configuration.get("_version") > 1:
@@ -778,107 +1092,123 @@ if __name__ == "__main__":
             else:
                 log_names = construct_log_names_legacy(configuration)
 
+            # Change the dataset value if requested (changes the data appearance)
+            if len(args.datasets) > 0:
+                  _if = args.datasets.get(_if)
 
-            for x in tqdm.tqdm(log_names.keys(), desc = "Logs", leave = False):
+            # Process the logs
+            for x, logs in tqdm.tqdm(
+                process_logs(log_names.items()),
+                desc = "Logs",
+                leave = False,
+                total = len(log_names.keys()),
+            ):
 
-                logs = {}
-
-                for _li, loop in enumerate(log_names[x]):
-                    for _i, step in enumerate(log_names[x][loop]):
-                        _logname = log_names[x][loop][step]
-                        if not args.recursive_find:
-                            if not os.path.exists(_logname):
-                                continue
-                        else:
-                            for dirpath, _, filenames in os.walk("."):
-                                if _logname in filenames:
-                                    _logname = os.path.join(dirpath, _logname)
-                                    break
-                            else:
-                                continue
-
-                        if _i not in logs:
-                            logs[_i] = Log(_logname, show_quantiles = args.quantiles, merged_min = args.merged_min)
-                        else:
-                            _log = Log(_logname, show_quantiles = args.quantiles, merged_min = args.merged_min)
-                            logs[_i].add(_log)
-
-                if args.step[0] in logs:
+                if args.step in logs:
 
                     try:
                         x = float(x)
+
+                        if len(args.variates) > 0:
+                            if x not in args.variates:
+                                continue
                     except:
                         pass
 
-                    g.plot_log(logs[args.step[0]], variate = x, dataset = _if)
+                    g.plot_log(logs[args.step], variate = x, dataset = _if, marker = args.marker_avg.get(_if))
+
+            if args.show_legend:
+                g.add_legend_handle(
+                    label = _label,
+                    dataset = _if,
+                    marker = args.marker_avg.get(_if),
+                )
+
+        if args.show_legend:
+            g.show_legend(loc = args.loc_legend)
+
+        if args.title != "":
+            matplotlib.pyplot.title(args.title)
 
         g.reduce_xticks()
         g.set_ylim(ymin = args.ymin, ymax = args.ymax)
 
+        if args.tight:
+            matplotlib.pyplot.tight_layout()
+
         if not args.save:
             matplotlib.pyplot.show()
         else:
-            if not args.outfile:
-                outfile = args.input_file[0].name
+            save_figure()
 
-                if outfile.endswith(".json"):
-                    outfile = outfile[:-5]
-
-                if len(args.input_file) > 1:
-                    outfile += "-multiple%d" % len(args.input_file)
-            else:
-                outfile = args.outfile
-
-            matplotlib.pyplot.savefig(outfile + ".pdf", format = "pdf", dpi = args.dpi)
-            matplotlib.pyplot.savefig(outfile + ".png", format = "png", dpi = args.dpi)
     else:
         if args.show_graph:
-            g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize[0])
+            g = Graph(xlabel = "num. of segments [-]", ylabel = "lap time [s]", show_min = args.show_min, show_max = args.show_max, show_avg = args.show_avg, show_bar = args.show_bar, marker = args.marker, markersize = args.markersize, width = args.width, height = args.height)
 
-            _n = 0
+            _log = None
 
-            for f in args.input_file:
-                l = Log(filestream = f, show_quantiles = args.quantiles)
+            # Process the logs
+            for _n, l in tqdm.tqdm(
+                process_log(enumerate(args.input_file)),
+                desc = "Logs",
+                total = len(args.input_file),
+            ):
+                if args.merged_min:
+                    if _n == 0:
+                        _log = l
+                        continue
+
+                    _log.add(l)
+
+                    if _n == len(args.input_file) - 1:
+                        l = _log
+                    else:
+                        continue
 
                 g.plot_log(l, variate =
                     _n if len(args.segments) == 0 else (
-                        args.segments[_n] if _n < len(args.segments) else args.segments[-1]
-                    )
+                        args.segments.get(_n)
+                    ),
+                    marker = args.marker_avg.get(_if),
                 )
 
-                _n += 1
+            if args.title != "":
+                matplotlib.pyplot.title(args.title)
 
             g.reduce_xticks()
             g.set_ylim(ymin = args.ymin, ymax = args.ymax)
 
+            if args.tight:
+                matplotlib.pyplot.tight_layout()
+
             if not args.save:
                 matplotlib.pyplot.show()
             else:
-                if not args.outfile:
-                    outfile = args.input_file[0].name
-
-                    if outfile.endswith(".log"):
-                        outfile = outfile[:-4]
-
-                    if len(args.input_file) > 1:
-                        outfile += "-multiple%d" % len(args.input_file)
-                else:
-                    outfile = args.outfile
-
-                matplotlib.pyplot.savefig(outfile + ".pdf", format = "pdf", dpi = args.dpi)
-                matplotlib.pyplot.savefig(outfile + ".png", format = "png", dpi = args.dpi)
+                save_figure()
 
         else:
-            _header_shown = False
+            _header_shown = args.no_header
 
-            for f in args.input_file:
-                l = Log(filestream = f, show_quantiles = args.quantiles)
+            _log = None
+
+            for _n, l in process_log(enumerate(args.input_file)):
+                if args.merged_min:
+                    if _n == 0:
+                        _log = l
+                        continue
+
+                    _log.add(l)
+
+                    if _n == len(args.input_file) - 1:
+                        l = _log
+                    else:
+                        continue
 
                 if not args.plot_friendly:
                     print(l)
                 else:
                     if not _header_shown:
-                        print (",".join(["len,rate,min,avg,max,std"] + ["Q%02d" % _q for _q in l.quantile_show_list]))
+                        print (",".join((["seg"] if len(args.segments) > 0 else []) + ["len,rate,min,avg,max,std"] + ["Q%02d" % _q for _q in l.quantile_show_list]))
                         _header_shown = True
 
-                    print (",".join(["%s" % s for s in [l.length, l.rate, l.min, l.mean, l.max, l.std] + [l.quantile(_q) for _q in l.quantile_show_list]]))
+                    print (",".join(["%s" % s for s in ([args.segments.get(_n)] if len(args.segments) > 0 else []) + [l.length, l.rate, l.min, l.mean, l.max, l.std] + [l.quantile(_q) for _q in l.quantile_show_list]]))
