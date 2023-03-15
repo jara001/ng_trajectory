@@ -526,7 +526,7 @@ class Graph(object):
                 label = label,
                 color = "white",
                 marker = "o",
-                markerfacecolor = self.__colors[dataset],
+                markerfacecolor = self.__colors[dataset % len(self.__colors)],
                 markersize = 8,
             )
         )
