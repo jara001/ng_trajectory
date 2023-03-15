@@ -293,14 +293,13 @@ Selectors are used for obtaining a subset of path's points, which are later used
 
 _ng_trajectory.selectors.*_
 
-- _curvature_          Points selector based on the path's shape.
-- _uniform_            Uniform selector.
-- _curvature_sample_   Sampling selector based on the curvature.
-- _uniform_distance_   Uniform distance selector.
-- _fixed_              Fixed selector.
-- _uniform_time_       Uniform time selector.
-- _uniform_curvature_  Uniform curvature selector.
-- _curvature2_         Selector that utilizes the curvature of the path.
+- _curvature_         Points selector based on the path's shape.
+- _uniform_           Uniform selector.
+- _curvature_sample_  Sampling selector based on the curvature.
+- _uniform_distance_  Uniform distance selector.
+- _fixed_             Fixed selector.
+- _uniform_time_      Uniform time selector.
+- _curvature2_        Selector that utilizes the curvature of the path.
 
 
 #### Curvature
@@ -431,35 +430,6 @@ a_break_max (float) = 4.5 [Maximum longitudal decceleration [m.s^-2]]
 sampling_distance (float) = 1.0 [[m] Distance of super-sampling before the interpolation, skipped when 0.]
 distance (float) = 0 [[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.]
 fixed_points (list) = [] [Points to be used in the selection upon calling 'select'.]
-```
-
-
-#### Uniform Curvature
-_selectors.uniform_curvature_
-
-Uniform curvature selector.
-
-This selector detects highest curvature peaks in the track (their number is given in 'peaks_num') and uniformly samples the rest of the input path the selected points are equidistantly spaced.
-
-Combination of 'curvature' and 'uniform_distance' selectors.
-
-
-```html
-Parameters:
-sampling_distance (float) = 1.0 [[m] Distance of super-sampling before the interpolation, skipped when 0.]
-track_name (str) = unknown [Name of the track.]
-plot (bool) = False [Whether the images are generated.]
-show_plot (bool) = True [Whether the generated images are shown.]
-point_distance (float) = 0.1 [[m] Distance between consecutive points of the path, skipped when 0.]
-peaks_height (float) = 1.0 [[m^-1] Minimum absolute height of peaks.]
-peaks_distance (int) = 16 [Minimum distance between two identified peaks.]
-peaks_bounds (int) = 8 [Distance to the turn boundaries (created pseudo-peaks), skipped when 0.]
-peaks_filling (float) = 10.0 [[m] Maximum distance between two consecutive peaks in the final array.]
-peaks_merge (int) = 0 [Maximum distance between two subsequent peaks to be merged.]
-
-Init parameters:
-distance (float) = 0 [[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.]
-peaks_num (int) = 0 [Number of peaks used for setting the initial points of equidistant sampling.]
 ```
 
 
