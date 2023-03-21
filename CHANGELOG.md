@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Fixed
+- 'ng_help' no longer requires an argument for `-h`.
+
 ## 1.8.0 - 2023-03-15
 ### Added
 - Criterions

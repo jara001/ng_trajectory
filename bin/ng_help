@@ -23,7 +23,7 @@ PARAMETERS = {
         {
             "help": "Show this help",
             "type": str,
-            "short": "h:",
+            "short": "h",
             "long": "help",
         },
     "algorithm":
