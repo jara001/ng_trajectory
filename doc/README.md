@@ -155,9 +155,10 @@ Criterions are used for calculating a fitness value during the optimization.
 
 _ng_trajectory.criterions.*_
 
-- _curvature_  Curvature criterion for fitness evaluation.
-- _length_     Length criterion for fitness evaluation.
-- _profile_    Profile criterion for fitness evaluation.
+- _curvature_    Curvature criterion for fitness evaluation.
+- _jazar_model_  Model simulation according to the simplified model from Jazar [1].
+- _length_       Length criterion for fitness evaluation.
+- _profile_      Profile criterion for fitness evaluation.
 
 
 #### Curvature
@@ -168,6 +169,56 @@ Curvature criterion for fitness evaluation.
 This criterion computes fitness value from curvature of the path. Since we expect that the input data already contain curvature, the fitness itself is computed as:
 
 	sum( (k_i)^2 )
+
+
+#### Jazar Model
+_criterions.jazar_model_
+
+Model simulation according to the simplified model from Jazar [1].
+
+This model is built on the 'Two-Wheel Planar Vehicle Dynamics' equations of motion, page 143, with some addition assumptions.
+
+Path profiling is done similarly to [2].
+
+Note: The parameters shown below are not synced with the algorithm itself. Therefore, pay attention to any updates.
+
+[1] R. N. Jazar, Advanced Vehicle Dynamics. Cham: Springer International Publishing, 2019. doi: 10.1007/978-3-030-13062-6.
+[2] N. R. Kapania, J. Subosits, and J. Christian Gerdes, ‘A Sequential Two-Step Algorithm for Fast Generation of Vehicle Racing Trajectories’, Journal of Dynamic Systems, Measurement, and Control, vol. 138, no. 9, p. 091005, Sep. 2016, doi: 10.1115/1.4033311.
+
+
+```html
+Parameters:
+overlap (int) = 0 [Size of the trajectory overlap. 0 disables this.]
+
+Aerodynamic parameters:
+cl (float) = 0.3 [Air drag coefficient [-]]
+ro (float) = 1.249512 [Air density [N.m^-2]]
+A (float) = 0.3 [Effective flow surface [m^2]]
+
+Init parameters:
+v_0 (float) = 0 [Initial speed [m.s^-1]]
+v_lim (float) = 4.5 [Maximum forward speed [m.s^-1]]
+a_acc_max (float) = 0.8 [Maximum longitudal acceleration [m.s^-2]]
+a_break_max (float) = 4.5 [Maximum longitudal decceleration [m.s^-2]]
+
+Tire parameters:
+C_sf (float) = 7.5 [Longitudinal slip coefficient of the front tire [-]]
+C_sr (float) = 7.5 [Longitudinal slip coefficient of the rear tire [-]]
+C_sa (float) = 0.5 [Longitudinal drop factor [-]]
+C_af (float) = 8.5 [Cornering stiffness of the front tire [-]]
+C_ar (float) = 8.5 [Cornering stiffness of the rear tire [-]]
+C_as (float) = 0.5 [Lateral drop factor [-]]
+s_s (float) = 0.1 [Saturation slip ratio [-]]
+alpha_s (float) = 0.0873 [Saturation sideslip angle [rad]]
+
+Vehicle parameters:
+g (float) = 9.81 [Gravity acceleration coeficient [m.s^-2]]
+m (float) = 3.68 [Vehicle mass [kg]]
+l_f (float) = 0.16 [Distance between center of mass and front axle [m]]
+l_r (float) = 0.16 [Distance between center of mass and rear axle [m]]
+h (float) = 0.08 [Height of the center of mass [m]]
+I_z (float) = 0.051558333 [Moment of interia of the vehicle around z-axis [kg.m^2]]
+```
 
 
 #### Length
