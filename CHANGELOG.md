@@ -11,6 +11,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Function `pointInBounds()` along with global `MAP_BOUNDS` to check whether point lies inside the map bounds.
 - Documentation for package plotter.
 
+### Changed
+- Penalizers
+    - _Count_
+        - Use segmentated map for getting the invalid points instead of numpy vectors.
+
 ### Fixed
 - 'ng_help' no longer requires an argument for `-h`.
 

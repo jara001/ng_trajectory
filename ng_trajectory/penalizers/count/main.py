@@ -8,7 +8,7 @@
 
 import numpy
 
-from ng_trajectory.segmentators.utils import gridCompute
+from ng_trajectory.segmentators.utils import gridCompute, pointToMap, validCheck#, pointInBounds
 
 
 # Global variables
@@ -52,11 +52,19 @@ def penalize(points: numpy.ndarray, valid_points: numpy.ndarray, grid: float, pe
     INVALID_POINTS.clear()
 
     for _p in points:
-        if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
-            invalid += 1
+        try:
+            # Depending on the context (i.e., how often something happens) it might be better to just
+            # avoid 'pointInBounds' and catch the exception.
+            # If there are many points outside the map it should be better to call the function instead
+            # of try-except.
+            #if not pointInBounds(_p) or not validCheck(pointToMap(_p)):
+            if not validCheck(pointToMap(_p)):
+                invalid += 1
 
-            # Store invalid point
-            INVALID_POINTS.append(_p)
+                # Store invalid point
+                INVALID_POINTS.append(_p)
+        except:
+            raise
 
 
     return invalid * penalty
