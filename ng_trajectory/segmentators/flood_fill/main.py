@@ -13,6 +13,9 @@ from ng_trajectory.segmentators.utils import *
 # PointDistance
 from ng_trajectory.interpolators.utils import pointDistance
 
+# Parallel execution of flood fill
+from concurrent import futures
+
 from typing import List
 
 
@@ -31,6 +34,7 @@ P.createAdd("reserve_width", False, bool, "When true, the segments are reserved 
 P.createAdd("reserve_selected", [], list, "IDs of segments that should use the reservation method, when empty, use all.", "")
 P.createAdd("reserve_distance", 2.0, float, "Distance from the line segment that is reserved to the segment.", "")
 P.createAdd("plot_flood", False, bool, "Whether the flooded areas should be plotted.", "")
+P.createAdd("parallel_flood", 0, int, "Number of threads used for flood fill (0 = sequential execution).", "")
 
 
 ######################
@@ -143,8 +147,8 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
         _map = MAP.copy()
         _map[_map == 100] = 255
 
-        for _i, _c in enumerate(pointsToMap(group_centers)):
-            _map[tuple(_c)] = _i
+        for _i, (_cx, _cy) in enumerate(pointsToMap(group_centers)):
+            _map[_cx, _cy] = _i
 
     else: # if reserve_width
         print ("Computing reserved zones...")
@@ -165,25 +169,24 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
             queue = [(walls[0][0], walls[1][0])]
 
             while len(queue) > 0:
-                cell = queue.pop(0)
+                cell_x, cell_y = queue.pop(0)
 
-                for _a in [-1, 0, 1]:
-                    for _b in [-1, 0, 1]:
-                        if _a == 0 and _b == 0:
-                            continue
+                for _a, _b in [ (-1, -1), (-1, 0), (-1, 1),
+                                ( 0, -1),          ( 0, 1),
+                                ( 1, -1), ( 1, 0), ( 1, 1) ]:
 
-                        # Try does catch larger values but not negative
-                        if cell[0] + _a < 0 or cell[1] + _b < 0:
-                            continue
+                    # Try does catch larger values but not negative
+                    if cell_x + _a < 0 or cell_y + _b < 0:
+                        continue
 
-                        try:
-                            _cell = _map[cell[0] + _a, cell[1] + _b]
-                        except:
-                            continue
+                    try:
+                        _cell = _map[cell_x + _a, cell_y + _b]
+                    except:
+                        continue
 
-                        if _cell == 0:
-                            _map[cell[0] + _a, cell[1] + _b] = color
-                            queue.append((cell[0] + _a, cell[1] + _b))
+                    if _cell == 0:
+                        _map[cell_x + _a, cell_y + _b] = color
+                        queue.append((cell_x + _a, cell_y + _b))
 
             color = color + 1
             walls = numpy.where(_map == 0)
@@ -194,7 +197,7 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
 
         for _i, _c in enumerate(pointsToMap(group_centers)):
             print ("\tSegment %d/%d:" % (_i, len(group_centers)))
-            _map[tuple(_c)] = _i
+            _map[_c[0], _c[1]] = _i
 
             if len(P.getValue("reserve_selected")) > 0 and _i not in P.getValue("reserve_selected"):
                 continue
@@ -248,27 +251,27 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
     #if create_borderlines:
     #    borderlines_map = { i: {} for i in range(len(group_centers)) }
 
-    while len(queue) > 0:
-        cell = queue.pop(0)
+    if P.getValue("parallel_flood") < 1:
+        while len(queue) > 0:
+            cell_x, cell_y = queue.pop(0)
 
-        for _a in [-1, 0, 1]:
-            for _b in [-1, 0, 1]:
-                if _a == 0 and _b == 0:
-                    continue
+            for _a, _b in [ (-1, -1), (-1, 0), (-1, 1),
+                            ( 0, -1),          ( 0, 1),
+                            ( 1, -1), ( 1, 0), ( 1, 1) ]:
 
                 # Try does catch larger values but not negative
-                if cell[0] + _a < 0 or cell[1] + _b < 0:
+                if cell_x + _a < 0 or cell_y + _b < 0:
                     continue
 
                 try:
-                    _cell = _map[cell[0] + _a, cell[1] + _b]
+                    _cell = _map[cell_x + _a, cell_y + _b]
                 except:
                     continue
 
                 # Color if its empty or reserved for this group
-                if _cell == 255 or (_cell == 100 + _map[tuple(cell)]):
-                    _map[cell[0] + _a, cell[1] + _b] = _map[tuple(cell)]
-                    queue.append((cell[0] + _a, cell[1] + _b))
+                if _cell == 255 or (_cell == 100 + _map[cell_x, cell_y]):
+                    _map[cell_x + _a, cell_y + _b] = _map[cell_x, cell_y]
+                    queue.append((cell_x + _a, cell_y + _b))
                 # Save some steps by continuing sooner when borderlines are not created
                 #elif not create_borderlines:
                 #    continue
@@ -279,15 +282,41 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
                 #elif _cell < 200 and _cell != _map[tuple(cell)]:
                 #    borderlines_map[_map[tuple(cell)]][(cell[0] + _a, cell[1] + _b)] = _cell - 100
 
+        # Save last map
+        MAP_LAST = _map
 
-    # Save last map
-    MAP_LAST = _map
+    else:
+        # Save last map
+        MAP_LAST = _map
+
+        pool = futures.ProcessPoolExecutor(max_workers = P.getValue("parallel_flood"))
+
+        queues = queue
+        colors = [ _map[queues[i][0], queues[i][1]] for i in range(len(group_centers)) ]
+        _run = True
+
+        while _run:
+            _run = False
+            for i, new_queue in enumerate(pool.map(expand_fill, queues)):
+
+                if len(new_queue) == 0:
+                    continue
+
+                _run = True
+                _color = colors[i]
+                queues[i] = []
+
+                for cell_x, cell_y in new_queue:
+                    if MAP_LAST[cell_x, cell_y] == 255:
+                        MAP_LAST[cell_x, cell_y] = _color
+                        queues[i].append((cell_x, cell_y))
 
     #if create_borderlines:
     #    borderlines_real = { i: { j: [] for j in range(len(group_centers)) } for i in range(len(group_centers)) }
 
     for p in points:
-        _i = _map[tuple(pointToMap(p))]
+        _px, _py = pointToMap(p)
+        _i = MAP_LAST[_px, _py]
 
         # Group only taken points
         if _i != 255 and _i < 100:
@@ -344,3 +373,41 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
             x[numpy.sqrt( numpy.sum( numpy.power( numpy.subtract(x[:, :2], group_centers[ix][:2]), 2), axis = 1 ) ) < P.getValue("range_limit")]
             for ix, x in enumerate(groups) if len(x) > 0
         ]
+
+
+def expand_fill(queue):
+    """Performs a step of flood fill algorithm.
+
+    This does not do any modification of the map,
+    only keeps track of points that should be changed.
+    Coloring is done by synchronization process.
+    """
+    global MAP_LAST
+
+    n_queue = []
+
+    if len(queue) == 2 and type(queue[0]) == int:
+        queue = [queue]
+
+    while len(queue) > 0:
+        cell_x, cell_y = queue.pop(0)
+
+        for _a, _b in [ (-1, -1), (-1, 0), (-1, 1),
+                        ( 0, -1),          ( 0, 1),
+                        ( 1, -1), ( 1, 0), ( 1, 1) ]:
+
+            # Try does catch larger values but not negative
+            if cell_x + _a < 0 or cell_y + _b < 0:
+                continue
+
+            try:
+                _cell = MAP_LAST[cell_x + _a, cell_y + _b]
+            except:
+                continue
+
+            # Color if its empty or reserved for this group
+            if _cell == 255 or (_cell == 100 + MAP_LAST[cell_x, cell_y]):
+                #_map[cell_x + _a, cell_y + _b] = MAP_LAST[cell_x, cell_y]
+                n_queue.append((cell_x + _a, cell_y + _b))
+
+    return n_queue

@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
+- Segmentators
+    - _Flood_fill_
+        - Parameter `parallel_flood` to run the segmentation with a ProcessPool.
 - Documentation for package plotter.
 
 ### Fixed
