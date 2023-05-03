@@ -143,8 +143,8 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
         _map = MAP.copy()
         _map[_map == 100] = 255
 
-        for _i, _c in enumerate(pointsToMap(group_centers)):
-            _map[tuple(_c)] = _i
+        for _i, (_cx, _cy) in enumerate(pointsToMap(group_centers)):
+            _map[_cx, _cy] = _i
 
     else: # if reserve_width
         print ("Computing reserved zones...")
@@ -165,7 +165,7 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
             queue = [(walls[0][0], walls[1][0])]
 
             while len(queue) > 0:
-                cell = queue.pop(0)
+                cell_x, cell_y = queue.pop(0)
 
                 for _a in [-1, 0, 1]:
                     for _b in [-1, 0, 1]:
@@ -173,17 +173,17 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
                             continue
 
                         # Try does catch larger values but not negative
-                        if cell[0] + _a < 0 or cell[1] + _b < 0:
+                        if cell_x + _a < 0 or cell_y + _b < 0:
                             continue
 
                         try:
-                            _cell = _map[cell[0] + _a, cell[1] + _b]
+                            _cell = _map[cell_x + _a, cell_y + _b]
                         except:
                             continue
 
                         if _cell == 0:
-                            _map[cell[0] + _a, cell[1] + _b] = color
-                            queue.append((cell[0] + _a, cell[1] + _b))
+                            _map[cell_x + _a, cell_y + _b] = color
+                            queue.append((cell_x + _a, cell_y + _b))
 
             color = color + 1
             walls = numpy.where(_map == 0)
@@ -194,7 +194,7 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
 
         for _i, _c in enumerate(pointsToMap(group_centers)):
             print ("\tSegment %d/%d:" % (_i, len(group_centers)))
-            _map[tuple(_c)] = _i
+            _map[_c[0], _c[1]] = _i
 
             if len(P.getValue("reserve_selected")) > 0 and _i not in P.getValue("reserve_selected"):
                 continue
@@ -249,7 +249,7 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
     #    borderlines_map = { i: {} for i in range(len(group_centers)) }
 
     while len(queue) > 0:
-        cell = queue.pop(0)
+        cell_x, cell_y = queue.pop(0)
 
         for _a in [-1, 0, 1]:
             for _b in [-1, 0, 1]:
@@ -257,18 +257,18 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
                     continue
 
                 # Try does catch larger values but not negative
-                if cell[0] + _a < 0 or cell[1] + _b < 0:
+                if cell_x + _a < 0 or cell_y + _b < 0:
                     continue
 
                 try:
-                    _cell = _map[cell[0] + _a, cell[1] + _b]
+                    _cell = _map[cell_x + _a, cell_y + _b]
                 except:
                     continue
 
                 # Color if its empty or reserved for this group
-                if _cell == 255 or (_cell == 100 + _map[tuple(cell)]):
-                    _map[cell[0] + _a, cell[1] + _b] = _map[tuple(cell)]
-                    queue.append((cell[0] + _a, cell[1] + _b))
+                if _cell == 255 or (_cell == 100 + _map[cell_x, cell_y]):
+                    _map[cell_x + _a, cell_y + _b] = _map[cell_x, cell_y]
+                    queue.append((cell_x + _a, cell_y + _b))
                 # Save some steps by continuing sooner when borderlines are not created
                 #elif not create_borderlines:
                 #    continue
@@ -287,7 +287,8 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
     #    borderlines_real = { i: { j: [] for j in range(len(group_centers)) } for i in range(len(group_centers)) }
 
     for p in points:
-        _i = _map[tuple(pointToMap(p))]
+        _px, _py = pointToMap(p)
+        _i = _map[_px, _py]
 
         # Group only taken points
         if _i != 255 and _i < 100:
