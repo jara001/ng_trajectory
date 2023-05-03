@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Segmentators
     - _Flood_fill_
         - Parameter `parallel_flood` to run the segmentation with a ProcessPool.
+    - Function `pointInBounds()` along with global `MAP_BOUNDS` to check whether point lies inside the map bounds.
 - Documentation for package plotter.
 
 ### Fixed
