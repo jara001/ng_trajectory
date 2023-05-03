@@ -167,23 +167,22 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
             while len(queue) > 0:
                 cell_x, cell_y = queue.pop(0)
 
-                for _a in [-1, 0, 1]:
-                    for _b in [-1, 0, 1]:
-                        if _a == 0 and _b == 0:
-                            continue
+                for _a, _b in [ (-1, -1), (-1, 0), (-1, 1),
+                                ( 0, -1),          ( 0, 1),
+                                ( 1, -1), ( 1, 0), ( 1, 1) ]:
 
-                        # Try does catch larger values but not negative
-                        if cell_x + _a < 0 or cell_y + _b < 0:
-                            continue
+                    # Try does catch larger values but not negative
+                    if cell_x + _a < 0 or cell_y + _b < 0:
+                        continue
 
-                        try:
-                            _cell = _map[cell_x + _a, cell_y + _b]
-                        except:
-                            continue
+                    try:
+                        _cell = _map[cell_x + _a, cell_y + _b]
+                    except:
+                        continue
 
-                        if _cell == 0:
-                            _map[cell_x + _a, cell_y + _b] = color
-                            queue.append((cell_x + _a, cell_y + _b))
+                    if _cell == 0:
+                        _map[cell_x + _a, cell_y + _b] = color
+                        queue.append((cell_x + _a, cell_y + _b))
 
             color = color + 1
             walls = numpy.where(_map == 0)
@@ -251,34 +250,32 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
     while len(queue) > 0:
         cell_x, cell_y = queue.pop(0)
 
-        for _a in [-1, 0, 1]:
-            for _b in [-1, 0, 1]:
-                if _a == 0 and _b == 0:
-                    continue
+        for _a, _b in [ (-1, -1), (-1, 0), (-1, 1),
+                        ( 0, -1),          ( 0, 1),
+                        ( 1, -1), ( 1, 0), ( 1, 1) ]:
 
-                # Try does catch larger values but not negative
-                if cell_x + _a < 0 or cell_y + _b < 0:
-                    continue
+            # Try does catch larger values but not negative
+            if cell_x + _a < 0 or cell_y + _b < 0:
+                continue
 
-                try:
-                    _cell = _map[cell_x + _a, cell_y + _b]
-                except:
-                    continue
+            try:
+                _cell = _map[cell_x + _a, cell_y + _b]
+            except:
+                continue
 
-                # Color if its empty or reserved for this group
-                if _cell == 255 or (_cell == 100 + _map[cell_x, cell_y]):
-                    _map[cell_x + _a, cell_y + _b] = _map[cell_x, cell_y]
-                    queue.append((cell_x + _a, cell_y + _b))
-                # Save some steps by continuing sooner when borderlines are not created
-                #elif not create_borderlines:
-                #    continue
-                # Store it if its another segment
-                #elif _cell < 100 and _cell != _map[tuple(cell)]: # Otherwise we also get "neighbours to itself".
-                #    borderlines_map[_map[tuple(cell)]][(cell[0] + _a, cell[1] + _b)] = _cell
-                # ... also in case that we are using reservations
-                #elif _cell < 200 and _cell != _map[tuple(cell)]:
-                #    borderlines_map[_map[tuple(cell)]][(cell[0] + _a, cell[1] + _b)] = _cell - 100
-
+            # Color if its empty or reserved for this group
+            if _cell == 255 or (_cell == 100 + _map[cell_x, cell_y]):
+                _map[cell_x + _a, cell_y + _b] = _map[cell_x, cell_y]
+                queue.append((cell_x + _a, cell_y + _b))
+            # Save some steps by continuing sooner when borderlines are not created
+            #elif not create_borderlines:
+            #    continue
+            # Store it if its another segment
+            #elif _cell < 100 and _cell != _map[tuple(cell)]: # Otherwise we also get "neighbours to itself".
+            #    borderlines_map[_map[tuple(cell)]][(cell[0] + _a, cell[1] + _b)] = _cell
+            # ... also in case that we are using reservations
+            #elif _cell < 200 and _cell != _map[tuple(cell)]:
+            #    borderlines_map[_map[tuple(cell)]][(cell[0] + _a, cell[1] + _b)] = _cell - 100
 
     # Save last map
     MAP_LAST = _map
