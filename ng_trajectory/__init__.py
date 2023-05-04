@@ -146,7 +146,7 @@ else:
 ######################
 
 #from . import utils
-from .main import execute, configurationLoad
+from .main import execute, configurationLoad, configurationMerge
 
 
 ######################
