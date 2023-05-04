@@ -156,7 +156,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
     # Local to global variables
     CRITERION = criterion
-    CRITERION_ARGS = criterion_args
+    CRITERION_ARGS = {**criterion_args, **{"optimization": True}}
     INTERPOLATOR = interpolator
     INTERPOLATOR_ARGS = interpolator_args
     SEGMENTATOR = segmentator
@@ -165,7 +165,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     SELECTOR_ARGS = selector_args
     PENALIZER = penalizer
     PENALIZER_INIT = penalizer_init
-    PENALIZER_ARGS = penalizer_args
+    PENALIZER_ARGS = {**penalizer_args, **{"optimization": True}}
     LOGFILE = logfile
     VERBOSITY = logging_verbosity
     _holdmatryoshka = hold_matryoshka
