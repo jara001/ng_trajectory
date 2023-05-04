@@ -191,7 +191,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
                 if not _holdmatryoshka:
                     print ("Warning: 'hold_matryoshka' is not set, so mapping won't be probably used.")
         except Exception as e:
-            print ("Failed to load Matryoshka from '%s': %s" % (P.getValue("load_matryoshka"), e)
+            print ("Failed to load Matryoshka from '%s': %s" % (P.getValue("load_matryoshka"), e))
             MATRYOSHKA = None
             GROUP_LAYERS = None
             GROUP_CENTERS = None
