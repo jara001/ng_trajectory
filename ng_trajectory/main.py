@@ -214,6 +214,46 @@ def configurationAppend(conf: Dict[str, any]) -> bool:
     return True
 
 
+def configurationMerge(conf: Dict[str, any]) -> bool:
+    """Merges configuration with the global settings.
+
+    Arguments:
+    conf -- configuration to merge, dict
+
+    Returns:
+    success -- True when loaded, otherwise False
+
+    Note: This crawls through the dicts and performs
+    a 'true merge'; merging values in the subdicts.
+
+    Sources:
+    https://stackoverflow.com/a/7205672
+    """
+    global CONFIGURATION
+
+    def mergedicts(dict1, dict2):
+        for k in set(dict1.keys()).union(dict2.keys()):
+            if k in dict1 and k in dict2:
+                if isinstance(dict1[k], dict) and isinstance(dict2[k], dict):
+                    yield (k, dict(mergedicts(dict1[k], dict2[k])))
+                else:
+                    # If one of the values is not a dict, you can't continue merging it.
+                    # Value from second dict overrides one in first and we move on.
+                    yield (k, dict2[k])
+                    # Alternatively, replace this with exception raiser to alert you of value conflicts
+            elif k in dict1:
+                yield (k, dict1[k])
+            else:
+                yield (k, dict2[k])
+
+    CONFIGURATION = dict(mergedicts(CONFIGURATION, conf))
+
+    if CONFIGURATION.get("logging_verbosity", 1) > 1:
+        print (CONFIGURATION)
+
+    return True
+
+
 def dataLoad(filename: str) -> numpy.ndarray:
     """Loads data from stored file.
 

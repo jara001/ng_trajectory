@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Parameter `parallel_flood` to run the segmentation with a ProcessPool.
     - Function `pointInBounds()` along with global `MAP_BOUNDS` to check whether point lies inside the map bounds.
 - Documentation for package plotter.
+- Function `configurationMerge()` to merge another configuration to self.
 
 ### Changed
 - Optimizers
