@@ -8,6 +8,7 @@
 
 import numpy
 
+from ng_trajectory.penalizers.utils import eInvalidPoints
 from ng_trajectory.segmentators.utils import *
 
 from typing import List, Dict
@@ -118,9 +119,6 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     """
     global CENTERLINE, INVALID_POINTS
 
-    # Use the grid or compute it
-    _grid = grid if grid else gridCompute(points)
-
     # Mapping between the candidate points and their interpolation
     _points_line_mapping = [
         numpy.argmin(
@@ -147,63 +145,61 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     invalid_points = 0
     INVALID_POINTS.clear()
 
-    for _ip, _p in enumerate(points):
-        if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
+    for _ip, _p in eInvalidPoints(points):
+        invalid_points += 1
 
-            invalid_points += 1
+        # Store invalid point
+        INVALID_POINTS.append(_p)
 
-            # Store invalid point
-            INVALID_POINTS.append(_p)
+        # Note: Trying borderlines here, it works the same, just the meaning of 'invalid' is different.
+        # Note: We used to have '<' here, however that failed with invalid index 0.
+        _segment_id = len([ _plm for _plm in _points_line_mapping if _plm <= _ip ]) - 1
 
-            # Note: Trying borderlines here, it works the same, just the meaning of 'invalid' is different.
-            # Note: We used to have '<' here, however that failed with invalid index 0.
-            _segment_id = len([ _plm for _plm in _points_line_mapping if _plm <= _ip ]) - 1
-
-            # We need to wrap around when reaching over end of the line
-            if _points_line_mapping[_segment_id] > _points_line_mapping[(_segment_id+1)%len(_points_line_mapping)]:
-                _invalid = numpy.max(
-                    numpy.sqrt(
-                        numpy.sum(
-                            numpy.power(
-                                numpy.subtract(
-                                    numpy.vstack((
-                                        CENTERLINE[_points_line_mapping[_segment_id]:, :2],
-                                        CENTERLINE[0:_points_line_mapping[(_segment_id+1)%len(_points_line_mapping)]+1, :2]
-                                    )),
-                                    _p[:2]
-                                ),
-                                2
+        # We need to wrap around when reaching over end of the line
+        if _points_line_mapping[_segment_id] > _points_line_mapping[(_segment_id+1)%len(_points_line_mapping)]:
+            _invalid = numpy.max(
+                numpy.sqrt(
+                    numpy.sum(
+                        numpy.power(
+                            numpy.subtract(
+                                numpy.vstack((
+                                    CENTERLINE[_points_line_mapping[_segment_id]:, :2],
+                                    CENTERLINE[0:_points_line_mapping[(_segment_id+1)%len(_points_line_mapping)]+1, :2]
+                                )),
+                                _p[:2]
                             ),
-                            axis = 1
-                        )
+                            2
+                        ),
+                        axis = 1
                     )
                 )
+            )
+        else:
+            _invalid = numpy.max(
+                numpy.sqrt(
+                    numpy.sum(
+                        numpy.power(
+                            numpy.subtract(
+                                CENTERLINE[_points_line_mapping[_segment_id]:_points_line_mapping[(_segment_id+1)%len(_points_line_mapping)]+1, :2],
+                                _p[:2]
+                            ),
+                            2
+                        ),
+                        axis = 1
+                    )
+                )
+            )
+
+
+        if HUBER_LOSS:
+            # '_invalid' is always positive
+            if _invalid <= HUBER_DELTA:
+                _invalid = 0.5 * pow(_invalid, 2)
             else:
-                _invalid = numpy.max(
-                    numpy.sqrt(
-                        numpy.sum(
-                            numpy.power(
-                                numpy.subtract(
-                                    CENTERLINE[_points_line_mapping[_segment_id]:_points_line_mapping[(_segment_id+1)%len(_points_line_mapping)]+1, :2],
-                                    _p[:2]
-                                ),
-                                2
-                            ),
-                            axis = 1
-                        )
-                    )
-                )
+                _invalid = HUBER_DELTA * (_invalid - 0.5 * HUBER_DELTA)
 
 
-            if HUBER_LOSS:
-                # '_invalid' is always positive
-                if _invalid <= HUBER_DELTA:
-                    _invalid = 0.5 * pow(_invalid, 2)
-                else:
-                    _invalid = HUBER_DELTA * (_invalid - 0.5 * HUBER_DELTA)
-
-
-            invalid = METHOD(invalid, _invalid)
+        invalid = METHOD(invalid, _invalid)
 
 
     invalid = AFTER(invalid, invalid_points)
