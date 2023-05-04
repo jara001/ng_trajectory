@@ -9,6 +9,7 @@
 import sys, os, argparse
 
 from ng_trajectory import configurationLoad, execute
+from ng_trajectory.main import configurationAppend
 
 # Global variables
 PARSER = argparse.ArgumentParser(
@@ -18,6 +19,9 @@ PARSER = argparse.ArgumentParser(
 Script for running the optimization using ng_trajectory.
 
 One argument is expected with a path to '.json' configuration.
+
+In addition, you can temporarily modify this configuration by
+passing arguments starting with '+' to this command.
     """,
 
 )
@@ -38,10 +42,20 @@ if __name__ == "__main__":
     # Obtain arguments
     args, rest = PARSER.parse_known_args()
 
+    # https://stackoverflow.com/questions/37367331/is-it-possible-to-use-argparse-to-capture-an-arbitrary-set-of-optional-arguments
+    CONF_PARSER = argparse.ArgumentParser(prefix_chars = "+")
+
+    for arg in rest:
+        if arg.startswith("+"):
+            CONF_PARSER.add_argument(arg.split("=")[0], type = str)
+
+    cargs, rest = CONF_PARSER.parse_known_args(args = rest)
+
     # Expect one argument
     if len(sys.argv) > 1:
         if os.path.exists(sys.argv[1]):
             if configurationLoad(sys.argv[1]):
+                configurationAppend(vars(cargs))
                 print (execute())
             else:
                 print ("Unable to load configuration from given file.", file=sys.stderr)
