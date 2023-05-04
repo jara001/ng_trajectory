@@ -6,9 +6,28 @@
 # Imports & Globals
 ######################
 
-import sys, os
+import sys, os, argparse
 
 from ng_trajectory import configurationLoad, execute
+
+# Global variables
+PARSER = argparse.ArgumentParser(
+    prog = "ng_run",
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description = """
+Script for running the optimization using ng_trajectory.
+
+One argument is expected with a path to '.json' configuration.
+    """,
+
+)
+
+# Arguments
+PARSER.add_argument("input_file",
+    help = "Path to the '.json' configuration file.",
+    default = None,
+    type = str,
+)
 
 
 ######################
@@ -16,6 +35,9 @@ from ng_trajectory import configurationLoad, execute
 ######################
 
 if __name__ == "__main__":
+    # Obtain arguments
+    args, rest = PARSER.parse_known_args()
+
     # Expect one argument
     if len(sys.argv) > 1:
         if os.path.exists(sys.argv[1]):
