@@ -36,6 +36,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Use `eInvalidPoints()` where applicable.
 
 ### Fixed
+- Optimizers
+    - _Matryoshka_
+        - ParameterList is updated with keyword arguments.
 - 'ng_help' no longer requires an argument for `-h`.
 
 ## 1.8.0 - 2023-03-15

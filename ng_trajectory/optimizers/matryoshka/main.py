@@ -172,6 +172,8 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
     VALID_POINTS = points
 
+    P.updateAll(kwargs, reset = False)
+
     # Create the transformation if:
     #  - There is no transformation.
     #  - Current transformation does not work for selected number of segments.
