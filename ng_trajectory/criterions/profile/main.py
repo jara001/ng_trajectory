@@ -50,7 +50,7 @@ def compute(points: numpy.ndarray, overlap: int = 0, **overflown) -> float:
          minimization criterion
     """
 
-    _, _, _t = profiler.profileCompute(points, overlap)
+    _, _, _t = profiler.profileCompute(points, overlap, lap_time = True)
 
     return float(_t[-1])
 

@@ -25,6 +25,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Function `configurationMerge()` to merge another configuration to self.
 
 ### Changed
+- Criterions
+    - _Profile_
+        - Criterion is using the true `lap_time`.
 - Optimizers
     - _Matryoshka_
         - Use list comprehension in `groupsCenterCompute()`.
