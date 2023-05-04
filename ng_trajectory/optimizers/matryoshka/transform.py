@@ -115,13 +115,7 @@ def groupsCenterCompute(groups: List[numpy.ndarray]) -> numpy.ndarray:
     Returns:
     centers -- center points of the groups, nx2 numpy.ndarray
     """
-
-    _centers = []
-
-    for _g in groups:
-        _centers.append( numpy.mean( _g, axis = 0 ) )
-
-    return numpy.asarray(_centers)
+    return numpy.asarray([numpy.mean( _g, axis = 0 ) for _g in groups])
 
 
 def groupsBorderObtain(groups: List[numpy.ndarray], grid: float = None) -> List[numpy.ndarray]:

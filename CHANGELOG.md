@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Documentation for package plotter.
 
 ### Changed
+- Optimizers
+    - _Matryoshka_
+        - Use list comprehension in `groupsCenterCompute()`.
 - Penalizers
     - _Count_
         - Use segmentated map for getting the invalid points instead of numpy vectors.
