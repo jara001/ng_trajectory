@@ -76,6 +76,8 @@ P.createAdd("hold_matryoshka", False, bool, "Whether the transformation should b
 P.createAdd("plot", False, bool, "Whether a graphical representation should be created.", "init (viz.)")
 P.createAdd("grid", "computed by default", list, "X-size and y-size of the grid used for points discretization.", "init (Matryoshka)")
 P.createAdd("plot_mapping", False, bool, "Whether a grid should be mapped onto the track (to show the mapping).", "init (viz.)")
+P.createAdd("save_matryoshka", None, str, "Name of the file to save Matryoshka mapping. When unset, do not save.", "init (Matryoshka)")
+P.createAdd("load_matryoshka", None, str, "Name of the file to load Matryoshka from. When unset, do not load.", "init (Matryoshka)")
 
 
 ######################
@@ -174,6 +176,26 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
     P.updateAll(kwargs, reset = False)
 
+    # Load Matryoshka
+    if MATRYOSHKA is None and P.getValue("load_matryoshka") is not None:
+        try:
+            _data = numpy.load(P.getValue("load_matryoshka"), allow_pickle = True)
+
+            if all([ _d in _data.files for _d in ["matryoshka", "group_layers", "group_centers"] ]):
+                MATRYOSHKA = _data.get("matryoshka").tolist()
+                GROUP_LAYERS = _data.get("group_layers")
+                GROUP_CENTERS = _data.get("group_centers")
+
+                print ("Matryoshka mapping loaded from '%s'." % P.getValue("load_matryoshka"))
+
+                if not _holdmatryoshka:
+                    print ("Warning: 'hold_matryoshka' is not set, so mapping won't be probably used.")
+        except Exception as e:
+            print ("Failed to load Matryoshka from '%s': %s" % (P.getValue("load_matryoshka"), e)
+            MATRYOSHKA = None
+            GROUP_LAYERS = None
+            GROUP_CENTERS = None
+
     # Create the transformation if:
     #  - There is no transformation.
     #  - Current transformation does not work for selected number of segments.
@@ -237,6 +259,13 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
             else:
                 _GRID = gridCompute(points)
                 GRID = [ _GRID, _GRID ]
+
+        if P.getValue("save_matryoshka") is not None:
+            try:
+                numpy.savez(P.getValue("save_matryoshka"), matryoshka = MATRYOSHKA, group_layers = GROUP_LAYERS, group_centers = GROUP_CENTERS)
+                print ("Matryoshka mapping saved to '%s'." % P.getValue("save_matryoshka"))
+            except Exception as e:
+                print ("Failed to save Matryoshka to '%s': %s" % (P.getValue("save_matryoshka"), e))
 
     elif plot: # Plot when mapping is held
         ngplot.indicesPlot(GROUP_CENTERS)

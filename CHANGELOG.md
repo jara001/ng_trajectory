@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Optimizers
     - _Matryoshka_
         - Function `indicesToRealCoordinatesInt()` to convert indices using slice.
+        - Parameter `load_matryoshka` to set file for loading Matryoshka instead of creating it.
+        - Parameter `save_matryoshka` to set file for saving Matryoshka after it is created.
 - Penalizers
     - Function `eInvalidPoints()` to iterate over invalid points obtained by segmentated map.
 - Segmentators
