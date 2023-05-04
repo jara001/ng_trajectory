@@ -208,7 +208,7 @@ def configurationAppend(conf: Dict[str, any]) -> bool:
 
     CONFIGURATION = {**CONFIGURATION, **conf}
 
-    if conf.get("logging_verbosity", 1) > 1:
+    if CONFIGURATION.get("logging_verbosity", 1) > 1:
         print (CONFIGURATION)
 
     return True
