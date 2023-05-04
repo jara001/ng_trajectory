@@ -78,6 +78,8 @@ P.createAdd("grid", "computed by default", list, "X-size and y-size of the grid 
 P.createAdd("plot_mapping", False, bool, "Whether a grid should be mapped onto the track (to show the mapping).", "init (viz.)")
 P.createAdd("save_matryoshka", None, str, "Name of the file to save Matryoshka mapping. When unset, do not save.", "init (Matryoshka)")
 P.createAdd("load_matryoshka", None, str, "Name of the file to load Matryoshka from. When unset, do not load.", "init (Matryoshka)")
+P.createAdd("plot_group_indices", True, bool, "Whether group indices should be shown on the track.", "init (viz.)")
+P.createAdd("plot_group_borders", True, bool, "Whether group borders should be shown on the track.", "init (viz.)")
 
 
 ######################
@@ -174,7 +176,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
     VALID_POINTS = points
 
-    P.updateAll(kwargs, reset = False)
+    P.updateAll(kwargs)
 
     # Load Matryoshka
     if MATRYOSHKA is None and P.getValue("load_matryoshka") is not None:
@@ -207,7 +209,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         #       times (or at least very very often).
         GROUP_CENTERS = SELECTOR.select(**{**{"points": group_centerline, "remain": groups}, **SELECTOR_ARGS})
 
-        if plot:
+        if plot and P.getValue("plot_group_indices"):
             ngplot.indicesPlot(GROUP_CENTERS)
 
         # Matryoshka construction
@@ -235,7 +237,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         GROUP_LAYERS = transform.groupsBorderObtain(_groups)
         GROUP_LAYERS = transform.groupsBorderBeautify(GROUP_LAYERS, 400)
 
-        if plot:
+        if plot and P.getValue("plot_group_borders"):
             ngplot.bordersPlot(GROUP_LAYERS, figure)
 
         layers_center = transform.groupsCenterCompute(_groups)
@@ -268,8 +270,11 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
                 print ("Failed to save Matryoshka to '%s': %s" % (P.getValue("save_matryoshka"), e))
 
     elif plot: # Plot when mapping is held
-        ngplot.indicesPlot(GROUP_CENTERS)
-        ngplot.bordersPlot(GROUP_LAYERS, figure)
+        if P.getValue("plot_group_indices"):
+            ngplot.indicesPlot(GROUP_CENTERS)
+
+        if P.getValue("plot_group_borders"):
+            ngplot.bordersPlot(GROUP_LAYERS, figure)
 
         if P.getValue("plot_mapping"):
             xx, yy = numpy.meshgrid(numpy.linspace(0, 1, 110), numpy.linspace(0, 1, 110))
