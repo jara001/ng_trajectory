@@ -8,8 +8,7 @@
 
 import sys, os, argparse
 
-from ng_trajectory import configurationLoad, execute
-from ng_trajectory.main import configurationAppend
+from ng_trajectory import configurationLoad, execute, configurationMerge
 
 # Global variables
 PARSER = argparse.ArgumentParser(
@@ -100,7 +99,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         if os.path.exists(sys.argv[1]):
             if configurationLoad(sys.argv[1]):
-                configurationAppend(dcargs)
+                configurationMerge(dcargs)
                 print (execute())
             else:
                 print ("Unable to load configuration from given file.", file=sys.stderr)
