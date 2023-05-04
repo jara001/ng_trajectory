@@ -169,7 +169,11 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
     VALID_POINTS = points
 
-    if MATRYOSHKA is None or not _holdmatryoshka:
+    # Create the transformation if:
+    #  - There is no transformation.
+    #  - Current transformation does not work for selected number of segments.
+    #  - We want to create a new transformation.
+    if MATRYOSHKA is None or (groups > 0 and groups != len(MATRYOSHKA)) or not _holdmatryoshka:
         # Note: In version <=1.3.0 the group_centerline passed to the SELECTOR was sorted using
         #       ng_trajectory.interpolators.utils.trajectorySort, but it sometimes rotated the
         #       already sorted centerline; interestingly, the result was counterclockwise at all

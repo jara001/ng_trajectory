@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Optimizers
     - _Matryoshka_
         - Use list comprehension in `groupsCenterCompute()`.
+        - Force new transformation when number of segments does not correspond to the current mapping.
 - Penalizers
     - _Count_
         - Use segmentated map for getting the invalid points instead of numpy vectors.
