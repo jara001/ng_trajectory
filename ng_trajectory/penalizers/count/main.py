@@ -8,7 +8,7 @@
 
 import numpy
 
-from ng_trajectory.segmentators.utils import gridCompute
+from ng_trajectory.penalizers.utils import eInvalidPoints
 
 
 # Global variables
@@ -45,18 +45,14 @@ def penalize(points: numpy.ndarray, valid_points: numpy.ndarray, grid: float, pe
     """
     global INVALID_POINTS
 
-    # Use the grid or compute it
-    _grid = grid if grid else gridCompute(points)
-
     invalid = 0
     INVALID_POINTS.clear()
 
-    for _p in points:
-        if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
-            invalid += 1
+    for _, _p in eInvalidPoints(points):
+        invalid += 1
 
-            # Store invalid point
-            INVALID_POINTS.append(_p)
+        # Store invalid point
+        INVALID_POINTS.append(_p)
 
 
     return invalid * penalty

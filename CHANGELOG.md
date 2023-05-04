@@ -5,10 +5,19 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
+- Penalizers
+    - Function `eInvalidPoints()` to iterate over invalid points obtained by segmentated map.
 - Segmentators
     - _Flood_fill_
         - Parameter `parallel_flood` to run the segmentation with a ProcessPool.
+    - Function `pointInBounds()` along with global `MAP_BOUNDS` to check whether point lies inside the map bounds.
 - Documentation for package plotter.
+
+### Changed
+- Penalizers
+    - _Count_
+        - Use segmentated map for getting the invalid points instead of numpy vectors.
+    - Use `eInvalidPoints()` where applicable.
 
 ### Fixed
 - 'ng_help' no longer requires an argument for `-h`.

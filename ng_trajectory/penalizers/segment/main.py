@@ -11,6 +11,7 @@ import numpy
 import ng_trajectory.plot as ngplot
 
 from ng_trajectory.interpolators.utils import pointDistance, trajectoryClosest, trajectoryClosestIndex, trajectoryFarthest
+from ng_trajectory.penalizers.utils import eInvalidPoints
 from ng_trajectory.segmentators.utils import *
 
 # Optimization methods
@@ -152,27 +153,24 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     INVALID_POINTS.clear()
 
     # 1. Find invalid points
-    for _ip, _p in enumerate(points):
+    for _ip, _p in eInvalidPoints(points):
 
-        # Check whether the point is invalid (i.e., there is not a single valid point next to it).
-        if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
+        _invalids.append(_ip)
 
-            _invalids.append(_ip)
+        # Store invalid point
+        INVALID_POINTS.append(_p)
 
-            # Store invalid point
-            INVALID_POINTS.append(_p)
+        _closest = trajectoryClosest(valid_points, _p)
 
-            _closest = trajectoryClosest(valid_points, _p)
-
-            _dists.append(
-                pointDistance(
-                    _closest,
-                    _p
-                )
+        _dists.append(
+            pointDistance(
+                _closest,
+                _p
             )
+        )
 
-            if DEBUG:
-                ngplot.pointsPlot(numpy.vstack((_closest[:2], _p[:2])))
+        if DEBUG:
+            ngplot.pointsPlot(numpy.vstack((_closest[:2], _p[:2])))
 
 
     # 2. Find edges of the track area

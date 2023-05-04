@@ -12,6 +12,7 @@ import numpy
 MAP = None
 MAP_ORIGIN = None
 MAP_GRID = None
+MAP_BOUNDS = None
 MAP_LAST = None
 HOOD4 = numpy.asarray([[-1, 0], [0, -1], [1, 0], [0, 1]])
 HOOD8 = numpy.asarray([[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]])
@@ -30,7 +31,7 @@ def mapCreate(points: numpy.ndarray, origin: numpy.ndarray = None, size: numpy.n
     size -- size of the map, 1x2 numpy.ndarray
     grid -- when set, use this value as a grid size, otherwise it is computed, float
     """
-    global MAP, MAP_ORIGIN, MAP_GRID
+    global MAP, MAP_ORIGIN, MAP_GRID, MAP_BOUNDS
 
     print ("Creating map...")
 
@@ -52,8 +53,12 @@ def mapCreate(points: numpy.ndarray, origin: numpy.ndarray = None, size: numpy.n
             )
         )
 
-    print ("\tMin:", numpy.min(points, axis = 0))
-    print ("\tMax:", numpy.max(points, axis = 0))
+    _min = numpy.min(points, axis = 0)
+    print ("\tMin:", _min)
+    _max = numpy.max(points, axis = 0)
+    print ("\tMax:", _max)
+    MAP_BOUNDS = [(_min[0], _max[0]), (_min[1], _max[1])]
+
     print ("\tDist:", numpy.subtract(
         numpy.max(points, axis = 0),
         _origin
@@ -74,6 +79,24 @@ def mapCreate(points: numpy.ndarray, origin: numpy.ndarray = None, size: numpy.n
     print ("Map created.")
 
     return MAP, MAP_ORIGIN, MAP_GRID
+
+
+def pointInBounds(point: list) -> bool:
+    """Checks whether a point is inside the map bounds.
+
+    Arguments:
+    point -- point to convert, >=2-list
+
+    Returns:
+    in_bounds -- True if in bounds, otherwise False
+    """
+    global MAP_BOUNDS
+
+    return (
+        (MAP_BOUNDS[0][0] <= point[0] <= MAP_BOUNDS[0][1])
+        and
+        (MAP_BOUNDS[1][0] <= point[1] <= MAP_BOUNDS[1][1])
+    )
 
 
 def pointToMap(point: list) -> numpy.ndarray:

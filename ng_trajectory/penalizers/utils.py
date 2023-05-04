@@ -6,6 +6,12 @@
 # Imports & Globals
 ######################
 
+import numpy
+
+from typing import List, Tuple
+
+from ng_trajectory.segmentators.utils import pointToMap, validCheck#, pointInBounds
+
 # Parameters
 from ng_trajectory.parameter import *
 P = ParameterList()
@@ -46,3 +52,30 @@ INITIAL = METHODS["max"]["initial"]
 AFTER = METHODS["max"]["after"]
 HUBER_LOSS = False
 HUBER_DELTA = 0.0
+
+
+######################
+# Utilities
+######################
+
+def eInvalidPoints(points: numpy.ndarray) -> List[Tuple[int, List[float]]]:
+    """Iterate over all invalid points with enumeration.
+
+    Arguments:
+    points -- points to check, nx2 numpy.ndarray
+
+    Return:
+    yield (_i, _p) -- invalid points with their indices, m-list of (int, [float])
+    """
+
+    for _i, _p in enumerate(points):
+        try:
+            # Depending on the context (i.e., how often something happens) it might be better to just
+            # avoid 'pointInBounds' and catch the exception.
+            # If there are many points outside the map it should be better to call the function instead
+            # of try-except.
+            #if not pointInBounds(_p) or not validCheck(pointToMap(_p)):
+            if not validCheck(pointToMap(_p)):
+                yield _i, _p
+        except:
+            yield _i, _p
