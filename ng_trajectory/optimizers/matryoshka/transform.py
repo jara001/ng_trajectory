@@ -364,6 +364,22 @@ def indicesToTransformedCoordinates(indices: List[float], layer_size: int, scale
     return numpy.asarray(_coords)
 
 
+def indicesToRealCoordinatesInt(indices: List[int], points: numpy.ndarray) -> numpy.ndarray:
+    """Convert indices (int only) of a layer to real coordinates.
+
+    Arguments:
+    indices -- indices of points in selected layer, n-list of ints
+    points -- points with real coordinates, nx2 numpy.ndarray
+
+    Returns:
+    rcoords -- real coordinates of points, nx2 numpy.ndarray
+
+    Note: When approximating the layer with float indices, use
+    `indicesToRealCoordinates` instead that can interpolate points.
+    """
+    return points[indices, :]
+
+
 def indicesToRealCoordinates(indices: List[float], points: numpy.ndarray) -> numpy.ndarray:
     """Convert indices of a layer to real coordinates.
 
@@ -419,7 +435,7 @@ def matryoshkaCreate(layer0: numpy.ndarray, layer0_center: numpy.ndarray, layer_
         layer_params = layerIndexToParameters(_layer_index, layer0_size, layer_count)
         indices = range(layer_params[0])
         tc = indicesToTransformedCoordinates(indices, *layer_params)
-        rc = indicesToRealCoordinates(indices, layers[int(_layer_index)])
+        rc = indicesToRealCoordinatesInt(indices, layers[int(_layer_index)])
 
         _tc = numpy.vstack( (_tc, tc) )
         _rc = numpy.vstack( (_rc, rc) )

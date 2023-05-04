@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
+- Optimizers
+    - _Matryoshka_
+        - Function `indicesToRealCoordinatesInt()` to convert indices using slice.
 - Penalizers
     - Function `eInvalidPoints()` to iterate over invalid points obtained by segmentated map.
 - Segmentators
