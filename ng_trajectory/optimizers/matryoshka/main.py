@@ -292,14 +292,16 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     tcpoints -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
     trajectory -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
     """
-    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS
+    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS, CRITERION_ARGS
 
     with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
         recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
 
     points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p])[0] for i, p in enumerate(numpy.asarray(recommendation.args[0])) ]
 
+    # TODO: Move this to ParameterList
     PENALIZER_ARGS["optimization"] = False
+    CRITERION_ARGS["optimization"] = False
     final = _opt(numpy.asarray(recommendation.args[0]))
 
 
