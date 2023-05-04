@@ -72,8 +72,8 @@ def penalize(points: numpy.ndarray, valid_points: numpy.ndarray, grid: float, pe
         ) / 100
 
         INVALID_POINTS += points[(points[:, 2] > _k_max) | (points[:, 2] < -_k_max), :].tolist()
-        print (points[(points[:, 2] > _k_max) | (points[:, 2] < -_k_max), 2])
+        #print (points[(points[:, 2] > _k_max) | (points[:, 2] < -_k_max), 2])
 
-    print(points[(points[:, 2] > _k_max) | (points[:, 2] < -_k_max), 2])
+    #print(points[(points[:, 2] > _k_max) | (points[:, 2] < -_k_max), 2])
 
     return invalid * penalty * 10
