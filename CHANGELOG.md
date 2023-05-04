@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
+- Criterions
+    - _Profile_
+        - Argument `lap_time` for `profileCompute()` to obtain lap time of the trajectory.
 - Optimizers
     - _Matryoshka_
         - Function `indicesToRealCoordinatesInt()` to convert indices using slice.
