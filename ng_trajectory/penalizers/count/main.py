@@ -64,7 +64,10 @@ def penalize(points: numpy.ndarray, valid_points: numpy.ndarray, grid: float, pe
                 # Store invalid point
                 INVALID_POINTS.append(_p)
         except:
-            raise
+            invalid += 1
+
+            # Store invalid point
+            INVALID_POINTS.append(_p)
 
 
     return invalid * penalty
