@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - _Flood_fill_
         - Parameter `parallel_flood` to run the segmentation with a ProcessPool.
     - Function `pointInBounds()` along with global `MAP_BOUNDS` to check whether point lies inside the map bounds.
+- 'ng_run'
+    - Parameter `--help` to show help for the command.
+    - Support for `+[PARAMETER]` parameters that modifies the loaded configuration.
+    - Support for `+[PARAMETER]/[PARAMETER]` to modify subdictionaries.
 - Documentation for package plotter.
 - Function `configurationMerge()` to merge another configuration to self.
 
