@@ -21,6 +21,7 @@ One argument is expected with a path to '.json' configuration.
 
 In addition, you can temporarily modify this configuration by
 passing arguments starting with '+' to this command.
+Subdictionaries can be accessed with '/' in the argument name.
     """,
 
 )
@@ -73,6 +74,28 @@ def autoType(value: str) -> any:
         return value
 
 
+def dictExpand(d: dict, key: str, value: any) -> None:
+    """Expand key on '/' to referenced dict.
+
+    If key does not contain any '/', this
+    function only sets d[key] = value.
+
+    Otherwise, it creates a subdictionary on
+    every '/', e.g.,
+        dictExpand({}, "a/b/c", 5)
+        {"a": {"b": {"c": 5}}}
+    """
+    if "/" not in key:
+        d[key] = value
+    else:
+        topkey = key[0:key.index("/")]
+
+        if topkey not in d:
+            d[topkey] = {}
+
+        dictExpand(d[topkey], key[key.index("/")+1:], value)
+
+
 ######################
 # Main
 ######################
@@ -93,7 +116,7 @@ if __name__ == "__main__":
     # Convert args to values
     dcargs = {}
     for key, value in vars(cargs).items():
-        dcargs[key] = autoType(value)
+        dictExpand(dcargs, key, autoType(value))
 
     # Expect one argument
     if len(sys.argv) > 1:
