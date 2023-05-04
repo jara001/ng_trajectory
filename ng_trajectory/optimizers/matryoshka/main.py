@@ -49,6 +49,8 @@ GRID = None
 PENALTY = None
 FIGURE = None
 PLOT = None
+GROUP_CENTERS = None
+GROUP_LAYERS = None
 
 
 # Parameters
@@ -146,6 +148,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     """
     global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE, PLOT
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER, PENALIZER_INIT, PENALIZER_ARGS
+    global GROUP_CENTERS, GROUP_LAYERS
 
     # Local to global variables
     CRITERION = criterion
@@ -178,13 +181,13 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         #       ng_trajectory.interpolators.utils.trajectorySort, but it sometimes rotated the
         #       already sorted centerline; interestingly, the result was counterclockwise at all
         #       times (or at least very very often).
-        group_centers = SELECTOR.select(**{**{"points": group_centerline, "remain": groups}, **SELECTOR_ARGS})
+        GROUP_CENTERS = SELECTOR.select(**{**{"points": group_centerline, "remain": groups}, **SELECTOR_ARGS})
 
         if plot:
-            ngplot.indicesPlot(group_centers)
+            ngplot.indicesPlot(GROUP_CENTERS)
 
         # Matryoshka construction
-        _groups = SEGMENTATOR.segmentate(points=points, group_centers=group_centers, **{**SEGMENTATOR_ARGS})
+        _groups = SEGMENTATOR.segmentate(points=points, group_centers=GROUP_CENTERS, **{**SEGMENTATOR_ARGS})
 
         # Call the init function of penalizer
         PENALIZER.init(
@@ -194,7 +197,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
             map_origin = SEGMENTATOR.main.MAP_ORIGIN,
             map_grid = SEGMENTATOR.main.MAP_GRID,
             map_last = SEGMENTATOR.main.MAP_LAST,
-            group_centers = group_centers,
+            group_centers = GROUP_CENTERS,
             **{
                 **{
                     key: value for key, value in kwargs.items() if key not in [
@@ -205,17 +208,17 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
             }
         )
 
-        grouplayers = transform.groupsBorderObtain(_groups)
-        grouplayers = transform.groupsBorderBeautify(grouplayers, 400)
+        GROUP_LAYERS = transform.groupsBorderObtain(_groups)
+        GROUP_LAYERS = transform.groupsBorderBeautify(GROUP_LAYERS, 400)
 
         if plot:
-            ngplot.bordersPlot(grouplayers, figure)
+            ngplot.bordersPlot(GROUP_LAYERS, figure)
 
         layers_center = transform.groupsCenterCompute(_groups)
-        layers_count = [ layers for i in range(len(grouplayers)) ]
+        layers_count = [ layers for i in range(len(GROUP_LAYERS)) ]
 
 
-        MATRYOSHKA = [ transform.matryoshkaCreate(grouplayers[_i], layers_center[_i], layers_count[_i]) for _i in range(len(_groups)) ]
+        MATRYOSHKA = [ transform.matryoshkaCreate(GROUP_LAYERS[_i], layers_center[_i], layers_count[_i]) for _i in range(len(_groups)) ]
 
         if plot and P.getValue("plot_mapping"):
             xx, yy = numpy.meshgrid(numpy.linspace(0, 1, 110), numpy.linspace(0, 1, 110))
@@ -233,6 +236,16 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
                 _GRID = gridCompute(points)
                 GRID = [ _GRID, _GRID ]
 
+    elif plot: # Plot when mapping is held
+        ngplot.indicesPlot(GROUP_CENTERS)
+        ngplot.bordersPlot(GROUP_LAYERS, figure)
+
+        if P.getValue("plot_mapping"):
+            xx, yy = numpy.meshgrid(numpy.linspace(0, 1, 110), numpy.linspace(0, 1, 110))
+            gridpoints = numpy.hstack((xx.flatten()[:, numpy.newaxis], yy.flatten()[:, numpy.newaxis]))
+
+            for _m in MATRYOSHKA:
+                ngplot.pointsScatter(transform.matryoshkaMap(_m, gridpoints), marker="x", s=0.1)
 
     # Optimizer definition
     instrum = nevergrad.Instrumentation(nevergrad.var.Array(len(MATRYOSHKA), 2).bounded(0, 1))
