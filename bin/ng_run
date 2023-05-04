@@ -35,6 +35,46 @@ PARSER.add_argument("input_file",
 
 
 ######################
+# Utilities
+######################
+
+def autoType(value: str) -> any:
+    """Detect true type of the variable and convert it.
+
+    Arguments:
+    value -- input data, str
+
+    Returns:
+    true_value -- converted data, float/int/str/bool
+    """
+
+    # is float
+    try:
+        float(value)
+        is_float = True
+    except:
+        is_float = False
+
+    # is int
+    try:
+        int(value)
+        is_int = True
+    except:
+        is_int = False
+
+    if is_float and is_int:
+        return int(value)
+    elif is_float:
+        return float(value)
+    elif value.lower() == "true":
+        return True
+    elif value.lower() == "false":
+        return False
+    else:
+        return value
+
+
+######################
 # Main
 ######################
 
@@ -51,11 +91,16 @@ if __name__ == "__main__":
 
     cargs, rest = CONF_PARSER.parse_known_args(args = rest)
 
+    # Convert args to values
+    dcargs = {}
+    for key, value in vars(cargs).items():
+        dcargs[key] = autoType(value)
+
     # Expect one argument
     if len(sys.argv) > 1:
         if os.path.exists(sys.argv[1]):
             if configurationLoad(sys.argv[1]):
-                configurationAppend(vars(cargs))
+                configurationAppend(dcargs)
                 print (execute())
             else:
                 print ("Unable to load configuration from given file.", file=sys.stderr)
