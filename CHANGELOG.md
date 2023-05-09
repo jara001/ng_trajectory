@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Criterions
     - _Profile_
         - Argument `lap_time` for `profileCompute()` to obtain lap time of the trajectory.
+        - Parameter `reference` to set file for loading reference trajectory that needs to be avoided in time.
+        - Parameter `reference_dist` to set the minimum allowed distance from the reference trajectory.
+        - Parameter `reference_rotate` to set the rotation of reference trajectory.
     - Parameter `optimization` (default to True) that when True indicates that the criterion is run during optimization sequence (similarly to penalizer).
     - Parameter `penalty` is passed to criterion during optimization.
 - Optimizers
