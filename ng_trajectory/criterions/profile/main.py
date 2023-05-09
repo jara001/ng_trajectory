@@ -12,6 +12,7 @@ from . import profiler
 
 from ng_trajectory.interpolators.utils import pointDistance
 
+import ng_trajectory.plot as ngplot
 
 # Parameters
 from ng_trajectory.parameter import *
@@ -30,6 +31,13 @@ P.createAdd("a_break_max", 4.5, float, "Maximum longitudal decceleration [m.s^-2
 P.createAdd("reference", None, str, "Name of the file to load (x, y, t) reference path that cannot be close.", "init")
 P.createAdd("reference_dist", 1.0, float, "Minimum allowed distance from the reference at given time [m].", "init")
 P.createAdd("reference_rotate", 0, int, "Number of points to rotate the reference trajectory.", "init")
+P.createAdd("plot", False, bool, "Whether a graphical representation should be created.", "init (viz.)")
+P.createAdd("plot_reference", False, bool, "Whether the reference trajectory should be plotted.", "init (viz.)")
+P.createAdd("plot_reference_width", 0.4, float, "Linewidth of the reference trajectory. 0 = disabled", "init (viz.)")
+P.createAdd("plot_solution", False, bool, "Whether the optimized solution should be plotted. (Using 'plot_reference_width'.)", "init (viz.)")
+P.createAdd("plot_timelines", False, bool, "Whether the lines between points in the same time should be plotted.", "init (viz.)")
+P.createAdd("plot_timelines_size", 1, float, "Size of the points of the timelines endpoints. 0 = disabled", "init (viz.)")
+P.createAdd("plot_timelines_width", 0.6, float, "Linewidth of the timelines. 0 = disabled", "init (viz.)")
 
 
 ######################
@@ -79,15 +87,59 @@ def compute(points: numpy.ndarray, overlap: int = 0, penalty: float = 100.0, **o
             __t = 0
 
             while True:
+                # Find closest point in time domain
                 _ci = (abs(_t[:-1] + __t - rt)).argmin()
 
+                # In case that we select the last point
+                # Do it again for next repetition of the trajectory
                 if _ci == len(_t) - 2:
                     __t += _t[-1]
                 else:
                     break
 
+            # If the points are too close to each other, return penalty
             if pointDistance([rx, ry], points[_ci, :]) < _d:
                 return float(penalty)
+
+        # Visualization
+        if not overflown.get("optimization", True) and P.getValue("plot"):
+
+            # Plot only to the last time point
+            if P.getValue("plot_reference"):
+                _closest = numpy.abs(numpy.subtract(REFERENCE[:, 2], int(_t[-1])-1)).argmin()
+                _closest_p = numpy.abs(numpy.subtract(_t[:-1], int(_t[-1])-1)).argmin()
+
+                ngplot.pointsPlot(REFERENCE[:_closest, :2], color="black", linewidth = P.getValue("plot_reference_width"))
+
+                if P.getValue("plot_solution"):
+                    ngplot.pointsPlot(points[:_closest_p, :2], color="orange", linewidth = P.getValue("plot_reference_width"))
+
+            if P.getValue("plot_timelines"):
+                for ts in range(int(_t[-1])):
+                    _closest = numpy.abs(numpy.subtract(REFERENCE[:, 2], ts)).argmin()
+
+                    ngplot.pointsScatter(
+                        REFERENCE[_closest, None, :2], # Trick to force 2D array.
+                        s = P.getValue("plot_timelines_size"),
+                        color = "black"
+                    )
+
+                    _closest_p = numpy.abs(numpy.subtract(_t[:-1], ts)).argmin()
+
+                    ngplot.pointsScatter(
+                        points[_closest_p, None, :2],
+                        s = P.getValue("plot_timelines_size"),
+                        color = "red"
+                    )
+
+                    ngplot.pointsPlot(
+                        numpy.vstack((points[_closest_p , :2], REFERENCE[_closest , :2])),
+                        color = "red",
+                        linewidth = P.getValue("plot_timelines_width"),
+                        linestyle = (
+                            "--" if pointDistance(points[_closest_p , :2], REFERENCE[_closest , :2]) < 5.0 else ":"
+                        )
+                    )
 
     return float(_t[-1])
 
