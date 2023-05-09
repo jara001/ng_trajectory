@@ -8,7 +8,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Criterions
     - _Profile_
         - Argument `lap_time` for `profileCompute()` to obtain lap time of the trajectory.
-    - Parameter `optimization` (default to True) that when True indicates that the Criterion is run during optimization sequence (similarly to penalizer).
+    - Parameter `optimization` (default to True) that when True indicates that the criterion is run during optimization sequence (similarly to penalizer).
+    - Parameter `penalty` is passed to criterion during optimization.
 - Optimizers
     - _Matryoshka_
         - Function `indicesToRealCoordinatesInt()` to convert indices using slice.
