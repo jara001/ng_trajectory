@@ -8,7 +8,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Criterions
     - _Profile_
         - Argument `lap_time` for `profileCompute()` to obtain lap time of the trajectory.
-    - Parameter `optimization` (default to True) that when True indicates that the Criterion is run during optimization sequence (similarly to penalizer).
+        - Parameter `reference` to set file for loading reference trajectory that needs to be avoided in time.
+        - Parameter `reference_dist` to set the minimum allowed distance from the reference trajectory.
+        - Parameter `reference_rotate` to set the rotation of reference trajectory.
+        - Parameters `plot_reference`, `plot_reference_width` to control plotting of reference trajectory.
+        - Parameter `plot_solution` to control plotting of optimized solution.
+        - Parameters `plot_timelines`, `plot_timelines_size`, `plot_timelines_width` to control plotting of lines between points of the same time.
+    - Parameter `optimization` (default to True) that when True indicates that the criterion is run during optimization sequence (similarly to penalizer).
+    - Parameter `penalty` is passed to criterion during optimization.
 - Optimizers
     - _Matryoshka_
         - Function `indicesToRealCoordinatesInt()` to convert indices using slice.
