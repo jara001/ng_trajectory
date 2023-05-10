@@ -80,6 +80,7 @@ P.createAdd("save_matryoshka", None, str, "Name of the file to save Matryoshka m
 P.createAdd("load_matryoshka", None, str, "Name of the file to load Matryoshka from. When unset, do not load.", "init (Matryoshka)")
 P.createAdd("plot_group_indices", True, bool, "Whether group indices should be shown on the track.", "init (viz.)")
 P.createAdd("plot_group_borders", True, bool, "Whether group borders should be shown on the track.", "init (viz.)")
+P.createAdd("fixed_segments", [], list, "Points to be used instead their corresponding segment.", "init")
 
 
 ######################
@@ -269,7 +270,51 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
             except Exception as e:
                 print ("Failed to save Matryoshka to '%s': %s" % (P.getValue("save_matryoshka"), e))
 
-    elif plot: # Plot when mapping is held
+    # Use fixed segments to reduce Matryoshka
+    # TODO: Actually reduce the array to reduce the problem dimension
+    if len(P.getValue("fixed_segments")) > 0:
+        for _fs in P.getValue("fixed_segments"):
+            _dists = [
+                numpy.min(
+                    numpy.sqrt(
+                        numpy.sum(
+                            numpy.power(
+                                numpy.subtract(
+                                    _border[:, :2],
+                                    _fs
+                                ),
+                                2
+                            ),
+                            axis = 1
+                        )
+                    )
+                )
+                for _border in GROUP_LAYERS
+            ]
+
+            # Index of the segment
+            _closest_i = _dists.index(min(_dists))
+
+            # Replace the segment in Matryoshka
+            # We create a "fake" interpolator that returns the requested value
+            MATRYOSHKA[_closest_i] = [
+                [
+                    numpy.repeat([0, 1], 4), # 0, 0, 0, 0, 1, 1, 1, 1
+                    numpy.repeat([0, 1], 4),
+                    numpy.repeat(_fs[0], 16),
+                    3,
+                    3
+                ],
+                [
+                    numpy.repeat([0, 1], 4), # 0, 0, 0, 0, 1, 1, 1, 1
+                    numpy.repeat([0, 1], 4),
+                    numpy.repeat(_fs[1], 16),
+                    3,
+                    3
+                ]
+            ]
+
+    if plot: # Plot when mapping is held
         if P.getValue("plot_group_indices"):
             ngplot.indicesPlot(GROUP_CENTERS)
 

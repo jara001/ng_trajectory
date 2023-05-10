@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Parameter `save_matryoshka` to set file for saving Matryoshka after it is created.
         - Parameter `plot_group_indices` (default to True) to turn off group indices in the plot.
         - Parameter `plot_group_borders` (default to True) to turn off group borders in the plot.
+        - Parameter `fixed_segments` to determine points (and their segments) that are not optimized.
 - Penalizers
     - Function `eInvalidPoints()` to iterate over invalid points obtained by segmentated map.
 - Segmentators
