@@ -36,6 +36,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Support for `+[PARAMETER]/[PARAMETER]` to modify subdictionaries.
 - Documentation for package plotter.
 - Function `configurationMerge()` to merge another configuration to self.
+- Variate run can properly handle floats when generating a name of the log file.
 
 ### Changed
 - Criterions

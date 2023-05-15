@@ -562,6 +562,9 @@ def execute(START_POINTS: numpy.ndarray = None, VALID_POINTS: numpy.ndarray = No
         if fileformat:
             if all([ isinstance(_value, int) for _value in values ]):
                 fileformat = fileformat + "-%%0%dd" % len(str(max(values)))
+            elif all([ isinstance(_value, (int, float)) for _value in values ]):
+                _len_decimal = max([ len(str(float(_value)).split(".")[1]) for _value in values ])
+                fileformat = fileformat + "-%%0%d.%df" % (len(str(int(max(values)))) + 1 + _len_decimal, _len_decimal)
             else:
                 fileformat = fileformat + "-%s"
         else:
