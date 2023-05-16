@@ -199,11 +199,14 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
             GROUP_LAYERS = None
             GROUP_CENTERS = None
 
+    already_plot = False
+
     # Create the transformation if:
     #  - There is no transformation.
     #  - Current transformation does not work for selected number of segments.
     #  - We want to create a new transformation.
     if MATRYOSHKA is None or (groups > 0 and groups != len(MATRYOSHKA)) or not _holdmatryoshka:
+        already_plot = True
         # Note: In version <=1.3.0 the group_centerline passed to the SELECTOR was sorted using
         #       ng_trajectory.interpolators.utils.trajectorySort, but it sometimes rotated the
         #       already sorted centerline; interestingly, the result was counterclockwise at all
@@ -314,7 +317,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
                 ]
             ]
 
-    if plot: # Plot when mapping is held
+    if plot and not already_plot: # Plot when mapping is held
         if P.getValue("plot_group_indices"):
             ngplot.indicesPlot(GROUP_CENTERS)
 
