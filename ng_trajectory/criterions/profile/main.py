@@ -104,19 +104,16 @@ def compute(points: numpy.ndarray, overlap: int = 0, penalty: float = 100.0, **o
         # Visualization
         if not overflown.get("optimization", True) and P.getValue("plot"):
 
-            # Plot only to the last time point
-            if P.getValue("plot_reference"):
-                _closest = numpy.abs(numpy.subtract(REFERENCE[:, 2], int(_t[-1])-1)).argmin()
-                _closest_p = numpy.abs(numpy.subtract(_t[:-1], int(_t[-1])-1)).argmin()
-
-                ngplot.pointsPlot(REFERENCE[:_closest, :2], color="black", linewidth = P.getValue("plot_reference_width"))
-
-                if P.getValue("plot_solution"):
-                    ngplot.pointsPlot(points[:_closest_p, :2], color="orange", linewidth = P.getValue("plot_reference_width"))
+            # Last time sample
+            ts = int(_t[-1]) - 1
 
             if P.getValue("plot_timelines"):
                 for ts in range(int(_t[-1])):
                     _closest = numpy.abs(numpy.subtract(REFERENCE[:, 2], ts)).argmin()
+
+                    if _closest >= len(REFERENCE) - 1:
+                        ts = ts - 1
+                        break
 
                     ngplot.pointsScatter(
                         REFERENCE[_closest, None, :2], # Trick to force 2D array.
@@ -140,6 +137,18 @@ def compute(points: numpy.ndarray, overlap: int = 0, penalty: float = 100.0, **o
                             "--" if pointDistance(points[_closest_p , :2], REFERENCE[_closest , :2]) < 5.0 else ":"
                         )
                     )
+
+            if P.getValue("plot_reference"):
+                # Plot only to the last time point
+                # That is specified by ts, which can be altered by previous if.
+                _closest = numpy.abs(numpy.subtract(REFERENCE[:, 2], ts)).argmin()
+                _closest_p = numpy.abs(numpy.subtract(_t[:-1], ts)).argmin()
+
+                ngplot.pointsPlot(REFERENCE[:_closest, :2], color="black", linewidth = P.getValue("plot_reference_width"))
+
+                if P.getValue("plot_solution"):
+                    ngplot.pointsPlot(points[:_closest_p, :2], color="orange", linewidth = P.getValue("plot_reference_width"))
+
 
     return float(_t[-1])
 
