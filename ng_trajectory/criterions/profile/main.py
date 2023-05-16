@@ -149,7 +149,7 @@ def compute(points: numpy.ndarray, overlap: int = 0, penalty: float = 100.0, **o
                         color = "red",
                         linewidth = P.getValue("plot_timelines_width"),
                         linestyle = (
-                            "--" if pointDistance(points[_closest_p , :2], REFERENCE[_closest , :2]) < 5.0 else ":"
+                            "--" if pointDistance(points[_closest_p , :2], REFERENCE[_closest , :2]) < 5.0 else " "
                         )
                     )
 
