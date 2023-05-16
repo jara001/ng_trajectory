@@ -121,6 +121,13 @@ def compute(points: numpy.ndarray, overlap: int = 0, penalty: float = 100.0, **o
                         color = "black"
                     )
 
+                    if ts % 4 == 0:
+                        ngplot.labelText(REFERENCE[_closest, :2], ts,
+                            verticalalignment = "top",
+                            horizontalalignment = "left",
+                            fontsize = 6
+                        )
+
                     _closest_p = numpy.abs(numpy.subtract(_t[:-1], ts)).argmin()
 
                     ngplot.pointsScatter(
@@ -128,6 +135,14 @@ def compute(points: numpy.ndarray, overlap: int = 0, penalty: float = 100.0, **o
                         s = P.getValue("plot_timelines_size"),
                         color = "red"
                     )
+
+                    if ts % 4 == 0:
+                        ngplot.labelText(points[_closest_p, :2], ts,
+                            verticalalignment = "bottom",
+                            horizontalalignment = "right",
+                            fontsize = 6,
+                            color = "red",
+                        )
 
                     ngplot.pointsPlot(
                         numpy.vstack((points[_closest_p , :2], REFERENCE[_closest , :2])),
