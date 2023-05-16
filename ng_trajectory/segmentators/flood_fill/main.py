@@ -289,27 +289,26 @@ def segmentate(points: numpy.ndarray, group_centers: numpy.ndarray, **overflown)
         # Save last map
         MAP_LAST = _map
 
-        pool = futures.ProcessPoolExecutor(max_workers = P.getValue("parallel_flood"))
+        with futures.ProcessPoolExecutor(max_workers = P.getValue("parallel_flood")) as executor:
+            queues = queue
+            colors = [ _map[queues[i][0], queues[i][1]] for i in range(len(group_centers)) ]
+            _run = True
 
-        queues = queue
-        colors = [ _map[queues[i][0], queues[i][1]] for i in range(len(group_centers)) ]
-        _run = True
+            while _run:
+                _run = False
+                for i, new_queue in enumerate(executor.map(expand_fill, queues)):
 
-        while _run:
-            _run = False
-            for i, new_queue in enumerate(pool.map(expand_fill, queues)):
+                    if len(new_queue) == 0:
+                        continue
 
-                if len(new_queue) == 0:
-                    continue
+                    _run = True
+                    _color = colors[i]
+                    queues[i] = []
 
-                _run = True
-                _color = colors[i]
-                queues[i] = []
-
-                for cell_x, cell_y in new_queue:
-                    if MAP_LAST[cell_x, cell_y] == 255:
-                        MAP_LAST[cell_x, cell_y] = _color
-                        queues[i].append((cell_x, cell_y))
+                    for cell_x, cell_y in new_queue:
+                        if MAP_LAST[cell_x, cell_y] == 255:
+                            MAP_LAST[cell_x, cell_y] = _color
+                            queues[i].append((cell_x, cell_y))
 
     #if create_borderlines:
     #    borderlines_real = { i: { j: [] for j in range(len(group_centers)) } for i in range(len(group_centers)) }
