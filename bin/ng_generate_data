@@ -7,7 +7,7 @@
 # Imports & Globals
 ######################
 
-import sys, os, getopt
+import sys, os, argparse
 
 # Load PIL with preserved typing
 # https://stackoverflow.com/questions/58236138/pil-and-python-static-typing
@@ -25,60 +25,86 @@ import yaml
 from typing import List, Generator
 
 
+# Custom types
+class ReadableFile(object):
+    """Object the check whether argument is a file that exists and is readable.
+
+    Source:
+    https://baoshangu.medium.com/python-argparse-custom-action-and-custom-type-8c8fa1e8ccb8
+    """
+
+    def __init__(self):
+        super(ReadableFile, self).__init__()
+
+    def __call__(self, filename):
+
+        if not os.access(filename, os.R_OK):
+            raise argparse.ArgumentTypeError(
+                ("permission denied '%s'" if os.access(filename, os.F_OK) else "no such file '%s'") % filename
+            )
+
+        return filename
+
+
 # Global variables
 HOOD4 = numpy.asarray([[-1, 0], [0, -1], [1, 0], [0, 1]])
 HOOD8 = numpy.asarray([[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]])
-
-
-# Parameters
-PARAMETERS = {
-    "file":
-        {
-            "help": "Input source image, %s",
-            "type": str,
-            "short": "f:",
-        },
-    "resize":
-        {
-            "help": "Ratio to resize the source image, %f",
-            "type": float,
-            "short": "r:",
-            "long": "resize=",
-            "value": 1.0,
-        },
-    "resolution":
-        {
-            "help": "Resolution of the map inside source image, %f",
-            "type": float,
-            "long": "resolution=",
-            "value": 1.0,
-        },
-    "originx":
-        {
-            "help": "Location of origin by the x-axis, %f meters",
-            "type": float,
-            "long": "ox=",
-            "value": 0.0,
-        },
-    "originy":
-        {
-            "help": "Location of origin by the y-axis, %f meters",
-            "type": float,
-            "long": "oy=",
-            "value": 0.0,
-        },
-    "yaml":
-        {
-            "help": "Input YAML file",
-            "type": str,
-            "short": "y:",
-        }
-}
-
-HELP = """python3 ng_generate_data [ARGUMENTS] [INPUT_FILE]
+PARSER = argparse.ArgumentParser(
+    prog = "ng_generate_data",
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description = """
 Utility for creating input data for ng_trajectory from a custom map image.
+    """,
+)
 
-Arguments:"""
+# Arguments
+PARSER.add_argument("input_file",
+    nargs = "?",
+    help = "Input source image, %%s",
+    type = ReadableFile(),
+    metavar = "INPUT_FILE",
+)
+
+PARSER.add_argument("-f",
+    dest = "file",
+    help = "Input source image, %%s",
+    type = ReadableFile(),
+    metavar = "INPUT_FILE",
+)
+
+PARSER.add_argument("-r", "--resize",
+    dest = "resize",
+    help = "Ratio to resize the source image, %%f",
+    default = 1.0,
+    type = float,
+)
+
+PARSER.add_argument("--resolution",
+    dest = "resolution",
+    help = "Resolution of the map inside source image, %%f",
+    default = 1.0,
+    type = float,
+)
+
+PARSER.add_argument("--ox",
+    dest = "originx",
+    help = "Location of origin by the x-axis, %%f meters",
+    default = 0.0,
+    type = float,
+)
+
+PARSER.add_argument("--oy",
+    dest = "originy",
+    help = "Location of origin by the y-axis, %%f meters",
+    default = 0.0,
+    type = float,
+)
+
+PARSER.add_argument("-y",
+    dest = "yaml",
+    help = "Input YAML file",
+    type = ReadableFile(),
+)
 
 
 ######################
@@ -358,12 +384,12 @@ def processImage(im: Image) -> None:
     start_points[:, 0] = numpy.abs(start_points[:, 0])
 
     # Convert to real units (if required)
-    if PARAMETERS["resolution"]["value"] != 1.0:# or PARAMETERS["resize"]["value"] != 1.0:
-        start_points *= PARAMETERS["resolution"]["value"] / PARAMETERS["resize"]["value"]
+    if args.resolution != 1.0:# or args.resize != 1.0:
+        start_points *= args.resolution / args.resize
 
     # Move the origin (if required)
-    if PARAMETERS["originx"]["value"] != 0.0 or PARAMETERS["originy"]["value"] != 0.0:
-        start_points += [PARAMETERS["originy"]["value"], PARAMETERS["originx"]["value"]]
+    if args.originx != 0.0 or args.originy != 0.0:
+        start_points += [args.originy, args.originx]
 
     # Swap yx
     start_points = numpy.vstack((start_points[:, 1], start_points[:, 0])).T
@@ -378,12 +404,12 @@ def processImage(im: Image) -> None:
     valid_points[:, 0] = numpy.abs(valid_points[:, 0])
 
     # Convert to real units (if required)
-    if PARAMETERS["resolution"]["value"] != 1.0:# or PARAMETERS["resize"]["value"] != 1.0:
-        valid_points *= PARAMETERS["resolution"]["value"] / PARAMETERS["resize"]["value"]
+    if args.resolution != 1.0:# or args.resize != 1.0:
+        valid_points *= args.resolution / args.resize
 
     # Move the origin (if required)
-    if PARAMETERS["originx"]["value"] != 0.0 or PARAMETERS["originy"]["value"] != 0.0:
-        valid_points += [PARAMETERS["originy"]["value"], PARAMETERS["originx"]["value"]]
+    if args.originx != 0.0 or args.originy != 0.0:
+        valid_points += [args.originy, args.originx]
 
     # Swap yx
     valid_points = numpy.vstack((valid_points[:, 1], valid_points[:, 0])).T
@@ -408,7 +434,7 @@ def loadImage(filename: str) -> Image:
     """
 
     im = P.open(filename)
-    im = im.resize((int(im.size[0]*PARAMETERS["resize"]["value"]), int(im.size[1]*PARAMETERS["resize"]["value"])), resample = P.BILINEAR)
+    im = im.resize((int(im.size[0]*args.resize), int(im.size[1]*args.resize)), resample = P.BILINEAR)
 
     has_alpha = False
 
@@ -534,112 +560,61 @@ def loadImage(filename: str) -> Image:
 
 if __name__ == "__main__":
 
-    try:
-        opts, args = getopt.getopt(
-            sys.argv[1:],
-            "".join([ info.get("short") for opt, info in PARAMETERS.items() if "short" in info ] + [ "h" ]),
-            [ info.get("long") for opt, info in PARAMETERS.items() if "long" in info ] + [ "help" ],
-        )
-    except getopt.GetoptError as e:
-        print ("Unable to process arguments: %s" % e, file = sys.stderr)
-        exit(2)
+    # Obtain arguments
+    args = PARSER.parse_args()
 
-    _opts = opts
     # Check whether yaml is set
-    for opt, arg in reversed(_opts):
-        if opt not in ("-" + PARAMETERS["yaml"].get("short").replace(":", "")):
-            continue
-        else:
-            # Index used to preserve the order of the arguments
-            index = opts.index((opt, arg))
-            opts.remove((opt, arg))
-
-        filename = PARAMETERS["yaml"].get("type")(arg)
-
-        # Check that file exists
-        if not os.path.exists(filename):
-            print ("File %s does not exist." % filename, file=sys.stderr)
-            exit (21)
-
-        # Load yaml
-        yaml_data = None
-        with open(filename, "r") as file:
+    if args.yaml is not None:
+        with open(args.yaml, "r") as file:
             try:
                 yaml_data = yaml.safe_load(file)
             except Exception as e:
                 print ("Unable to parse YAML file: %s" % e, file=sys.stderr)
                 exit (22)
 
-        # Add parameters to the arguments
-        # Image
+        # Remove yaml from arguments
+        index = 0
+        for index, _arg in enumerate(sys.argv):
+            if _arg == "-y":
+                del sys.argv[index+1], sys.argv[index]
+                break
+
+        # Load yaml into the args
         if "image" in yaml_data:
-            opts.insert(index,
-                (
-                    "-" + PARAMETERS["file"].get("short").replace(":", ""),
-                    yaml_data.get("image") if os.path.isabs(yaml_data.get("image")) or os.path.exists(yaml_data.get("image")) else os.path.dirname(filename) + os.sep + yaml_data.get("image")
-                )
+            _image = str(yaml_data.get("image"))
+
+            sys.argv.insert(index,
+                _image if os.path.isabs(_image) or os.path.exists(_image) else os.path.dirname(args.yaml) + os.sep + _image
             )
+            sys.argv.insert(index, "-f")
 
         # Resolution
         if "resolution" in yaml_data:
-            opts.insert(index,
-                (
-                    "--" + PARAMETERS["resolution"].get("long").replace("=", ""),
-                    PARAMETERS["resolution"].get("type")(yaml_data.get("resolution"))
-                )
-            )
+            sys.argv.insert(index, str(yaml_data.get("resolution")))
+            sys.argv.insert(index, "--resolution")
 
         # Origin
         if "origin" in yaml_data:
-            opts.insert(index,
-                (
-                    "--" + PARAMETERS["originx"].get("long").replace("=", ""),
-                    PARAMETERS["originx"].get("type")(yaml_data.get("origin")[0])
-                )
-            )
-            opts.insert(index,
-                (
-                    "--" + PARAMETERS["originy"].get("long").replace("=", ""),
-                    PARAMETERS["originy"].get("type")(yaml_data.get("origin")[1])
-                )
-            )
+            sys.argv.insert(index, str(yaml_data.get("origin")[0]))
+            sys.argv.insert(index, "--ox")
+
+            sys.argv.insert(index, str(yaml_data.get("origin")[1]))
+            sys.argv.insert(index, "--oy")
 
 
-    for opt, arg in opts:
-        for param, info in PARAMETERS.items():
-            if opt in ("-h", "--help"):
-                print (HELP)
-                print ("\n".join([ " %s\n\t\t%s" % (", ".join((["-" + i.get("short").replace(":", "")] if "short" in i else []) + (["--" + i.get("long").replace("=", "")] if "long" in i else [])), i.get("help", "")) for o, i in PARAMETERS.items() ]))
-                exit (0)
+    args = PARSER.parse_args()
 
-            if ("short" in info and opt in ("-" + info.get("short").replace(":", ""))) \
-               or ("long" in info and opt in ("--" + info.get("long").replace("=", ""))):
 
-                # Check type of the variable
-                if "type" in info:
-                    try:
-                        arg = info.get("type")(arg)
-                    except Exception as e:
-                        print ("Error during processing argument '%s': %s" % (opt, e), file = sys.stderr)
-                        exit(3)
-
-                info["value"] = arg
-
-    # Check whether file was given
-    if "value" not in PARAMETERS["file"]:
-        if len(args) < 1:
+    # Use positional file if optional not given
+    if args.file is None:
+        if args.input_file is None:
             print ("Expected argument with path to the source image.", file=sys.stderr)
             exit(10)
         else:
-            PARAMETERS["file"]["value"] = args[0]
-
-    # Check that the file does exist
-    if not os.path.exists(PARAMETERS["file"]["value"]):
-        print ("File %s does not exist." % PARAMETERS["file"]["value"], file=sys.stderr)
-        exit(11)
+            args.file = args.input_file
 
     # Run the program
-    im = loadImage(PARAMETERS["file"]["value"])
+    im = loadImage(args.file)
     processImage(im)
 
 
