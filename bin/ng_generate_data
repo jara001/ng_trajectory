@@ -478,7 +478,8 @@ def loadImage(filename: str) -> Image:
     im = im.convert("RGB")
 
     # Quantize colors in the image
-    im = im.quantize(3, method = 1)#palette = imQ) <- Palette is broken with rescaled images? (returns 4 colors instead of 3)
+    # For some reason 'method = 1' is much worse for resized images.
+    im = im.quantize(3, method = 0)#palette = imQ) <- Palette is broken with rescaled images? (returns 4 colors instead of 3)
 
     # Convert the image back to grayscale
     im = im.convert("L")
@@ -490,6 +491,10 @@ def loadImage(filename: str) -> Image:
         for r, c in numpy.argwhere(alpha_nd == 0):
             im.putpixel((int(c), int(r)), int(UNKN))
 
+    return im
+
+    # Not used now, as it seems that it is not necessary with
+    # im.quantize(method = 0)
 
     ## Fix missaligned colors
     # When changing the size, free space can appear outside the track and unknown inside.
