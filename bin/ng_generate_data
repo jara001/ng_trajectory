@@ -327,15 +327,16 @@ def processImage(im: Image) -> None:
     ## Sort centerline points
     # Note: This is an adapted version from 'ng_trajectory:trajectorySort()'.
     sorted_points = []
-    sorted_points.append(filtered_border.pop(0))
+    _filtered_border = filtered_border.copy()
+    sorted_points.append(_filtered_border.pop(0))
 
-    starting_value = len(filtered_border)
+    starting_value = len(_filtered_border)
 
-    while len(filtered_border) > 0:
+    while len(_filtered_border) > 0:
         min_dist = 100000
         point = None
 
-        for p in filtered_border:
+        for p in _filtered_border:
             dist = numpy.hypot(p[0] - sorted_points[-1][0], p[1] - sorted_points[-1][1])
 
             if dist < min_dist:
@@ -343,9 +344,9 @@ def processImage(im: Image) -> None:
                 point = p
 
         sorted_points.append(point)
-        filtered_border.remove(point)
+        _filtered_border.remove(point)
 
-        sys.stdout.write("\rSorting points... %03.2f%%" % (100.0 - (100.0 * len(filtered_border) / starting_value)))
+        sys.stdout.write("\rSorting points... %03.2f%%" % (100.0 - (100.0 * len(_filtered_border) / starting_value)))
 
     print (" - DONE")
 
