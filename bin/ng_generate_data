@@ -20,6 +20,9 @@ import numpy
 # Yaml support
 import yaml
 
+# ng_trajectory utilities
+from ng_trajectory.optimizers.matryoshka.transform import pointsFilter
+
 
 # Typing
 from typing import List, Generator
@@ -316,39 +319,8 @@ def processImage(im: Image) -> None:
 
 
     ## Filter centerline points
-    # This is taken from center_trajectory package, function 'on_border".
-
-    filtered_border = []
-    border_length = border.shape[0]-1
-
-    for _i in range(border.shape[0]):
-
-        r, c = border[_i, :]
-        row_neighbours, col_neighbours = (0, 0)
-
-        for _r, _c in HOOD8:
-
-            # In here, we should check for reaching the outside of the map.
-            # However, in the current design, this should not happen(?).
-
-            if _r == 0 and _c != 0 and nd[r, c + _c] == 1:
-                row_neighbours += 1
-
-            if _c == 0 and _r != 0 and nd[r + _r, c] == 1:
-                col_neighbours += 1
-
-            # ^^ These two will skip 'redundant' point as in:
-            #
-            #      1112                     1112                    0010
-            #      1112                     11X2                    0100
-            #      1122    is X redundant   1122  thus we will get  0100
-            #      1122                     1122                    0100
-
-        if row_neighbours < 2 and col_neighbours < 2:
-            filtered_border.append(border[_i, :].tolist())
-
-        sys.stdout.write("\rFiltering points... %03.2f%%" % (100.0 * _i / border_length))
-
+    sys.stdout.write("\rFiltering points...")
+    filtered_border = pointsFilter(border).tolist()
     print (" - DONE")
 
 
