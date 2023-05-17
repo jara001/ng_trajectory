@@ -216,6 +216,8 @@ def processImage(im: Image) -> None:
 
     # Create numpy array
     nd = numpy.asarray(im, dtype = int)
+    # Helper array
+    nd_walls = numpy.zeros_like(im, dtype = bool)
 
     # Name colors (just in case)
     try:
@@ -238,6 +240,7 @@ def processImage(im: Image) -> None:
     # Color initial walls
     for i in range(len(walls)):
         nd[walls[i][:, 0], walls[i][:, 1]] = i + 1
+        nd_walls[walls[i][:, 0], walls[i][:, 1]] = True
 
     starting_value = len(_free)
 
@@ -258,10 +261,11 @@ def processImage(im: Image) -> None:
         _hood = numpy.unique(_hood[~numpy.any((_hood < 0) | (_hood >= nd.shape), axis = 1), :], axis = 0)
 
         # Find all free points that are also in the neighbourhood
-        _new_wall = intersectArrays(_hood, _free)
+        _new_wall = _hood[numpy.where(nd_walls[_hood[:, 0], _hood[:, 1]] == False)[0], :]
 
         # Mark newly found walls
         nd[_new_wall[:, 0], _new_wall[:, 1]] = _w + 1
+        nd_walls[_new_wall[:, 0], _new_wall[:, 1]] = True
         
         # Save these walls for the next iteration
         walls[_w] = _new_wall
