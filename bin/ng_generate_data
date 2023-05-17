@@ -359,6 +359,8 @@ def processImage(im: Image) -> None:
     nnd = numpy.asarray(im, dtype = numpy.uint8).copy()
     try:
         nnd[border[:, 0], border[:, 1]] = UNKN
+        for x, y in filtered_border:
+            nnd[x, y] = WALL
     except:
         pass
 
