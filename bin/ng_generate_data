@@ -54,6 +54,10 @@ PARSER = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description = """
 Utility for creating input data for ng_trajectory from a custom map image.
+
+Notes:
+- Arguments are position sensitive, i.e., later arguments overwrite the prior ones.
+- YAML file is loaded and replaced with its arguments.
     """,
 )
 
