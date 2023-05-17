@@ -278,29 +278,40 @@ def processImage(im: Image) -> None:
     ## Obtain centerline
     sys.stdout.write("\rGenerating centerline...")
 
-    # Get neighbourhood of wall 1 where it meets different wall.
-    wall0 = numpy.argwhere(nd_walls == 1)
-    # Obtain all walls of one color and replicate it
-    # https://stackoverflow.com/questions/53239242/how-to-duplicate-each-row-of-a-matrix-n-times-numpy
-    _wall = numpy.repeat(wall0, repeats = HOOD4.shape[0], axis = 0)
+    border = []
+    nd2 = numpy.asarray(im, dtype = int)
 
-    # Find the neighbourhood
-    _hood = numpy.add(
-        _wall,
-        numpy.tile(HOOD4, reps = (wall0.shape[0], 1))
-    )
+    # Get neighbourhood of a wall where it meets different walls.
+    for wall_index_1 in range(1, len(walls) + 1):
 
-    # Throw away points that are outside the image and remove duplicits
-    _hood = numpy.unique(_hood[~numpy.any((_hood < 0) | (_hood >= nd.shape), axis = 1), :], axis = 0)
+        wall_1 = numpy.argwhere(nd_walls == wall_index_1)
 
-    # Find all points of other walls
-    # Copy is required as argwhere returns 2xn array with nx2 view,
-    # which is unfortunately incompatible with current intersect function.
-    _walls = numpy.argwhere(nd_walls > 1).copy()
+        # Obtain all walls of one color and replicate it
+        # https://stackoverflow.com/questions/53239242/how-to-duplicate-each-row-of-a-matrix-n-times-numpy
+        _wall = numpy.repeat(wall_1, repeats = HOOD4.shape[0], axis = 0)
 
-    # Find all free points that are also in the neighbourhood
-    border = intersectArrays(_hood, _walls)
+        # Find the neighbourhood
+        _hood = numpy.add(
+            _wall,
+            numpy.tile(HOOD4, reps = (wall_1.shape[0], 1))
+        )
 
+        # Throw away points that are outside the image and remove duplicits
+        _hood = numpy.unique(_hood[~numpy.any((_hood < 0) | (_hood >= nd.shape), axis = 1), :], axis = 0)
+
+        # Find all points of other walls
+        # Copy is required as argwhere returns 2xn array with nx2 view,
+        # which is unfortunately incompatible with current intersect function.
+        _other_walls = numpy.argwhere(nd_walls > wall_index_1).copy()
+
+        # Find all free points that are also in the neighbourhood
+        # And append them to the current skeleton
+        border += intersectArrays(
+            intersectArrays(_hood, _other_walls),
+            numpy.argwhere(nd2 == FREE).copy()
+        ).tolist()
+
+    border = numpy.asarray(border)
     print (" - DONE")
 
 
