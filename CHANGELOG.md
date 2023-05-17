@@ -58,6 +58,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - ParameterList is updated with keyword arguments.
     - Set `optimization` parameter of criterions/penalizers to True during optimizer initialization.
 - 'ng_help' no longer requires an argument for `-h`.
+- Matplotlib internal variables should not be longer garbage collected from different thread.
 
 ## 1.8.0 - 2023-03-15
 ### Added

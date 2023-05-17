@@ -112,12 +112,18 @@ import numpy, sys
 
 try:
     from ng_trajectory import matplotlib, pyplot
+    import matplotlib._pylab_helpers
 except:
     pass
 
 from ng_trajectory import PLOT_AVAILABLE
 
 from typing import List, Dict
+
+
+# Global variables
+CANVAS = None
+CANVAS_OLD = None
 
 
 ######################
@@ -148,8 +154,36 @@ def figureCreate() -> matplotlib.figure.Figure:
     Returns:
     figure -- created Figure
     """
+    global CANVAS, CANVAS_OLD
+
     figure = pyplot.figure(dpi=300)
     figure.add_subplot(111)
+
+    try:
+        # Hold onto the PhotoImage object (canvas) in the memory to avoid gc related errors:
+        # Exception ignored in: <bound method Image.__del__ of <tkinter.PhotoImage object at 0x7f77550ab240>>
+        # Traceback (most recent call last):
+        #   File "/usr/lib/python3.6/tkinter/__init__.py", line 3519, in __del__
+        #     self.tk.call('image', 'delete', self.name)
+        # RuntimeError: main thread is not in main loop
+        CANVAS_OLD = CANVAS
+
+        # This is not very investigated, but basically any thread can run garbage collection
+        # of any variable, even tkinter of another thread.
+        # https://stackoverflow.com/questions/44781806/tkinter-objects-being-garbage-collected-from-the-wrong-thread
+        # https://bugs.python.org/issue39093
+
+        # Invoking garbage collection here (or during 'figureClose') does not work.
+        # I assume that some part of the canvas is still kept in the memory, that said
+        # calling 'delete' on tk image does not actually delete it right away.
+
+        # Should be same as
+        #    matplotlib._pylab_helpers.Gcf.get_fig_manager(1).canvas._tkphoto
+        # or matplotlib._pylab_helpers.Gcf.get_all_fig_managers()[0].canvas._tkphoto
+        CANVAS = matplotlib._pylab_helpers.Gcf.get_active().canvas._tkphoto
+    except:
+        pass
+
     return figure
 
 
