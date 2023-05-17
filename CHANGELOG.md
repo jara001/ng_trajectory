@@ -30,6 +30,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - _Flood_fill_
         - Parameter `parallel_flood` to run the segmentation with a ProcessPool.
     - Function `pointInBounds()` along with global `MAP_BOUNDS` to check whether point lies inside the map bounds.
+- 'ng_generate_data'
+    - Repeatable parameter `-v` to increase verbosity.
+    - Centerline is generated between all walls, but only the section without dead-ends is returned.
+    - Inflated map is saved when verbosity is set to at least 2.
 - 'ng_run'
     - Parameter `--help` to show help for the command.
     - Support for `+[PARAMETER]` parameters that modifies the loaded configuration.
@@ -51,6 +55,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - _Count_
         - Use segmentated map for getting the invalid points instead of numpy vectors.
     - Use `eInvalidPoints()` where applicable.
+- 'ng_generate_data'
+    - Arguments are parsed by argparse instead of getopt.
+    - Map inflation is much faster because of helper array.
+    - Centerline points are filtered by Matryoshka's `pointsFilter()`.
+    - Quantization `PIL.quantize()` uses median cut method instead of maximum coverage.
 
 ### Fixed
 - Optimizers
