@@ -217,7 +217,7 @@ def processImage(im: Image) -> None:
     # Create numpy array
     nd = numpy.asarray(im, dtype = int)
     # Helper array
-    nd_walls = numpy.zeros_like(im, dtype = bool)
+    nd_walls = numpy.zeros_like(im, dtype = int)
 
     # Name colors (just in case)
     try:
@@ -229,18 +229,14 @@ def processImage(im: Image) -> None:
     ## Inflate walls
 
     # Obtain all empty spaces
-    # Copy is required as argwhere returns 2xn array with nx2 view,
-    # which is unfortunately incompatible with current intersect function.
     _free = numpy.argwhere(nd == FREE).copy()
-    #_free = numpy.argwhere(nd > (WALL + len(walls))).copy()
 
     # Wall "iterator"
     _w = 0
 
     # Color initial walls
     for i in range(len(walls)):
-        nd[walls[i][:, 0], walls[i][:, 1]] = i + 1
-        nd_walls[walls[i][:, 0], walls[i][:, 1]] = True
+        nd_walls[walls[i][:, 0], walls[i][:, 1]] = i + 1
 
     starting_value = len(_free)
 
@@ -261,11 +257,11 @@ def processImage(im: Image) -> None:
         _hood = numpy.unique(_hood[~numpy.any((_hood < 0) | (_hood >= nd.shape), axis = 1), :], axis = 0)
 
         # Find all free points that are also in the neighbourhood
-        _new_wall = _hood[numpy.where(nd_walls[_hood[:, 0], _hood[:, 1]] == False)[0], :]
+        _new_wall = _hood[numpy.where(nd_walls[_hood[:, 0], _hood[:, 1]] == 0)[0], :]
 
         # Mark newly found walls
         nd[_new_wall[:, 0], _new_wall[:, 1]] = _w + 1
-        nd_walls[_new_wall[:, 0], _new_wall[:, 1]] = True
+        nd_walls[_new_wall[:, 0], _new_wall[:, 1]] = _w + 1
         
         # Save these walls for the next iteration
         walls[_w] = _new_wall
@@ -273,7 +269,6 @@ def processImage(im: Image) -> None:
         # Prepare variables for new iteration
         _w = (_w + 1) % len(walls)
         _free = numpy.argwhere(nd == FREE).copy()
-        #_free = numpy.argwhere(nd > (WALL + len(walls))).copy()
 
         sys.stdout.write("\rInflating map... %03.2f%%" % (100.0 - (100.0 * len(_free) / starting_value)))
 
@@ -284,7 +279,7 @@ def processImage(im: Image) -> None:
     sys.stdout.write("\rGenerating centerline...")
 
     # Get neighbourhood of wall 1 where it meets different wall.
-    wall0 = numpy.argwhere(nd == 1)
+    wall0 = numpy.argwhere(nd_walls == 1)
     # Obtain all walls of one color and replicate it
     # https://stackoverflow.com/questions/53239242/how-to-duplicate-each-row-of-a-matrix-n-times-numpy
     _wall = numpy.repeat(wall0, repeats = HOOD4.shape[0], axis = 0)
@@ -299,10 +294,9 @@ def processImage(im: Image) -> None:
     _hood = numpy.unique(_hood[~numpy.any((_hood < 0) | (_hood >= nd.shape), axis = 1), :], axis = 0)
 
     # Find all points of other walls
-    try:
-        _walls = numpy.argwhere((nd > 1) & (nd < UNKN)).copy()
-    except:
-        _walls = numpy.argwhere((nd > 1) & (nd < FREE)).copy()
+    # Copy is required as argwhere returns 2xn array with nx2 view,
+    # which is unfortunately incompatible with current intersect function.
+    _walls = numpy.argwhere(nd_walls > 1).copy()
 
     # Find all free points that are also in the neighbourhood
     border = intersectArrays(_hood, _walls)
