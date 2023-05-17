@@ -116,7 +116,8 @@ PARSER.add_argument("-y",
 PARSER.add_argument("-v",
     dest = "verbose",
     help = "Give more output.",
-    action = "store_true",
+    default = 0,
+    action = "count",
 )
 
 
