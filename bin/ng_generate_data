@@ -110,6 +110,12 @@ PARSER.add_argument("-y",
     type = ReadableFile(),
 )
 
+PARSER.add_argument("-v",
+    dest = "verbose",
+    help = "Give more output.",
+    action = "store_true",
+)
+
 
 ######################
 # Centerline generation
@@ -607,6 +613,10 @@ if __name__ == "__main__":
 
 
     args = PARSER.parse_args()
+
+    if args.verbose:
+        print ("Interpreted arguments:")
+        print ("\n".join([ "\t%s: %s" % (key, value) for key, value in args._get_kwargs() ]))
 
 
     # Use positional file if optional not given
