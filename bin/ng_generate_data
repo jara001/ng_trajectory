@@ -131,6 +131,18 @@ def printv(*a, **kw) -> None:
         print (*a, **kw)
 
 
+def savev(im, filename: str) -> None:
+    """Saves an image when verbose is set to >=2."""
+    if args.verbose >= 2:
+        try:
+            _image = P.fromarray(im)
+        except:
+            _image = P.fromarray(numpy.asarray(im, dtype = numpy.uint8).copy())
+
+        _image.convert("L")
+        _image.save(filename)
+
+
 ######################
 # Centerline generation
 ######################
@@ -292,6 +304,13 @@ def processImage(im: Image) -> None:
 
     print (" - DONE")
     printv ("Covered all of %d free cells." % starting_value)
+
+    if args.verbose >= 2:
+        _nd_walls = nd_walls.copy()
+        _nd_walls = (_nd_walls * 30) % 255
+        _nd_walls[numpy.where(_nd_walls == 0)] = 255
+        savev (_nd_walls, "inflated.png")
+        printv ("Saved inflated map to 'inflated.png'.")
 
 
     ## Obtain centerline
