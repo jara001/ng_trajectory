@@ -121,6 +121,16 @@ PARSER.add_argument("-v",
 
 
 ######################
+# Utilities
+######################
+
+def printv(*a, **kw) -> None:
+    """Print only when verbose is set."""
+    if args.verbose:
+        print (*a, **kw)
+
+
+######################
 # Centerline generation
 ######################
 
@@ -180,6 +190,10 @@ def getWalls(im: Image) -> List[numpy.ndarray]:
         sys.stdout.write("\rObtaining walls... %03.2f%%" % (100.0 - (100.0 * _im.histogram()[wall_color] / starting_value)))
 
     print (" - DONE")
+
+    if args.verbose:
+        print ("Found %d walls:" % len(walls))
+        print ("\n".join(["\t Wall %d: length %d" % (_i + 1, len(wall)) for _i, wall in enumerate(walls)]))
 
     return walls
 
@@ -276,6 +290,7 @@ def processImage(im: Image) -> None:
         sys.stdout.write("\rInflating map... %03.2f%%" % (100.0 - (100.0 * len(_free) / starting_value)))
 
     print (" - DONE")
+    printv ("Covered all of %d free cells." % starting_value)
 
 
     ## Obtain centerline
@@ -316,12 +331,14 @@ def processImage(im: Image) -> None:
 
     border = numpy.asarray(border)
     print (" - DONE")
+    printv ("Centerline has length %d." % len(border))
 
 
     ## Filter centerline points
     sys.stdout.write("\rFiltering points...")
     filtered_border = pointsFilter(border).tolist()
     print (" - DONE")
+    printv ("Reduced centerline to %d points." % len(filtered_border))
 
 
     ## Sort centerline points
@@ -431,6 +448,8 @@ def loadImage(filename: str) -> Image:
     im = im.resize((int(im.size[0]*args.resize), int(im.size[1]*args.resize)), resample = P.BILINEAR)
 
     has_alpha = False
+
+    printv ("Loaded image:", im)
 
     # Verify used palette
     # Note: Only "L" is now usable.
