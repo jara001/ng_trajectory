@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Fixed
+- Criterions
+    - _Profile_
+        - Parameter `reference_rotate` no longer flips axes.
+
 ## 1.9.0 - 2023-05-18
 ### Added
 - Criterions
