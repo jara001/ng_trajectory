@@ -28,9 +28,12 @@ P.createAdd("v_0", 0, float, "Initial speed [m.s^-1]", "init")
 P.createAdd("v_lim", 4.5, float, "Maximum forward speed [m.s^-1]", "init")
 P.createAdd("a_acc_max", 0.8, float, "Maximum longitudal acceleration [m.s^-2]", "init")
 P.createAdd("a_break_max", 4.5, float, "Maximum longitudal decceleration [m.s^-2]", "init")
+P.createAdd("_lf", 0.191, float, "Distance from center of mass to the front axle [m]", "init")
+P.createAdd("_lr", 0.139, float, "Distance from center of mass to the rear axle [m]", "init")
 P.createAdd("reference", None, str, "Name of the file to load (x, y, t) reference path that cannot be close.", "init")
 P.createAdd("reference_dist", 1.0, float, "Minimum allowed distance from the reference at given time [m].", "init")
 P.createAdd("reference_rotate", 0, int, "Number of points to rotate the reference trajectory.", "init")
+P.createAdd("save_solution_csv", None, str, "When given, save final trajectory to this file as CSV.", "init")
 P.createAdd("plot", False, bool, "Whether a graphical representation should be created.", "init (viz.)")
 P.createAdd("plot_reference", False, bool, "Whether the reference trajectory should be plotted.", "init (viz.)")
 P.createAdd("plot_reference_width", 0.4, float, "Linewidth of the reference trajectory. 0 = disabled", "init (viz.)")
@@ -75,7 +78,9 @@ def compute(points: numpy.ndarray, overlap: int = 0, penalty: float = 100.0, **o
     """
     global REFERENCE
 
-    _, _, _t = profiler.profileCompute(points, overlap, lap_time = True)
+    _v, _a, _t = profiler.profileCompute(points, overlap, lap_time = True,
+        save = P.getValue("save_solution_csv") if not overflown.get("optimization", True) and P.getValue("save_solution_csv") is not None else None
+    )
 
     if REFERENCE is not None:
         _d = P.getValue("reference_dist")

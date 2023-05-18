@@ -14,8 +14,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Parameters `plot_reference`, `plot_reference_width` to control plotting of reference trajectory.
         - Parameter `plot_solution` to control plotting of optimized solution.
         - Parameters `plot_timelines`, `plot_timelines_size`, `plot_timelines_width` to control plotting of lines between points of the same time.
+        - Parameter `save_solution_csv` to save final solution to a CSV file.
+        - Parameters `_lf` and `_lr` to set the car wheelbase for the saved trajectory.
     - Parameter `optimization` (default to True) that when True indicates that the criterion is run during optimization sequence (similarly to penalizer).
     - Parameter `penalty` is passed to criterion during optimization.
+    - When enabled, final trajectory is saved to a csv file.
 - Interpolators
     - _Cubic_spline_
         - Parameter `closed_loop` to set interpolator to create closed/unclosed lines.
