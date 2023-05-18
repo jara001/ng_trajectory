@@ -7,6 +7,9 @@
 ######################
 
 import math, numpy
+import csv
+
+from ng_trajectory.interpolators.utils import pointsDistance
 
 from typing import List, Tuple, TextIO
 
@@ -21,6 +24,8 @@ v_0 = 0             # Initial speed [m.s^-1]
 v_lim = 4.5         # Maximum forward speed [m.s^-1]
 a_acc_max = 0.8     # Maximum longitudal acceleration [m.s^-2]
 a_break_max = 4.5   # Maximum longitudal decceleration [m.s^-2]
+_lf = 0.191         # distance from the center of mass to the front axle [m]
+_lr = 0.139         # distance from the center of mass to the rear axle [m]
 
 
 ######################
@@ -171,7 +176,7 @@ def backward_pass(points: numpy.ndarray) -> Tuple[List[float], List[float], List
 
     cur = numpy.zeros((len(points)))
     for i, p in enumerate(points):
-        cur[i] = (abs(p[2]) if p[2] != 0 else 0.001)
+        cur[i] = abs(p[2])
 
     v_bwd = numpy.zeros((len(points)))
 
@@ -183,7 +188,7 @@ def backward_pass(points: numpy.ndarray) -> Tuple[List[float], List[float], List
     v_max[k%len(points)] = v_lim
 
     while k > 0:
-        v_max_cr[k-1] = math.sqrt(_mu*_g/cur[k-1])
+        v_max_cr[k-1] = math.sqrt(_mu*_g/cur[k-1]) if cur[k-1] != 0.0 else v_lim
         v_max[k-1] = min(v_max_cr[k-1],v_lim)
         ds = math.sqrt(math.pow(points[k%len(points), 0] - points[k-1, 0],2)+math.pow(points[k%len(points), 1] - points[k-1, 1],2))
         alim[k%len(points)] = (math.pow(v_max[k-1],2)-math.pow(v_bwd[k%len(points)],2))/(2*ds)
@@ -243,22 +248,89 @@ def forward_pass(points: numpy.ndarray, v_bwd: List[float], v_max: List[float], 
     return v_fwd, a, t
 
 
-def profileCompute(points: numpy.ndarray, overlap: int = 0, fd: TextIO = None) -> Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]:
+def saveState(filename: str, points: numpy.ndarray, t: numpy.ndarray, v: numpy.ndarray, a: numpy.ndarray) -> bool:
+    """Save the computed profile into a CSV file.
+
+    Arguments:
+    filename -- name of the file to save state, str
+    points -- points of a trajectory with curvature, nx3 numpy.ndarray
+    v -- speed profile of the trajectory, [m.s^-1], nx1 numpy.ndarray
+    a -- acceleration profile of the trajectory, [m.s^-2], nx1 numpy.ndarray
+    t -- time of reaching the points of the trajectory, [s], nx1 or (n+1)x1 numpy.ndarray
+
+    Returns:
+    success -- True if saved, otherwise False
+
+    Note: This is inspired by the 'ng_trajectory_ros' wrapper.
+    """
+
+    x, y, k = points[:, :3].T
+    t, v, a = t.flatten(), v.flatten(), a.flatten()
+
+    # Track progress (d)
+    d = pointsDistance(points)
+    d[0] = 0.0
+    d = numpy.cumsum(d)
+
+
+    # Heading (psi)
+    psi = numpy.asarray([
+        math.atan2(
+            y[(_i + 1) % len(points)] - _y,
+            x[(_i + 1) % len(points)] - _x
+        ) for _i, (_x, _y) in enumerate(points[:, :2])
+    ])
+
+
+    with open(filename, "w", newline = "") as f:
+        writer = csv.DictWriter(f,
+            fieldnames = ["t_s", "d_m", "x_m", "y_m", "psi_rad", "k_radpm", "vx_mps", "vy_mps", "a_mps2", "omega_radps", "delta_rad"]
+        )
+
+        writer.writeheader()
+
+        for _i in range(len(points)):
+            _beta = math.atan(_lr * k[_i])
+
+            writer.writerow(
+                {
+                    "t_s": t[_i],
+                    "d_m": d[_i],
+                    "x_m": x[_i],
+                    "y_m": y[_i],
+                    "psi_rad": psi[_i],
+                    "k_radpm": k[_i],
+                    "vx_mps": v[_i] * math.cos(_beta),
+                    "vy_mps": v[_i] * math.sin(_beta),
+                    "a_mps2": a[_i],
+                    "omega_radps": v[_i] * math.cos(_beta) * k[_i],
+                    "delta_rad": (_lf + _lr) * k[_i]
+                }
+            )
+
+
+def profileCompute(points: numpy.ndarray, overlap: int = 0, fd: TextIO = None, lap_time: bool = False, save: str = None) -> Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     """Compute the speed profile using overlap.
 
     Arguments:
     points -- points of a trajectory with curvature, nx3 numpy.ndarray
     overlap -- size of trajectory overlap, int, default 0 (disabled)
+    lap_time -- when True, time is appended with lap_time, bool, default False
+    save -- when given, save the solution to this file, default None (disabled)
 
     Returns:
     v_fwd -- speed profile of the trajectory after forward step, [m.s^-1],
              nx1 numpy.ndarray
     a -- final acceleration profile of the trajectory, [m.s^-2], nx1 numpy.ndarray
-    t -- time of reaching the points of the trajectory, [s], nx1 numpy.ndarray
+    t -- time of reaching the points of the trajectory, [s], nx1 or (n+1)x1 numpy.ndarray
     """
 
     # Overlap points
     if overlap > 0:
+        # Overlapping fails when there is not enough points.
+        # So we limit the overlap here.
+        if len(points) < overlap:
+            overlap = len(points)
         _points = overlapCreate(points, overlap)
     else:
         _points = numpy.asarray(points)
@@ -276,6 +348,9 @@ def profileCompute(points: numpy.ndarray, overlap: int = 0, fd: TextIO = None) -
     _a = a[:, numpy.newaxis]
     _t = t[:, numpy.newaxis]
 
+    if lap_time:
+        __t = _t[-overlap]
+
     # Remove overlap and convert to numpy.ndarray
     if overlap > 0:
         _v = overlapRemove(_v, overlap)
@@ -283,6 +358,9 @@ def profileCompute(points: numpy.ndarray, overlap: int = 0, fd: TextIO = None) -
         _t = overlapRemove(_t, overlap)
 
         # Fix time array
+        if lap_time:
+            _t = numpy.vstack((_t, __t))
+
         _t = numpy.subtract(_t, _t[0])
 
         bwd = overlapRemove(bwd, overlap)
@@ -295,6 +373,12 @@ def profileCompute(points: numpy.ndarray, overlap: int = 0, fd: TextIO = None) -
             fd.write("Curvature: %s\n" % str(listFlatten(cur.tolist())))
             fd.write("Final speed: %s\n" % str(listFlatten(_v.tolist())))
             fd.flush()
+    elif lap_time:
+        _t = numpy.vstack((_t, _t[0]))
+        _t[0] = 0
+
+    if save is not None:
+        saveState(save, points, _t, _v, _a)
 
     return _v, _a, _t
 

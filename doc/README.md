@@ -75,9 +75,14 @@ For the optimization itself, Nevergrad is used.
 
 
 ```html
+Init parameters:
+fixed_segments (list) = [] [Points to be used instead their corresponding segment.]
+
 Init (matryoshka) parameters:
 hold_matryoshka (bool) = False [Whether the transformation should be created only once.]
 grid (list) = computed by default [X-size and y-size of the grid used for points discretization.]
+save_matryoshka (str) = None [Name of the file to save Matryoshka mapping. When unset, do not save.]
+load_matryoshka (str) = None [Name of the file to load Matryoshka from. When unset, do not load.]
 
 Init (general) parameters:
 budget (int) = 100 [Budget parameter for the genetic algorithm.]
@@ -100,6 +105,8 @@ logging_verbosity (int) = 2 [Index for verbosity of the logger.]
 Init (viz.) parameters:
 plot (bool) = False [Whether a graphical representation should be created.]
 plot_mapping (bool) = False [Whether a grid should be mapped onto the track (to show the mapping).]
+plot_group_indices (bool) = True [Whether group indices should be shown on the track.]
+plot_group_borders (bool) = True [Whether group borders should be shown on the track.]
 ```
 
 
@@ -254,6 +261,21 @@ v_0 (float) = 0 [Initial speed [m.s^-1]]
 v_lim (float) = 4.5 [Maximum forward speed [m.s^-1]]
 a_acc_max (float) = 0.8 [Maximum longitudal acceleration [m.s^-2]]
 a_break_max (float) = 4.5 [Maximum longitudal decceleration [m.s^-2]]
+_lf (float) = 0.191 [Distance from center of mass to the front axle [m]]
+_lr (float) = 0.139 [Distance from center of mass to the rear axle [m]]
+reference (str) = None [Name of the file to load (x, y, t) reference path that cannot be close.]
+reference_dist (float) = 1.0 [Minimum allowed distance from the reference at given time [m].]
+reference_rotate (int) = 0 [Number of points to rotate the reference trajectory.]
+save_solution_csv (str) = None [When given, save final trajectory to this file as CSV.]
+
+Init (viz.) parameters:
+plot (bool) = False [Whether a graphical representation should be created.]
+plot_reference (bool) = False [Whether the reference trajectory should be plotted.]
+plot_reference_width (float) = 0.4 [Linewidth of the reference trajectory. 0 = disabled]
+plot_solution (bool) = False [Whether the optimized solution should be plotted. (Using 'plot_reference_width'.)]
+plot_timelines (bool) = False [Whether the lines between points in the same time should be plotted.]
+plot_timelines_size (float) = 1 [Size of the points of the timelines endpoints. 0 = disabled]
+plot_timelines_width (float) = 0.6 [Linewidth of the timelines. 0 = disabled]
 ```
 
 
@@ -286,6 +308,9 @@ Note: It is expected that the input points describe a continuous path (end-start
 ```html
 Parameters:
 int_size (int) = 400 [Number of points in the interpolation.]
+
+Init parameters:
+closed_loop (bool) = True [When set, interpolation creates a closed loop.]
 ```
 
 
@@ -331,6 +356,7 @@ reserve_width (bool) = False [When true, the segments are reserved a path toward
 reserve_selected (list) = [] [IDs of segments that should use the reservation method, when empty, use all.]
 reserve_distance (float) = 2.0 [Distance from the line segment that is reserved to the segment.]
 plot_flood (bool) = False [Whether the flooded areas should be plotted.]
+parallel_flood (int) = 0 [Number of threads used for flood fill (0 = sequential execution).]
 
 Init parameters:
 hold_map (bool) = False [When true, the map is created only once.]
@@ -478,9 +504,24 @@ v_0 (float) = 0 [Initial speed [m.s^-1]]
 v_lim (float) = 4.5 [Maximum forward speed [m.s^-1]]
 a_acc_max (float) = 0.8 [Maximum longitudal acceleration [m.s^-2]]
 a_break_max (float) = 4.5 [Maximum longitudal decceleration [m.s^-2]]
+_lf (float) = 0.191 [Distance from center of mass to the front axle [m]]
+_lr (float) = 0.139 [Distance from center of mass to the rear axle [m]]
+reference (str) = None [Name of the file to load (x, y, t) reference path that cannot be close.]
+reference_dist (float) = 1.0 [Minimum allowed distance from the reference at given time [m].]
+reference_rotate (int) = 0 [Number of points to rotate the reference trajectory.]
+save_solution_csv (str) = None [When given, save final trajectory to this file as CSV.]
 sampling_distance (float) = 1.0 [[m] Distance of super-sampling before the interpolation, skipped when 0.]
 distance (float) = 0 [[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.]
 fixed_points (list) = [] [Points to be used in the selection upon calling 'select'.]
+
+Init (viz.) parameters:
+plot (bool) = False [Whether a graphical representation should be created.]
+plot_reference (bool) = False [Whether the reference trajectory should be plotted.]
+plot_reference_width (float) = 0.4 [Linewidth of the reference trajectory. 0 = disabled]
+plot_solution (bool) = False [Whether the optimized solution should be plotted. (Using 'plot_reference_width'.)]
+plot_timelines (bool) = False [Whether the lines between points in the same time should be plotted.]
+plot_timelines_size (float) = 1 [Size of the points of the timelines endpoints. 0 = disabled]
+plot_timelines_width (float) = 0.6 [Linewidth of the timelines. 0 = disabled]
 ```
 
 
@@ -669,3 +710,106 @@ plot_args (list) = None [List of dicts with information for plotter. 1 el. is us
 silent_stub (bool) = False [When set, the application does not report that an algorithm for some part is missing.]
 ```
 
+
+## Plot functions for ng_trajectory
+
+From the user side (i.e., configuration file), only dynamic plotting is available.
+However, all plotting (package-wise) should be controlled by variable `plot` that
+is set to False by default.
+
+Dynamic plotting is defined using a custom key in the JSON. Following example
+resembles what is a "standard" and most used configuration:
+```json
+"plot": true,
+"plot_args": [
+    {
+        "_figure": {
+            "function": "axis",
+            "_args": [ "equal" ]
+        },
+        "trackPlot": [ "@track" ]
+    },
+    {
+        "pointsPlot": {
+            "_args": [ "@result" ]
+        },
+        "pointsScatter": {
+            "_args": [ "@rcandidate" ]
+        }
+    }
+]
+```
+Note: This creates a figure with equal axis, underlying track, optimized control
+points of the trajectory and their interpolation.
+
+The list in `plot_args` contains two dictionaries. The first one is executed
+before the optimization (and even before initialization of algorithms), whereas
+the second one is executed after optimization finishes.
+
+Commands in the `plot_args` are executed in order, key-wise. Basic syntax is
+```json
+"func": [ "arg1", "arg2" ]
+```
+
+which sends all arguments to the function, or
+```json
+"func": {
+    "_args": [ "arg1", "arg2" ],
+    "kw_arg": 4
+}
+```
+
+which calls `func` with the arguments stored in `_args`, appended with other
+arguments as kwargs.
+
+Note: Keys starting with `_` are treated differently; and are removed from kwargs.
+
+Since it is not possible to have a dictionary with repeating keys, you can use
+a meta character `-`. Dash, and everything after it is discarded during dynamic
+plotting.
+
+To pass a variable to the function, write its name prefixed with `@`. In case
+that the variable is not available, an exception is raised.
+
+
+### Available functions
+Following functions are available for plotting, however only the first three
+are usually used:
+
+- trackPlot
+- pointsScatter
+- pointsPlot
+- bordersPlot
+- indicesPlot
+- groupsScatter
+- groupsPlot
+- grouplayersScatter
+- grouplayersPlot
+- labelText
+
+
+### Available variables
+Following variables are available for plotting (by setting the value to `@` + name
+of the variable):
+
+- track -- All valid points of the track.
+- fitness -- Fitness value of the best solution.
+- rcandidate -- Control points of the best solution.
+- tcandidate -- Control points of the best solution in Matryoshka space.
+- result -- Optimized trajectory (interpolation of rcandidate).
+- figure -- Currently used figure for plotting.
+- + any variable defined in the current loop from the configuration file.
+
+
+### Matplotlib wrapper
+In addition, it is possible to call literally any function related to `pyplot` or
+`figure` from the matplotlib. To do this, call function `_pyplot`/`_figure`
+with argument `function` with the name of the required function.
+
+For example, to make the axis equal, one can use this:
+```json
+"_figure": {
+    "function": "axis",
+    "_args": [ "equal" ]
+}
+```

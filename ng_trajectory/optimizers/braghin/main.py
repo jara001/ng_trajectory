@@ -161,7 +161,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
     # Local to global variables
     CRITERION = criterion
-    CRITERION_ARGS = criterion_args
+    CRITERION_ARGS = {**criterion_args, **{"optimization": True}}
     INTERPOLATOR = interpolator
     INTERPOLATOR_ARGS = interpolator_args
     SEGMENTATOR = segmentator
@@ -170,7 +170,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     SELECTOR_ARGS = selector_args
     PENALIZER = penalizer
     PENALIZER_INIT = penalizer_init
-    PENALIZER_ARGS = penalizer_args
+    PENALIZER_ARGS = {**penalizer_args, **{"optimization": True}}
     LOGFILE = logfile
     VERBOSITY = logging_verbosity
     _holdtransform = hold_transform
@@ -246,13 +246,14 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     tcpoints -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
     trajectory -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
     """
-    global OPTIMIZER, CUTS, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS
+    global OPTIMIZER, CUTS, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS, CRITERION_ARGS
 
     with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
         recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
 
     points = transform.transform(recommendation.args[0], CUTS)
 
+    CRITERION_ARGS["optimization"] = False
     PENALIZER_ARGS["optimization"] = False
     final = _opt(numpy.asarray(recommendation.args[0]))
 
@@ -323,7 +324,7 @@ def _opt(points: numpy.ndarray) -> float:
             LOGFILE.flush()
         return penalty
 
-    _c = CRITERION.compute(**{**{'points': _points}, **CRITERION_ARGS})
+    _c = CRITERION.compute(**{**{'points': _points, 'penalty': PENALTY}, **CRITERION_ARGS})
     with FILELOCK:
         if VERBOSITY > 2:
             print ("pointsA:%s" % str(points), file=LOGFILE)

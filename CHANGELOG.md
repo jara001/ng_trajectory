@@ -4,6 +4,82 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.9.0 - 2023-05-18
+### Added
+- Criterions
+    - _Profile_
+        - Argument `lap_time` for `profileCompute()` to obtain lap time of the trajectory.
+        - Parameter `reference` to set file for loading reference trajectory that needs to be avoided in time.
+        - Parameter `reference_dist` to set the minimum allowed distance from the reference trajectory.
+        - Parameter `reference_rotate` to set the rotation of reference trajectory.
+        - Parameters `plot_reference`, `plot_reference_width` to control plotting of reference trajectory.
+        - Parameter `plot_solution` to control plotting of optimized solution.
+        - Parameters `plot_timelines`, `plot_timelines_size`, `plot_timelines_width` to control plotting of lines between points of the same time.
+        - Parameter `save_solution_csv` to save final solution to a CSV file.
+        - Parameters `_lf` and `_lr` to set the car wheelbase for the saved trajectory.
+    - Parameter `optimization` (default to True) that when True indicates that the criterion is run during optimization sequence (similarly to penalizer).
+    - Parameter `penalty` is passed to criterion during optimization.
+    - When enabled, final trajectory is saved to a csv file.
+- Interpolators
+    - _Cubic_spline_
+        - Parameter `closed_loop` to set interpolator to create closed/unclosed lines.
+- Optimizers
+    - _Matryoshka_
+        - Function `indicesToRealCoordinatesInt()` to convert indices using slice.
+        - Parameter `load_matryoshka` to set file for loading Matryoshka instead of creating it.
+        - Parameter `save_matryoshka` to set file for saving Matryoshka after it is created.
+        - Parameter `plot_group_indices` (default to True) to turn off group indices in the plot.
+        - Parameter `plot_group_borders` (default to True) to turn off group borders in the plot.
+        - Parameter `fixed_segments` to determine points (and their segments) that are not optimized.
+- Penalizers
+    - Function `eInvalidPoints()` to iterate over invalid points obtained by segmentated map.
+- Segmentators
+    - _Flood_fill_
+        - Parameter `parallel_flood` to run the segmentation with a ProcessPool.
+    - Function `pointInBounds()` along with global `MAP_BOUNDS` to check whether point lies inside the map bounds.
+- 'ng_generate_data'
+    - Repeatable parameter `-v` to increase verbosity.
+    - Centerline is generated between all walls, but only the section without dead-ends is returned. If this fails, centerline for the largest wall is returned instead.
+    - Inflated map is saved when verbosity is set to at least 2.
+- 'ng_run'
+    - Parameter `--help` to show help for the command.
+    - Support for `+[PARAMETER]` parameters that modifies the loaded configuration.
+    - Support for `+[PARAMETER]/[PARAMETER]` to modify subdictionaries.
+- Documentation for package plotter.
+- Function `configurationMerge()` to merge another configuration to self.
+- Variate run can properly handle floats when generating a name of the log file.
+
+### Changed
+- Criterions
+    - _Profile_
+        - Criterion is using the true `lap_time`.
+        - Overlap is upper bound by the number of points.
+- Optimizers
+    - _Matryoshka_
+        - Use list comprehension in `groupsCenterCompute()`.
+        - Force new transformation when number of segments does not correspond to the current mapping.
+        - Matryoshka is plotted even with held transformation.
+- Penalizers
+    - _Count_
+        - Use segmentated map for getting the invalid points instead of numpy vectors.
+    - Use `eInvalidPoints()` where applicable.
+- 'ng_generate_data'
+    - Arguments are parsed by argparse instead of getopt.
+    - Map inflation is much faster because of helper array.
+    - Centerline points are filtered by Matryoshka's `pointsFilter()`.
+    - Quantization `PIL.quantize()` uses median cut method instead of maximum coverage.
+
+### Fixed
+- Criterions
+    - _Profile_
+        - Profiling uses curvature that is not modified for straight sections.
+- Optimizers
+    - _Matryoshka_
+        - ParameterList is updated with keyword arguments.
+    - Set `optimization` parameter of criterions/penalizers to True during optimizer initialization.
+- 'ng_help' no longer requires an argument for `-h`.
+- Matplotlib internal variables should not be longer garbage collected from different thread.
+
 ## 1.8.0 - 2023-03-15
 ### Added
 - Criterions

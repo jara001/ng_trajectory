@@ -6,9 +6,94 @@
 # Imports & Globals
 ######################
 
-import sys, os
+import sys, os, argparse
 
-from ng_trajectory import configurationLoad, execute
+from ng_trajectory import configurationLoad, execute, configurationMerge
+
+# Global variables
+PARSER = argparse.ArgumentParser(
+    prog = "ng_run",
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description = """
+Script for running the optimization using ng_trajectory.
+
+One argument is expected with a path to '.json' configuration.
+
+In addition, you can temporarily modify this configuration by
+passing arguments starting with '+' to this command.
+Subdictionaries can be accessed with '/' in the argument name.
+    """,
+
+)
+
+# Arguments
+PARSER.add_argument("input_file",
+    help = "Path to the '.json' configuration file.",
+    default = None,
+    type = str,
+)
+
+
+######################
+# Utilities
+######################
+
+def autoType(value: str) -> any:
+    """Detect true type of the variable and convert it.
+
+    Arguments:
+    value -- input data, str
+
+    Returns:
+    true_value -- converted data, float/int/str/bool
+    """
+
+    # is float
+    try:
+        float(value)
+        is_float = True
+    except:
+        is_float = False
+
+    # is int
+    try:
+        int(value)
+        is_int = True
+    except:
+        is_int = False
+
+    if is_float and is_int:
+        return int(value)
+    elif is_float:
+        return float(value)
+    elif value.lower() == "true":
+        return True
+    elif value.lower() == "false":
+        return False
+    else:
+        return value
+
+
+def dictExpand(d: dict, key: str, value: any) -> None:
+    """Expand key on '/' to referenced dict.
+
+    If key does not contain any '/', this
+    function only sets d[key] = value.
+
+    Otherwise, it creates a subdictionary on
+    every '/', e.g.,
+        dictExpand({}, "a/b/c", 5)
+        {"a": {"b": {"c": 5}}}
+    """
+    if "/" not in key:
+        d[key] = value
+    else:
+        topkey = key[0:key.index("/")]
+
+        if topkey not in d:
+            d[topkey] = {}
+
+        dictExpand(d[topkey], key[key.index("/")+1:], value)
 
 
 ######################
@@ -16,10 +101,28 @@ from ng_trajectory import configurationLoad, execute
 ######################
 
 if __name__ == "__main__":
+    # Obtain arguments
+    args, rest = PARSER.parse_known_args()
+
+    # https://stackoverflow.com/questions/37367331/is-it-possible-to-use-argparse-to-capture-an-arbitrary-set-of-optional-arguments
+    CONF_PARSER = argparse.ArgumentParser(prefix_chars = "+")
+
+    for arg in rest:
+        if arg.startswith("+"):
+            CONF_PARSER.add_argument(arg.split("=")[0], type = str)
+
+    cargs, rest = CONF_PARSER.parse_known_args(args = rest)
+
+    # Convert args to values
+    dcargs = {}
+    for key, value in vars(cargs).items():
+        dictExpand(dcargs, key, autoType(value))
+
     # Expect one argument
     if len(sys.argv) > 1:
         if os.path.exists(sys.argv[1]):
             if configurationLoad(sys.argv[1]):
+                configurationMerge(dcargs)
                 print (execute())
             else:
                 print ("Unable to load configuration from given file.", file=sys.stderr)

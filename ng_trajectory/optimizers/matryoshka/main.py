@@ -49,6 +49,8 @@ GRID = None
 PENALTY = None
 FIGURE = None
 PLOT = None
+GROUP_CENTERS = None
+GROUP_LAYERS = None
 
 
 # Parameters
@@ -74,6 +76,11 @@ P.createAdd("hold_matryoshka", False, bool, "Whether the transformation should b
 P.createAdd("plot", False, bool, "Whether a graphical representation should be created.", "init (viz.)")
 P.createAdd("grid", "computed by default", list, "X-size and y-size of the grid used for points discretization.", "init (Matryoshka)")
 P.createAdd("plot_mapping", False, bool, "Whether a grid should be mapped onto the track (to show the mapping).", "init (viz.)")
+P.createAdd("save_matryoshka", None, str, "Name of the file to save Matryoshka mapping. When unset, do not save.", "init (Matryoshka)")
+P.createAdd("load_matryoshka", None, str, "Name of the file to load Matryoshka from. When unset, do not load.", "init (Matryoshka)")
+P.createAdd("plot_group_indices", True, bool, "Whether group indices should be shown on the track.", "init (viz.)")
+P.createAdd("plot_group_borders", True, bool, "Whether group borders should be shown on the track.", "init (viz.)")
+P.createAdd("fixed_segments", [], list, "Points to be used instead their corresponding segment.", "init")
 
 
 ######################
@@ -146,10 +153,11 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     """
     global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE, PLOT
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER, PENALIZER_INIT, PENALIZER_ARGS
+    global GROUP_CENTERS, GROUP_LAYERS
 
     # Local to global variables
     CRITERION = criterion
-    CRITERION_ARGS = criterion_args
+    CRITERION_ARGS = {**criterion_args, **{"optimization": True}}
     INTERPOLATOR = interpolator
     INTERPOLATOR_ARGS = interpolator_args
     SEGMENTATOR = segmentator
@@ -158,7 +166,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     SELECTOR_ARGS = selector_args
     PENALIZER = penalizer
     PENALIZER_INIT = penalizer_init
-    PENALIZER_ARGS = penalizer_args
+    PENALIZER_ARGS = {**penalizer_args, **{"optimization": True}}
     LOGFILE = logfile
     VERBOSITY = logging_verbosity
     _holdmatryoshka = hold_matryoshka
@@ -169,18 +177,47 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
     VALID_POINTS = points
 
-    if MATRYOSHKA is None or not _holdmatryoshka:
+    P.updateAll(kwargs)
+
+    # Load Matryoshka
+    if MATRYOSHKA is None and P.getValue("load_matryoshka") is not None:
+        try:
+            _data = numpy.load(P.getValue("load_matryoshka"), allow_pickle = True)
+
+            if all([ _d in _data.files for _d in ["matryoshka", "group_layers", "group_centers"] ]):
+                MATRYOSHKA = _data.get("matryoshka").tolist()
+                GROUP_LAYERS = _data.get("group_layers")
+                GROUP_CENTERS = _data.get("group_centers")
+
+                print ("Matryoshka mapping loaded from '%s'." % P.getValue("load_matryoshka"))
+
+                if not _holdmatryoshka:
+                    print ("Warning: 'hold_matryoshka' is not set, so mapping won't be probably used.")
+        except Exception as e:
+            print ("Failed to load Matryoshka from '%s': %s" % (P.getValue("load_matryoshka"), e))
+            MATRYOSHKA = None
+            GROUP_LAYERS = None
+            GROUP_CENTERS = None
+
+    already_plot = False
+
+    # Create the transformation if:
+    #  - There is no transformation.
+    #  - Current transformation does not work for selected number of segments.
+    #  - We want to create a new transformation.
+    if MATRYOSHKA is None or (groups > 0 and groups != len(MATRYOSHKA)) or not _holdmatryoshka:
+        already_plot = True
         # Note: In version <=1.3.0 the group_centerline passed to the SELECTOR was sorted using
         #       ng_trajectory.interpolators.utils.trajectorySort, but it sometimes rotated the
         #       already sorted centerline; interestingly, the result was counterclockwise at all
         #       times (or at least very very often).
-        group_centers = SELECTOR.select(**{**{"points": group_centerline, "remain": groups}, **SELECTOR_ARGS})
+        GROUP_CENTERS = SELECTOR.select(**{**{"points": group_centerline, "remain": groups}, **SELECTOR_ARGS})
 
-        if plot:
-            ngplot.indicesPlot(group_centers)
+        if plot and P.getValue("plot_group_indices"):
+            ngplot.indicesPlot(GROUP_CENTERS)
 
         # Matryoshka construction
-        _groups = SEGMENTATOR.segmentate(points=points, group_centers=group_centers, **{**SEGMENTATOR_ARGS})
+        _groups = SEGMENTATOR.segmentate(points=points, group_centers=GROUP_CENTERS, **{**SEGMENTATOR_ARGS})
 
         # Call the init function of penalizer
         PENALIZER.init(
@@ -190,7 +227,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
             map_origin = SEGMENTATOR.main.MAP_ORIGIN,
             map_grid = SEGMENTATOR.main.MAP_GRID,
             map_last = SEGMENTATOR.main.MAP_LAST,
-            group_centers = group_centers,
+            group_centers = GROUP_CENTERS,
             **{
                 **{
                     key: value for key, value in kwargs.items() if key not in [
@@ -201,17 +238,17 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
             }
         )
 
-        grouplayers = transform.groupsBorderObtain(_groups)
-        grouplayers = transform.groupsBorderBeautify(grouplayers, 400)
+        GROUP_LAYERS = transform.groupsBorderObtain(_groups)
+        GROUP_LAYERS = transform.groupsBorderBeautify(GROUP_LAYERS, 400)
 
-        if plot:
-            ngplot.bordersPlot(grouplayers, figure)
+        if plot and P.getValue("plot_group_borders"):
+            ngplot.bordersPlot(GROUP_LAYERS, figure)
 
         layers_center = transform.groupsCenterCompute(_groups)
-        layers_count = [ layers for i in range(len(grouplayers)) ]
+        layers_count = [ layers for i in range(len(GROUP_LAYERS)) ]
 
 
-        MATRYOSHKA = [ transform.matryoshkaCreate(grouplayers[_i], layers_center[_i], layers_count[_i]) for _i in range(len(_groups)) ]
+        MATRYOSHKA = [ transform.matryoshkaCreate(GROUP_LAYERS[_i], layers_center[_i], layers_count[_i]) for _i in range(len(_groups)) ]
 
         if plot and P.getValue("plot_mapping"):
             xx, yy = numpy.meshgrid(numpy.linspace(0, 1, 110), numpy.linspace(0, 1, 110))
@@ -229,6 +266,70 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
                 _GRID = gridCompute(points)
                 GRID = [ _GRID, _GRID ]
 
+        if P.getValue("save_matryoshka") is not None:
+            try:
+                numpy.savez(P.getValue("save_matryoshka"), matryoshka = MATRYOSHKA, group_layers = GROUP_LAYERS, group_centers = GROUP_CENTERS)
+                print ("Matryoshka mapping saved to '%s'." % P.getValue("save_matryoshka"))
+            except Exception as e:
+                print ("Failed to save Matryoshka to '%s': %s" % (P.getValue("save_matryoshka"), e))
+
+    # Use fixed segments to reduce Matryoshka
+    # TODO: Actually reduce the array to reduce the problem dimension
+    if len(P.getValue("fixed_segments")) > 0:
+        for _fs in P.getValue("fixed_segments"):
+            _dists = [
+                numpy.min(
+                    numpy.sqrt(
+                        numpy.sum(
+                            numpy.power(
+                                numpy.subtract(
+                                    _border[:, :2],
+                                    _fs
+                                ),
+                                2
+                            ),
+                            axis = 1
+                        )
+                    )
+                )
+                for _border in GROUP_LAYERS
+            ]
+
+            # Index of the segment
+            _closest_i = _dists.index(min(_dists))
+
+            # Replace the segment in Matryoshka
+            # We create a "fake" interpolator that returns the requested value
+            MATRYOSHKA[_closest_i] = [
+                [
+                    numpy.repeat([0, 1], 4), # 0, 0, 0, 0, 1, 1, 1, 1
+                    numpy.repeat([0, 1], 4),
+                    numpy.repeat(_fs[0], 16),
+                    3,
+                    3
+                ],
+                [
+                    numpy.repeat([0, 1], 4), # 0, 0, 0, 0, 1, 1, 1, 1
+                    numpy.repeat([0, 1], 4),
+                    numpy.repeat(_fs[1], 16),
+                    3,
+                    3
+                ]
+            ]
+
+    if plot and not already_plot: # Plot when mapping is held
+        if P.getValue("plot_group_indices"):
+            ngplot.indicesPlot(GROUP_CENTERS)
+
+        if P.getValue("plot_group_borders"):
+            ngplot.bordersPlot(GROUP_LAYERS, figure)
+
+        if P.getValue("plot_mapping"):
+            xx, yy = numpy.meshgrid(numpy.linspace(0, 1, 110), numpy.linspace(0, 1, 110))
+            gridpoints = numpy.hstack((xx.flatten()[:, numpy.newaxis], yy.flatten()[:, numpy.newaxis]))
+
+            for _m in MATRYOSHKA:
+                ngplot.pointsScatter(transform.matryoshkaMap(_m, gridpoints), marker="x", s=0.1)
 
     # Optimizer definition
     instrum = nevergrad.Instrumentation(nevergrad.var.Array(len(MATRYOSHKA), 2).bounded(0, 1))
@@ -244,14 +345,16 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     tcpoints -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
     trajectory -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
     """
-    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS
+    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS, CRITERION_ARGS
 
     with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
         recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
 
     points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p])[0] for i, p in enumerate(numpy.asarray(recommendation.args[0])) ]
 
+    # TODO: Move this to ParameterList
     PENALIZER_ARGS["optimization"] = False
+    CRITERION_ARGS["optimization"] = False
     final = _opt(numpy.asarray(recommendation.args[0]))
 
 
@@ -317,7 +420,7 @@ def _opt(points: numpy.ndarray) -> float:
             LOGFILE.flush()
         return penalty
 
-    _c = CRITERION.compute(**{**{'points': _points}, **CRITERION_ARGS})
+    _c = CRITERION.compute(**{**{'points': _points, 'penalty': PENALTY}, **CRITERION_ARGS})
     with FILELOCK:
         if VERBOSITY > 2:
             print ("pointsA:%s" % str(points), file=LOGFILE)

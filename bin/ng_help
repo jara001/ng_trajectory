@@ -23,7 +23,7 @@ PARAMETERS = {
         {
             "help": "Show this help",
             "type": str,
-            "short": "h:",
+            "short": "h",
             "long": "help",
         },
     "algorithm":
@@ -145,10 +145,11 @@ if __name__ == "__main__":
                         exit(0)
                 else:
                     if arg in dir(ng_trajectory):
-                        print ("%s\n\n%s\n" % (arg, ng_trajectory.__getattribute__(arg).__doc__))
+                        print ("%s\n\n%s" % (arg, ng_trajectory.__getattribute__(arg).__doc__))
 
-                        print ("Available algorithms:")
-                        print_available_algorithms([ng_trajectory.__getattribute__(arg)])
+                        if "__all__" in dir(ng_trajectory.__getattribute__(arg)):
+                            print ("\nAvailable algorithms:")
+                            print_available_algorithms([ng_trajectory.__getattribute__(arg)])
 
                         if "P" in dir(ng_trajectory.__getattribute__(arg)):
                             print ()
@@ -206,6 +207,9 @@ if __name__ == "__main__":
                         print ("```")
                         print ()
 
+                # Print plot instructions
+                print ("\n%s" % ng_trajectory.plot.__doc__, end = "")
+
                 exit (4)
 
     print ("%s" % (ng_trajectory.main.__doc__))
@@ -216,3 +220,5 @@ if __name__ == "__main__":
     if "P" in dir(ng_trajectory.main):
         print ()
         print_parameters(ng_trajectory.main.P)
+
+    print ("\nTo get more information about plotting, run `ng_help -a plot`.")
