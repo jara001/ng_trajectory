@@ -52,6 +52,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Criterions
     - _Profile_
         - Criterion is using the true `lap_time`.
+        - Overlap is upper bound by the number of points.
 - Optimizers
     - _Matryoshka_
         - Use list comprehension in `groupsCenterCompute()`.

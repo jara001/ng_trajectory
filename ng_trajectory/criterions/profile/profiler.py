@@ -327,6 +327,10 @@ def profileCompute(points: numpy.ndarray, overlap: int = 0, fd: TextIO = None, l
 
     # Overlap points
     if overlap > 0:
+        # Overlapping fails when there is not enough points.
+        # So we limit the overlap here.
+        if len(points) < overlap:
+            overlap = len(points)
         _points = overlapCreate(points, overlap)
     else:
         _points = numpy.asarray(points)
