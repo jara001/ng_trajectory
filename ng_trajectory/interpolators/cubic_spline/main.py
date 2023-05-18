@@ -15,6 +15,7 @@ from scipy.interpolate import CubicSpline
 from ng_trajectory.parameter import *
 P = ParameterList()
 P.createAdd("int_size", 400, int, "Number of points in the interpolation.", "")
+P.createAdd("closed_loop", True, bool, "When set, interpolation creates a closed loop.", "init")
 
 
 ######################
@@ -23,7 +24,8 @@ P.createAdd("int_size", 400, int, "Number of points in the interpolation.", "")
 
 def init(**kwargs) -> None:
     """Initialize interpolator."""
-    pass
+
+    P.updateAll(kwargs)
 
 
 def interpolate(points: numpy.ndarray, int_size: int = 400, **overflown) -> numpy.ndarray:
@@ -52,7 +54,12 @@ def interpolate(points: numpy.ndarray, int_size: int = 400, **overflown) -> nump
         Reduced default int_size from 440 to 400.
     """
 
-    _points = numpy.vstack((points, points[0, :]))
+    if P.getValue("closed_loop"):
+        _points = numpy.vstack((points, points[0, :]))
+        _bc_type = "periodic"
+    else:
+        _points = points.copy()
+        _bc_type = "natural"
 
     x, y = _points.T
     i = numpy.arange(len(_points))
@@ -63,7 +70,7 @@ def interpolate(points: numpy.ndarray, int_size: int = 400, **overflown) -> nump
     alpha = numpy.linspace(0, 1, int_size, endpoint = False)
 
     # CubicSpline allows forcing 2nd order differentiability on spline start/end
-    ipol = CubicSpline(distance, _points, axis=0, bc_type="periodic")(alpha)
+    ipol = CubicSpline(distance, _points, axis=0, bc_type=_bc_type)(alpha)
 
     # 2nd order derivative
     # https://en.wikipedia.org/wiki/Curvature#Curvature_of_a_graph
@@ -71,8 +78,8 @@ def interpolate(points: numpy.ndarray, int_size: int = 400, **overflown) -> nump
     # pokus #2
     # https://www.math24.net/curvature-radius/
     # K = (x' * y'' - y' * x'') / ( x'**2 + y'**2 )**(3/2)
-    ipol2 = CubicSpline(distance, _points, axis=0, bc_type="periodic")(alpha, 2)
-    ipol1 = CubicSpline(distance, _points, axis=0, bc_type="periodic")(alpha, 1)
+    ipol2 = CubicSpline(distance, _points, axis=0, bc_type=_bc_type)(alpha, 2)
+    ipol1 = CubicSpline(distance, _points, axis=0, bc_type=_bc_type)(alpha, 1)
 
     return numpy.hstack((ipol, (
                         numpy.divide(

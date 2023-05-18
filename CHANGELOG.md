@@ -16,6 +16,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Parameters `plot_timelines`, `plot_timelines_size`, `plot_timelines_width` to control plotting of lines between points of the same time.
     - Parameter `optimization` (default to True) that when True indicates that the criterion is run during optimization sequence (similarly to penalizer).
     - Parameter `penalty` is passed to criterion during optimization.
+- Interpolators
+    - _Cubic_spline_
+        - Parameter `closed_loop` to set interpolator to create closed/unclosed lines.
 - Optimizers
     - _Matryoshka_
         - Function `indicesToRealCoordinatesInt()` to convert indices using slice.
