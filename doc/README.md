@@ -75,9 +75,14 @@ For the optimization itself, Nevergrad is used.
 
 
 ```html
+Init parameters:
+fixed_segments (list) = [] [Points to be used instead their corresponding segment.]
+
 Init (matryoshka) parameters:
 hold_matryoshka (bool) = False [Whether the transformation should be created only once.]
 grid (list) = computed by default [X-size and y-size of the grid used for points discretization.]
+save_matryoshka (str) = None [Name of the file to save Matryoshka mapping. When unset, do not save.]
+load_matryoshka (str) = None [Name of the file to load Matryoshka from. When unset, do not load.]
 
 Init (general) parameters:
 budget (int) = 100 [Budget parameter for the genetic algorithm.]
@@ -100,6 +105,8 @@ logging_verbosity (int) = 2 [Index for verbosity of the logger.]
 Init (viz.) parameters:
 plot (bool) = False [Whether a graphical representation should be created.]
 plot_mapping (bool) = False [Whether a grid should be mapped onto the track (to show the mapping).]
+plot_group_indices (bool) = True [Whether group indices should be shown on the track.]
+plot_group_borders (bool) = True [Whether group borders should be shown on the track.]
 ```
 
 
@@ -254,6 +261,21 @@ v_0 (float) = 0 [Initial speed [m.s^-1]]
 v_lim (float) = 4.5 [Maximum forward speed [m.s^-1]]
 a_acc_max (float) = 0.8 [Maximum longitudal acceleration [m.s^-2]]
 a_break_max (float) = 4.5 [Maximum longitudal decceleration [m.s^-2]]
+_lf (float) = 0.191 [Distance from center of mass to the front axle [m]]
+_lr (float) = 0.139 [Distance from center of mass to the rear axle [m]]
+reference (str) = None [Name of the file to load (x, y, t) reference path that cannot be close.]
+reference_dist (float) = 1.0 [Minimum allowed distance from the reference at given time [m].]
+reference_rotate (int) = 0 [Number of points to rotate the reference trajectory.]
+save_solution_csv (str) = None [When given, save final trajectory to this file as CSV.]
+
+Init (viz.) parameters:
+plot (bool) = False [Whether a graphical representation should be created.]
+plot_reference (bool) = False [Whether the reference trajectory should be plotted.]
+plot_reference_width (float) = 0.4 [Linewidth of the reference trajectory. 0 = disabled]
+plot_solution (bool) = False [Whether the optimized solution should be plotted. (Using 'plot_reference_width'.)]
+plot_timelines (bool) = False [Whether the lines between points in the same time should be plotted.]
+plot_timelines_size (float) = 1 [Size of the points of the timelines endpoints. 0 = disabled]
+plot_timelines_width (float) = 0.6 [Linewidth of the timelines. 0 = disabled]
 ```
 
 
@@ -286,6 +308,9 @@ Note: It is expected that the input points describe a continuous path (end-start
 ```html
 Parameters:
 int_size (int) = 400 [Number of points in the interpolation.]
+
+Init parameters:
+closed_loop (bool) = True [When set, interpolation creates a closed loop.]
 ```
 
 
@@ -331,6 +356,7 @@ reserve_width (bool) = False [When true, the segments are reserved a path toward
 reserve_selected (list) = [] [IDs of segments that should use the reservation method, when empty, use all.]
 reserve_distance (float) = 2.0 [Distance from the line segment that is reserved to the segment.]
 plot_flood (bool) = False [Whether the flooded areas should be plotted.]
+parallel_flood (int) = 0 [Number of threads used for flood fill (0 = sequential execution).]
 
 Init parameters:
 hold_map (bool) = False [When true, the map is created only once.]
@@ -478,9 +504,24 @@ v_0 (float) = 0 [Initial speed [m.s^-1]]
 v_lim (float) = 4.5 [Maximum forward speed [m.s^-1]]
 a_acc_max (float) = 0.8 [Maximum longitudal acceleration [m.s^-2]]
 a_break_max (float) = 4.5 [Maximum longitudal decceleration [m.s^-2]]
+_lf (float) = 0.191 [Distance from center of mass to the front axle [m]]
+_lr (float) = 0.139 [Distance from center of mass to the rear axle [m]]
+reference (str) = None [Name of the file to load (x, y, t) reference path that cannot be close.]
+reference_dist (float) = 1.0 [Minimum allowed distance from the reference at given time [m].]
+reference_rotate (int) = 0 [Number of points to rotate the reference trajectory.]
+save_solution_csv (str) = None [When given, save final trajectory to this file as CSV.]
 sampling_distance (float) = 1.0 [[m] Distance of super-sampling before the interpolation, skipped when 0.]
 distance (float) = 0 [[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.]
 fixed_points (list) = [] [Points to be used in the selection upon calling 'select'.]
+
+Init (viz.) parameters:
+plot (bool) = False [Whether a graphical representation should be created.]
+plot_reference (bool) = False [Whether the reference trajectory should be plotted.]
+plot_reference_width (float) = 0.4 [Linewidth of the reference trajectory. 0 = disabled]
+plot_solution (bool) = False [Whether the optimized solution should be plotted. (Using 'plot_reference_width'.)]
+plot_timelines (bool) = False [Whether the lines between points in the same time should be plotted.]
+plot_timelines_size (float) = 1 [Size of the points of the timelines endpoints. 0 = disabled]
+plot_timelines_width (float) = 0.6 [Linewidth of the timelines. 0 = disabled]
 ```
 
 
