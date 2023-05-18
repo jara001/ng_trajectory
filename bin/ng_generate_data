@@ -204,6 +204,11 @@ def getWalls(im: Image) -> List[numpy.ndarray]:
 
     print (" - DONE")
 
+    # We sort the walls in descending size
+    # i.e., indices here are not the same as latter ones,
+    # but that is ok.
+    walls = sorted(walls, key = lambda x: -len(x))
+
     if args.verbose:
         print ("Found %d walls:" % len(walls))
         print ("\n".join(["\t Wall %d: length %d" % (_i + 1, len(wall)) for _i, wall in enumerate(walls)]))
@@ -317,6 +322,7 @@ def processImage(im: Image) -> None:
     sys.stdout.write("\rGenerating centerline...")
 
     border = []
+    wall_len_1 = 0
     nd2 = numpy.asarray(im, dtype = int)
 
     # Get neighbourhood of a wall where it meets different walls.
@@ -349,6 +355,9 @@ def processImage(im: Image) -> None:
             numpy.argwhere(nd2 == FREE).copy()
         ).tolist()
 
+        if wall_index_1 == 1:
+            wall_len_1 = len(border)
+
     border = numpy.asarray(border)
     print (" - DONE")
     printv ("Centerline has length %d." % len(border))
@@ -357,8 +366,14 @@ def processImage(im: Image) -> None:
     ## Filter centerline points
     sys.stdout.write("\rFiltering points...")
     filtered_border = pointsFilter(border).tolist()
-    print (" - DONE")
-    printv ("Reduced centerline to %d points." % len(filtered_border))
+    if len(filtered_border) < 1:
+        print (" - FAILED")
+        printv ("Using the centerline of largest wall, as filter removed everything.")
+        printv ("Centerline has %d points." % wall_len_1)
+        filtered_border = border.tolist()[0:wall_len_1]
+    else:
+        print (" - DONE")
+        printv ("Reduced centerline to %d points." % len(filtered_border))
 
 
     ## Sort centerline points

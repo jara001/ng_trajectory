@@ -32,7 +32,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Function `pointInBounds()` along with global `MAP_BOUNDS` to check whether point lies inside the map bounds.
 - 'ng_generate_data'
     - Repeatable parameter `-v` to increase verbosity.
-    - Centerline is generated between all walls, but only the section without dead-ends is returned.
+    - Centerline is generated between all walls, but only the section without dead-ends is returned. If this fails, centerline for the largest wall is returned instead.
     - Inflated map is saved when verbosity is set to at least 2.
 - 'ng_run'
     - Parameter `--help` to show help for the command.
