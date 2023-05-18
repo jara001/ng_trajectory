@@ -68,6 +68,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Quantization `PIL.quantize()` uses median cut method instead of maximum coverage.
 
 ### Fixed
+- Criterions
+    - _Profile_
+        - Profiling uses curvature that is not modified for straight sections.
 - Optimizers
     - _Matryoshka_
         - ParameterList is updated with keyword arguments.

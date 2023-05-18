@@ -176,7 +176,7 @@ def backward_pass(points: numpy.ndarray) -> Tuple[List[float], List[float], List
 
     cur = numpy.zeros((len(points)))
     for i, p in enumerate(points):
-        cur[i] = (abs(p[2]) if p[2] != 0 else 0.001)
+        cur[i] = abs(p[2])
 
     v_bwd = numpy.zeros((len(points)))
 
@@ -188,7 +188,7 @@ def backward_pass(points: numpy.ndarray) -> Tuple[List[float], List[float], List
     v_max[k%len(points)] = v_lim
 
     while k > 0:
-        v_max_cr[k-1] = math.sqrt(_mu*_g/cur[k-1])
+        v_max_cr[k-1] = math.sqrt(_mu*_g/cur[k-1]) if cur[k-1] != 0.0 else v_lim
         v_max[k-1] = min(v_max_cr[k-1],v_lim)
         ds = math.sqrt(math.pow(points[k%len(points), 0] - points[k-1, 0],2)+math.pow(points[k%len(points), 1] - points[k-1, 1],2))
         alim[k%len(points)] = (math.pow(v_max[k-1],2)-math.pow(v_bwd[k%len(points)],2))/(2*ds)
