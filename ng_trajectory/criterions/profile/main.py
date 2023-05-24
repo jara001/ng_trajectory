@@ -57,7 +57,7 @@ def init(**kwargs) -> None:
 
     if P.getValue("reference") is not None:
         REFERENCE = numpy.load(P.getValue("reference"))
-        REFERENCE = numpy.hstack((numpy.roll(REFERENCE[:, :2], -P.getValue("reference_rotate")), REFERENCE[:, 2:]))
+        REFERENCE = numpy.hstack((numpy.roll(REFERENCE[:, :2], -P.getValue("reference_rotate"), axis=0), REFERENCE[:, 2:]))
         print ("Loaded reference with '%d' points." % len(REFERENCE), file = kwargs.get("logfile", sys.stdout))
     else:
         REFERENCE = None
