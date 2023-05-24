@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Parameter `reference_rotate` no longer flips axes.
 - 'ng_generate_data'
     - Points of the centerline are not duplicated anymore.
+- Require numpy versions `<1.24` as newer ones are not compatible with `nevergrad==0.3.0`.
 
 ## 1.9.0 - 2023-05-18
 ### Added
