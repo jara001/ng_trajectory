@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Criterions
     - _Profile_
         - Parameter `reference_rotate` no longer flips axes.
+- 'ng_generate_data'
+    - Points of the centerline are not duplicated anymore.
 
 ## 1.9.0 - 2023-05-18
 ### Added
