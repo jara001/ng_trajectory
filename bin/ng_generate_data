@@ -460,6 +460,10 @@ def processImage(im: Image) -> None:
     printv ("Centerline has length %d." % len(border))
 
 
+    ## Remove duplicits of centerline points
+    border = numpy.unique(border, axis = 0)
+
+
     ## Filter centerline points
     sys.stdout.write("\rFiltering points...")
     filtered_border = pointsFilter(border).tolist()
@@ -473,13 +477,10 @@ def processImage(im: Image) -> None:
         printv ("Reduced centerline to %d points." % len(filtered_border))
 
 
-    ## Remove duplicits of centerline points
-    _filtered_border = numpy.unique(numpy.asarray(filtered_border), axis = 0).tolist()
-
-
     ## Sort centerline points
     # Note: This is an adapted version from 'ng_trajectory:trajectorySort()'.
     sorted_points = []
+    _filtered_border = filtered_border.copy()
     sorted_points.append(_filtered_border.pop(0))
 
     starting_value = len(_filtered_border)

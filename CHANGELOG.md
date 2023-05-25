@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Fixed
 - 'ng_generate_data'
     - Centerline is properly filtered when more then one is present.
+    - Duplicit points are removed before filtering to avoid unfilterable path sections.
 
 ## 1.9.1 - 2023-05-24
 ### Fixed
