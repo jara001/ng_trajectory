@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Changed
+- 'ng_generate_data'
+    - Function for filtering points is no longer imported from the package.
+
+### Fixed
+- 'ng_generate_data'
+    - Centerline is properly filtered when more then one is present.
+
 ## 1.9.1 - 2023-05-24
 ### Fixed
 - Criterions
