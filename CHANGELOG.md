@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.9.2 - 2023-05-25
+### Added
+- 'ng_generate_data'
+    - Parameter `--inflate` that inflates the walls before processing the map.
+
+### Changed
+- 'ng_generate_data'
+    - Function for filtering points is no longer imported from the package.
+    - Generated image is not in grayscale; centerline points are shown green, start points are red.
+
+### Fixed
+- Criterions
+    - _Profile_
+        - Parameter `overlap` is properly handled via ParameterList.
+- 'ng_generate_data'
+    - Centerline is properly filtered when more then one is present.
+    - Duplicit points are removed before filtering to avoid unfilterable path sections.
+
 ## 1.9.1 - 2023-05-24
 ### Fixed
 - Criterions

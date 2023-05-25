@@ -21,7 +21,7 @@ import numpy
 import yaml
 
 # ng_trajectory utilities
-from ng_trajectory.optimizers.matryoshka.transform import pointsFilter
+#from ng_trajectory.optimizers.matryoshka.transform import pointsFilter
 
 
 # Typing
@@ -61,6 +61,8 @@ Utility for creating input data for ng_trajectory from a custom map image.
 Notes:
 - Arguments are position sensitive, i.e., later arguments overwrite the prior ones.
 - YAML file is loaded and replaced with its arguments.
+- An image is generated at the end, showing the processed data. Centerline points
+  (unfiltered) are shown green, while the results (start points) are shown red.
     """,
 )
 
@@ -120,6 +122,13 @@ PARSER.add_argument("-v",
     action = "count",
 )
 
+PARSER.add_argument("--inflate",
+    dest = "inflate",
+    help = "Inflation size, %%d cells",
+    default = 0,
+    type = int,
+)
+
 
 ######################
 # Utilities
@@ -141,6 +150,101 @@ def savev(im, filename: str) -> None:
 
         _image.convert("L")
         _image.save(filename)
+
+
+def pointsFilter(points: numpy.ndarray, grid: float = None) -> numpy.ndarray:
+    """Filter out points that are not necessary in trajectory planning.
+
+    Arguments:
+    points -- points to be filtered, nx2 numpy.ndarray
+
+    Returns:
+    fpoints -- filtered points, mx2 numpy.ndarray
+
+    Note: It is expected that points are aligned to a square grid.
+    Note: Extended version from Matryoshka transform.
+    """
+
+    _points = []
+
+    # Obtain grid size if not set
+    _grid = grid if grid else numpy.min(
+            [
+                numpy.min( numpy.subtract(u[1:], u[:-1]) ) for u in
+                    [
+                        numpy.unique( points[:, d] ) for d in range(points.shape[1])
+                    ]
+            ]
+        )
+
+    # Convert points to cell-oriented list
+    _cells = [
+            [ int( numpy.round(_p[_d] / _grid) ) for _d in range(points.shape[1]) ] for _p in points
+        ]
+    _cells_copy = [
+            [ int( numpy.round(_p[_d] / _grid) ) for _d in range(points.shape[1]) ] for _p in points
+        ]
+
+    # Treat points as list
+    pointsL = points.tolist()
+
+    for _p in pointsL:
+        # Remove unnecessary points.
+        # _X_  ___  ___  _X_  |  _XX  __X  ___  ___  ___  ___  X__  XX_
+        # _XX  _XX  XX_  XX_  |  _X_  _XX  _XX  _X_  _X_  XX_  XX_  _X_
+        # ___  _X_  _X_  ___  |  ___  ___  __X  _XX  XX_  X__  ___  ___
+        # But also endpoints (iteratively)
+        # X__  _X_  __X  ___  ___  ___  ___  ___
+        # _X_  _X_  _X_  _XX  _X_  _X_  _X_  XX_
+        # ___  ___  ___  ___  __X  _X_  X__  ___
+        # Convert points to a cell
+        _cell = [ int( numpy.round(_p[_d] / _grid) ) for _d in range(points.shape[1]) ]
+
+        # Ranges
+        _xr = range(-1, 2)
+        _yr = range(-1, 2)
+
+        # Count number of points in the area (x-wise, y-wise)
+        x = [ sum([ [ _cell[0] + _x, _cell[1] + _y ] in _cells for _y in _yr ]) for _x in _xr ]
+        y = [ sum([ [ _cell[0] + _x, _cell[1] + _y ] in _cells for _x in _xr ]) for _y in _yr ]
+        x_sum = sum([ _x > 0 for _x in x ])
+        y_sum = sum([ _y > 0 for _y in y ])
+
+        # Count the points on HOOD4
+        # _._
+        # ...
+        # _._
+        x_4 = sum([ [ _cell[0] + _x, _cell[1]      ] in _cells for _x in _xr ])
+        y_4 = sum([ [ _cell[0],      _cell[1] + _y ] in _cells for _y in _yr ])
+
+        # Second part resolves issues with multiple centerlines being improperly filtered
+        # __X  _XX  _X_  __X  __X
+        # _XX  _XX  _XX  _XX  _XX
+        # __X  __X  __X  _XX  _X_
+        # and their rotations
+        if ( ( x_sum < 3 ) and ( y_sum < 3 ) ) or \
+            (x_sum + y_sum == 5 and (x_4 == y_4 == 2 or (x_4 + y_4 == 3 and 3 in x + y))):
+            # Return nearby points back to the loop
+            for _xr in range(-1, 2):
+                for _yr in range(-1, 2):
+                    if _xr == _yr == 0:
+                        continue
+
+                    # Get index of the cell
+                    _nearbyc = [ _cell[0] + _xr, _cell[1] + _yr ]
+
+                    # Find whether it is a valid border cell and try to find it
+                    if _nearbyc in _cells_copy and pointsL[_cells_copy.index(_nearbyc)] in _points:
+                        _nearbyp = pointsL[_cells_copy.index(_nearbyc)]
+                        _points.remove(_nearbyp)
+                        pointsL.append(_nearbyp)
+
+            _cells.remove(_cell)
+
+        else:
+            _points.append(_p)
+
+    return numpy.asarray(_points)
 
 
 ######################
@@ -216,6 +320,67 @@ def getWalls(im: Image) -> List[numpy.ndarray]:
     return walls
 
 
+def inflateWalls(im: Image) -> Image:
+    """Inflates the walls by a certain amount.
+
+    Arguments:
+    im -- loaded image
+
+    Returns:
+    _im -- inflated image
+    """
+
+    # Duplicate image
+    _im = im.copy()
+
+    # Create numpy array
+    nd = numpy.asarray(_im, dtype = numpy.uint8)
+
+    # Name colors (just in case)
+    try:
+        WALL, UNKN, FREE = numpy.unique(nd)
+    except:
+        WALL, FREE = numpy.unique(nd)
+
+
+    sys.stdout.write("\rInflating walls...")
+
+    printv("\n\tOriginal: %d of wall cells" % len(numpy.argwhere(nd == WALL)))
+
+    for _i in range(args.inflate):
+
+        walls = numpy.argwhere(nd == WALL)
+
+        # Obtain all walls of one color and replicate it
+        # https://stackoverflow.com/questions/53239242/how-to-duplicate-each-row-of-a-matrix-n-times-numpy
+        _walls = numpy.repeat(walls, repeats = HOOD4.shape[0], axis = 0)
+
+        # Find the neighbourhood
+        _hood = numpy.add(
+            _walls,
+            numpy.tile(HOOD4, reps = (walls.shape[0], 1))
+        )
+
+        # Throw away points that are outside the image and remove duplicits
+        _hood = numpy.unique(_hood[~numpy.any((_hood < 0) | (_hood >= nd.shape), axis = 1), :], axis = 0)
+
+        # Find all other points
+        # Copy is required as argwhere returns 2xn array with nx2 view,
+        # which is unfortunately incompatible with current intersect function.
+        _not_wall = numpy.argwhere(nd != WALL).copy()
+
+        # Find all free points that are also in the neighbourhood
+        # And color them
+        z = intersectArrays(_hood, _not_wall)
+        nd[z[:, 0], z[:, 1]] = WALL
+
+        printv("\tLoop %d: %d of wall cells" % (_i + 1, len(numpy.argwhere(nd == WALL))))
+
+    print (" - DONE")
+
+    return P.fromarray(nd)
+
+
 ######################
 # PIL functions
 ######################
@@ -245,6 +410,10 @@ def processImage(im: Image) -> None:
     Arguments:
     im -- loaded image
     """
+
+    # Inflate walls if required
+    if args.inflate > 0:
+        im = inflateWalls(im)
 
     # Get walls
     walls = getWalls(im)
@@ -363,6 +532,10 @@ def processImage(im: Image) -> None:
     printv ("Centerline has length %d." % len(border))
 
 
+    ## Remove duplicits of centerline points
+    border = numpy.unique(border, axis = 0)
+
+
     ## Filter centerline points
     sys.stdout.write("\rFiltering points...")
     filtered_border = pointsFilter(border).tolist()
@@ -376,13 +549,10 @@ def processImage(im: Image) -> None:
         printv ("Reduced centerline to %d points." % len(filtered_border))
 
 
-    ## Remove duplicits of centerline points
-    _filtered_border = numpy.unique(numpy.asarray(filtered_border), axis = 0).tolist()
-
-
     ## Sort centerline points
     # Note: This is an adapted version from 'ng_trajectory:trajectorySort()'.
     sorted_points = []
+    _filtered_border = filtered_border.copy()
     sorted_points.append(_filtered_border.pop(0))
 
     starting_value = len(_filtered_border)
@@ -411,16 +581,15 @@ def processImage(im: Image) -> None:
     ## Create and save image of the situation
     sys.stdout.write("\rSaving the data...")
 
-    nnd = numpy.asarray(im, dtype = numpy.uint8).copy()
+    nnd = numpy.asarray(im.convert("RGB"))
     try:
-        nnd[border[:, 0], border[:, 1]] = UNKN
+        nnd[border[:, 0], border[:, 1]] = [0, 255, 0]
         for x, y in filtered_border:
-            nnd[x, y] = WALL
+            nnd[x, y] = [255, 0, 0]
     except:
         pass
 
     nndi = P.fromarray(nnd)
-    nndi.convert("L")
     nndi.save("generated_data.png")
 
 
