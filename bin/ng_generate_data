@@ -61,6 +61,8 @@ Utility for creating input data for ng_trajectory from a custom map image.
 Notes:
 - Arguments are position sensitive, i.e., later arguments overwrite the prior ones.
 - YAML file is loaded and replaced with its arguments.
+- An image is generated at the end, showing the processed data. Centerline points
+  (unfiltered) are shown green, while the results (start points) are shown red.
     """,
 )
 
@@ -506,16 +508,15 @@ def processImage(im: Image) -> None:
     ## Create and save image of the situation
     sys.stdout.write("\rSaving the data...")
 
-    nnd = numpy.asarray(im, dtype = numpy.uint8).copy()
+    nnd = numpy.asarray(im.convert("RGB"))
     try:
-        nnd[border[:, 0], border[:, 1]] = UNKN
+        nnd[border[:, 0], border[:, 1]] = [0, 255, 0]
         for x, y in filtered_border:
-            nnd[x, y] = WALL
+            nnd[x, y] = [255, 0, 0]
     except:
         pass
 
     nndi = P.fromarray(nnd)
-    nndi.convert("L")
     nndi.save("generated_data.png")
 
 

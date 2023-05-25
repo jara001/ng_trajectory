@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Changed
 - 'ng_generate_data'
     - Function for filtering points is no longer imported from the package.
+    - Generated image is not in grayscale; centerline points are shown green, start points are red.
 
 ### Fixed
 - 'ng_generate_data'
