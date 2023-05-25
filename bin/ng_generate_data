@@ -122,6 +122,13 @@ PARSER.add_argument("-v",
     action = "count",
 )
 
+PARSER.add_argument("--inflate",
+    dest = "inflate",
+    help = "Inflation size, %%d cells",
+    default = 0,
+    type = int,
+)
+
 
 ######################
 # Utilities
@@ -313,6 +320,67 @@ def getWalls(im: Image) -> List[numpy.ndarray]:
     return walls
 
 
+def inflateWalls(im: Image) -> Image:
+    """Inflates the walls by a certain amount.
+
+    Arguments:
+    im -- loaded image
+
+    Returns:
+    _im -- inflated image
+    """
+
+    # Duplicate image
+    _im = im.copy()
+
+    # Create numpy array
+    nd = numpy.asarray(_im, dtype = numpy.uint8)
+
+    # Name colors (just in case)
+    try:
+        WALL, UNKN, FREE = numpy.unique(nd)
+    except:
+        WALL, FREE = numpy.unique(nd)
+
+
+    sys.stdout.write("\rInflating walls...")
+
+    printv("\n\tOriginal: %d of wall cells" % len(numpy.argwhere(nd == WALL)))
+
+    for _i in range(args.inflate):
+
+        walls = numpy.argwhere(nd == WALL)
+
+        # Obtain all walls of one color and replicate it
+        # https://stackoverflow.com/questions/53239242/how-to-duplicate-each-row-of-a-matrix-n-times-numpy
+        _walls = numpy.repeat(walls, repeats = HOOD4.shape[0], axis = 0)
+
+        # Find the neighbourhood
+        _hood = numpy.add(
+            _walls,
+            numpy.tile(HOOD4, reps = (walls.shape[0], 1))
+        )
+
+        # Throw away points that are outside the image and remove duplicits
+        _hood = numpy.unique(_hood[~numpy.any((_hood < 0) | (_hood >= nd.shape), axis = 1), :], axis = 0)
+
+        # Find all other points
+        # Copy is required as argwhere returns 2xn array with nx2 view,
+        # which is unfortunately incompatible with current intersect function.
+        _not_wall = numpy.argwhere(nd != WALL).copy()
+
+        # Find all free points that are also in the neighbourhood
+        # And color them
+        z = intersectArrays(_hood, _not_wall)
+        nd[z[:, 0], z[:, 1]] = WALL
+
+        printv("\tLoop %d: %d of wall cells" % (_i + 1, len(numpy.argwhere(nd == WALL))))
+
+    print (" - DONE")
+
+    return P.fromarray(nd)
+
+
 ######################
 # PIL functions
 ######################
@@ -342,6 +410,10 @@ def processImage(im: Image) -> None:
     Arguments:
     im -- loaded image
     """
+
+    # Inflate walls if required
+    if args.inflate > 0:
+        im = inflateWalls(im)
 
     # Get walls
     walls = getWalls(im)
