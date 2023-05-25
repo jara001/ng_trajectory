@@ -63,12 +63,12 @@ def init(**kwargs) -> None:
         REFERENCE = None
 
 
-def compute(points: numpy.ndarray, overlap: int = 0, penalty: float = 100.0, **overflown) -> float:
+def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, **overflown) -> float:
     """Compute the speed profile using overlap.
 
     Arguments:
     points -- points of a trajectory with curvature, nx3 numpy.ndarray
-    overlap -- size of trajectory overlap, int, default 0 (disabled)
+    overlap -- size of trajectory overlap, int, default None/0 (disabled)
     penalty -- penalty value applied to the incorrect solutions, float, default 100.0
     **overflown -- arguments not caught by previous parts
 
@@ -77,6 +77,9 @@ def compute(points: numpy.ndarray, overlap: int = 0, penalty: float = 100.0, **o
          minimization criterion
     """
     global REFERENCE
+
+    if overlap is None:
+        overlap = P.getValue("overlap")
 
     _v, _a, _t = profiler.profileCompute(points, overlap, lap_time = True,
         save = P.getValue("save_solution_csv") if not overflown.get("optimization", True) and P.getValue("save_solution_csv") is not None else None

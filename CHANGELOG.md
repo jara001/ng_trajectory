@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Generated image is not in grayscale; centerline points are shown green, start points are red.
 
 ### Fixed
+- Criterions
+    - _Profile_
+        - Parameter `overlap` is properly handled via ParameterList.
 - 'ng_generate_data'
     - Centerline is properly filtered when more then one is present.
     - Duplicit points are removed before filtering to avoid unfilterable path sections.
