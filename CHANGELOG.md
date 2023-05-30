@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Criterions
+    - _Profile_
+        - Parameter `save_solution_csv` treates `$` as name of the current log.
+
 ## 1.9.2 - 2023-05-25
 ### Added
 - 'ng_generate_data'
