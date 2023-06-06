@@ -63,7 +63,8 @@ PARSER.add_argument("-O",
     dest = "outfile",
     help = "Set the output filename.",
     type = str,
-    required = True,
+    default = None,
+    #required = True,
 )
 
 PARSER.add_argument("-v",
@@ -156,13 +157,17 @@ def figureGenerate(solution, args):
 
 
     # https://www.tutorialspoint.com/how-to-convert-matplotlib-figure-to-pil-image-object
-    img_buf = io.BytesIO()
-    #matplotlib.pyplot.savefig(img_buf, format='png')
-    ngplot.figureSave(img_buf)
+    if args.outfile is not None:
+        img_buf = io.BytesIO()
+        #matplotlib.pyplot.savefig(img_buf, format='png')
+        ngplot.figureSave(img_buf)
 
-    ngplot.figureClose()
+        ngplot.figureClose()
 
-    return img_buf
+        return img_buf
+    else:
+        ngplot.figureShow()
+        return None
 
 
 ######################
@@ -219,10 +224,11 @@ if __name__ == "__main__":
 
     # Load images to Pillow
     # https://stackoverflow.com/questions/753190/programmatically-generate-video-or-animated-gif-in-python
-    imgs = [ Image.open(i) for i in images ]
-    img = imgs[0]
+    if args.outfile is not None:
+        imgs = [ Image.open(i) for i in images ]
+        img = imgs[0]
 
-    if len(imgs) > 1:
-        img.save(args.outfile + ".gif", format = "GIF", append_images = imgs[1:], save_all = True, duration = args.duration, loop = 0)
-    elif len(imgs) == 1:
-        img.save(args.outfile + ".png", format = "PNG")
+        if len(imgs) > 1:
+            img.save(args.outfile + ".gif", format = "GIF", append_images = imgs[1:], save_all = True, duration = args.duration, loop = 0)
+        elif len(imgs) == 1:
+            img.save(args.outfile + ".png", format = "PNG")

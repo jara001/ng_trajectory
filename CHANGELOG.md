@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - _Profile_
         - Parameter `save_solution_csv` treates `$` as name of the current log.
 
+### Changed
+- 'ng_plot'
+    - Parameter `-O` is now optional. When not given, plots are displayed directly in a sequence.
+
 ## 1.9.2 - 2023-05-25
 ### Added
 - 'ng_generate_data'
