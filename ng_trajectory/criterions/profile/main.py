@@ -20,7 +20,7 @@ from multiprocessing import Queue
 # Global variables
 CENTERLINE = None
 REFERENCE_PROGRESS = None
-OVERTAKING_POINTS = None
+OVERTAKING_POINTS = Queue()
 
 
 # Parameters
