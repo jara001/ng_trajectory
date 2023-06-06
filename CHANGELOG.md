@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Criterions
     - _Profile_
         - Parameter `save_solution_csv` treates `$` as name of the current log.
+        - Check for overlap consistency, as short overlaps might not smoothen the velocity enough.
 
 ### Changed
 - 'ng_plot'

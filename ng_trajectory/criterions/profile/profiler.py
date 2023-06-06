@@ -373,6 +373,41 @@ def profileCompute(points: numpy.ndarray, overlap: int = 0, fd: TextIO = None, l
             fd.write("Curvature: %s\n" % str(listFlatten(cur.tolist())))
             fd.write("Final speed: %s\n" % str(listFlatten(_v.tolist())))
             fd.flush()
+
+        # Check for overlap consistency
+        # e.g., when dynamic parameters are large, but overlap small
+        #       it is not smooth enough on the path end
+        """
+        Small comment on the derivation.
+        v[-1] -- initial speed
+        v[0] -- end speed
+        _ds -- distance between the points
+
+        Since we know the speeds, the time to travel from A to B is given by:
+        $
+            t = _ds / ( (v[0] + v[-1]) / 2 )
+        $
+
+        Acceleration required to attain these speeds is:
+        $
+            a = (v[0] - v[-1]) / t
+        $
+
+        Substituing them into each other yields:
+        $
+            a = ( v[0]^2 - v[-1]^2 ) / 2s
+        $
+
+        And this acceleration has to be in the limits.
+        """
+        _ds = pointsDistance(points[[-1, 0], :])[0]
+        _ac = (_v[0]**2 - _v[-1]**2) / (2 * _ds)
+        try:
+            assert -a_break_max <= _ac <= a_acc_max, \
+               "Overlap is violating the acceleration limit (-%f <= %f <= %f), so it is not long enough to make the path velocity smooth." % (a_break_max, _ac, a_acc_max)
+        except:
+            if not math.isclose(_ac, a_acc_max) and not math.isclose(_ac, -a_break_max):
+                raise
     elif lap_time:
         _t = numpy.vstack((_t, _t[0]))
         _t[0] = 0
