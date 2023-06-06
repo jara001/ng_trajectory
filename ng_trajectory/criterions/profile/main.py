@@ -88,6 +88,8 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
         save = P.getValue("save_solution_csv") if not overflown.get("optimization", True) and P.getValue("save_solution_csv") is not None else None
     )
 
+    invalid_points = []
+
     if REFERENCE is not None:
         _d = P.getValue("reference_dist")
 
@@ -110,7 +112,10 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
 
             # If the points are too close to each other, return penalty
             if pointDistance([rx, ry], points[_ci, :]) < _d:
-                return float(penalty)
+                if overflown.get("optimization", True):
+                    return float(penalty)
+                else:
+                    invalid_points.append([rx, ry])
 
         # Visualization
         if not overflown.get("optimization", True) and P.getValue("plot"):
@@ -174,6 +179,13 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
 
                 if P.getValue("plot_solution"):
                     ngplot.pointsPlot(points[:_closest_p, :2], color="orange", linewidth = P.getValue("plot_reference_width"))
+
+            if len(invalid_points) > 0:
+                ngplot.pointsScatter(numpy.asarray(invalid_points), color="blue", marker="x", s = 1)
+
+
+    if len(invalid_points) > 0:
+        return float(penalty)
 
 
     return float(_t[-1])
