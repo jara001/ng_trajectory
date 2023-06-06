@@ -347,8 +347,14 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     """
     global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS, CRITERION_ARGS
 
+    overtaking = []
+
     with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
         recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
+
+        if hasattr(CRITERION, "OVERTAKING_POINTS"):
+            while CRITERION.OVERTAKING_POINTS.qsize() > 0:
+                overtaking.append(CRITERION.OVERTAKING_POINTS.get(False))
 
     points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p])[0] for i, p in enumerate(numpy.asarray(recommendation.args[0])) ]
 
@@ -356,6 +362,15 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     PENALIZER_ARGS["optimization"] = False
     CRITERION_ARGS["optimization"] = False
     final = _opt(numpy.asarray(recommendation.args[0]))
+
+
+    ## Plot overtaking points
+    if len(overtaking) > 0:
+        ngplot.pointsScatter(
+            numpy.asarray(overtaking), #numpy.asarray(OVERTAKING_POINTS),
+            s = 10,
+            color = [0.0, 1.0, 0.0, 0.1],
+        )
 
 
     ## Plot invalid points if available

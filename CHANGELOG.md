@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.9.3 - 2023-06-06
+### Added
+- Criterions
+    - _Profile_
+        - Parameter `save_solution_csv` treates `$` as name of the current log.
+        - Check for overlap consistency, as short overlaps might not smoothen the velocity enough.
+        - Display points that invalid because of the distance to the reference.
+        - Show points where overtaking occurs (across whole budget).
+
+### Changed
+- 'ng_plot'
+    - Parameter `-O` is now optional. When not given, plots are displayed directly in a sequence.
+
 ## 1.9.2 - 2023-05-25
 ### Added
 - 'ng_generate_data'

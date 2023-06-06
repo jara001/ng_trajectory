@@ -10,9 +10,18 @@ import sys, numpy
 
 from . import profiler
 
-from ng_trajectory.interpolators.utils import pointDistance
+from ng_trajectory.interpolators.utils import pointDistance, trajectoryClosestIndex
 
 import ng_trajectory.plot as ngplot
+
+from multiprocessing import Queue
+
+
+# Global variables
+CENTERLINE = None
+REFERENCE_PROGRESS = None
+OVERTAKING_POINTS = Queue()
+
 
 # Parameters
 from ng_trajectory.parameter import *
@@ -33,7 +42,7 @@ P.createAdd("_lr", 0.139, float, "Distance from center of mass to the rear axle 
 P.createAdd("reference", None, str, "Name of the file to load (x, y, t) reference path that cannot be close.", "init")
 P.createAdd("reference_dist", 1.0, float, "Minimum allowed distance from the reference at given time [m].", "init")
 P.createAdd("reference_rotate", 0, int, "Number of points to rotate the reference trajectory.", "init")
-P.createAdd("save_solution_csv", None, str, "When given, save final trajectory to this file as CSV.", "init")
+P.createAdd("save_solution_csv", None, str, "When given, save final trajectory to this file as CSV. Use '$' to use log name instead.", "init")
 P.createAdd("plot", False, bool, "Whether a graphical representation should be created.", "init (viz.)")
 P.createAdd("plot_reference", False, bool, "Whether the reference trajectory should be plotted.", "init (viz.)")
 P.createAdd("plot_reference_width", 0.4, float, "Linewidth of the reference trajectory. 0 = disabled", "init (viz.)")
@@ -49,11 +58,17 @@ P.createAdd("plot_timelines_width", 0.6, float, "Linewidth of the timelines. 0 =
 
 def init(**kwargs) -> None:
     """Initialize criterion."""
-    global REFERENCE
+    global REFERENCE, CENTERLINE, OVERTAKING_POINTS
 
     profiler.parametersSet(**kwargs)
 
     P.updateAll(kwargs)
+
+    OVERTAKING_POINTS = Queue()
+
+
+    if P.getValue("save_solution_csv") == "$":
+        P.update("save_solution_csv", kwargs.get("logfile").name + ".csv")
 
     if P.getValue("reference") is not None:
         REFERENCE = numpy.load(P.getValue("reference"))
@@ -76,7 +91,7 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
     t -- time of reaching the last point of the trajectory, [s], float
          minimization criterion
     """
-    global REFERENCE
+    global REFERENCE, CENTERLINE, REFERENCE_PROGRESS, OVERTAKING_POINTS
 
     if overlap is None:
         overlap = P.getValue("overlap")
@@ -84,6 +99,9 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
     _v, _a, _t = profiler.profileCompute(points, overlap, lap_time = True,
         save = P.getValue("save_solution_csv") if not overflown.get("optimization", True) and P.getValue("save_solution_csv") is not None else None
     )
+
+    invalid_points = []
+    closest_indices = []
 
     if REFERENCE is not None:
         _d = P.getValue("reference_dist")
@@ -105,9 +123,14 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
                 else:
                     break
 
+            closest_indices.append(_ci)
+
             # If the points are too close to each other, return penalty
             if pointDistance([rx, ry], points[_ci, :]) < _d:
-                return float(penalty)
+                if overflown.get("optimization", True):
+                    return float(penalty)
+                else:
+                    invalid_points.append([rx, ry])
 
         # Visualization
         if not overflown.get("optimization", True) and P.getValue("plot"):
@@ -171,6 +194,34 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
 
                 if P.getValue("plot_solution"):
                     ngplot.pointsPlot(points[:_closest_p, :2], color="orange", linewidth = P.getValue("plot_reference_width"))
+
+            if len(invalid_points) > 0:
+                ngplot.pointsScatter(numpy.asarray(invalid_points), color="blue", marker="x", s = 1)
+
+
+    if len(invalid_points) > 0:
+        return float(penalty)
+
+
+    # Locate points where overtaking occurs
+    # Centerline is used to obtain track progression.
+    if REFERENCE is not None and CENTERLINE is not None:
+        if REFERENCE_PROGRESS is None:
+            REFERENCE_PROGRESS = [
+                trajectoryClosestIndex(CENTERLINE, REFERENCE[_i, :2])
+                for _i in range(len(REFERENCE))
+            ]
+
+        overtaken = False
+        for _i, (rx, ry, _) in enumerate(REFERENCE):
+            rd = REFERENCE_PROGRESS[_i]                    # nejblizsi i ve stejnem case
+            pd = trajectoryClosestIndex(CENTERLINE, points[closest_indices[_i], :2])
+
+            if rd > 50 and pd > rd and not overtaken:
+                overtaken = True
+                OVERTAKING_POINTS.put(points[closest_indices[_i], :2])
+            #elif pd < rd and overtaken:
+            #    overtaken = False
 
 
     return float(_t[-1])
