@@ -367,6 +367,12 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
     itp.init(**{**_alg, **_alg.get("interpolator_init", {}), **{"logfile": LOGFILE}})
     seg.init(track, **{**_alg, **_alg.get("segmentator_init", {}), **{"logfile": LOGFILE}})
     cri.init(**{**_alg, **_alg.get("criterion_init", {}), **{"logfile": LOGFILE}})
+
+    # Note: This passes the initial line (which is usually centerline).
+    # TODO: Actually pass centerline.
+    if not hasattr(cri.main, "CENTERLINE") or cri.main.CENTERLINE is None:
+        cri.main.CENTERLINE = result.copy()
+
     opt.init(track, rcandidate, result, **{**_alg, **{"criterion": cri}, **{"interpolator": itp}, **{"segmentator": seg}, **{"selector": sel}, **{"penalizer": pen}, **{"logfile": LOGFILE}})
 
 

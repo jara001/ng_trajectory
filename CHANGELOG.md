@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Parameter `save_solution_csv` treates `$` as name of the current log.
         - Check for overlap consistency, as short overlaps might not smoothen the velocity enough.
         - Display points that invalid because of the distance to the reference.
+        - Show points where overtaking occurs (across whole budget).
 
 ### Changed
 - 'ng_plot'

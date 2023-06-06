@@ -10,3 +10,5 @@ Note: The parameters shown below are not synced with the algorithm
 itself. Therefore, pay attention to any updates.
 """
 from .main import init, compute
+
+from .main import OVERTAKING_POINTS
