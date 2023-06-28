@@ -52,7 +52,7 @@ setup(
     description = ("A trajectory generation script using Nevergrad."),
     license = "GPLv3",
     keywords = "trajectory Nevergrad",
-    #url = "http://packages.python.org/an_example_pypi_project",
+    url = "https://github.com/jara001/ng_trajectory",
     packages=find_packages(),
     #long_description=read('README'),
     classifiers=[
