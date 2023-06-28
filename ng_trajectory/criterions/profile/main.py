@@ -42,7 +42,7 @@ P.createAdd("_lr", 0.139, float, "Distance from center of mass to the rear axle 
 P.createAdd("reference", None, str, "Name of the file to load (x, y, t) reference path that cannot be close.", "init")
 P.createAdd("reference_dist", 1.0, float, "Minimum allowed distance from the reference at given time [m].", "init")
 P.createAdd("reference_rotate", 0, int, "Number of points to rotate the reference trajectory.", "init")
-P.createAdd("save_solution_csv", None, str, "When given, save final trajectory to this file as CSV. Use '$' to use log name instead.", "init")
+P.createAdd("save_solution_csv", "$", str, "When non-empty, save final trajectory to this file as CSV. Use '$' to use log name instead.", "init")
 P.createAdd("plot", False, bool, "Whether a graphical representation should be created.", "init (viz.)")
 P.createAdd("plot_reference", False, bool, "Whether the reference trajectory should be plotted.", "init (viz.)")
 P.createAdd("plot_reference_width", 0.4, float, "Linewidth of the reference trajectory. 0 = disabled", "init (viz.)")
@@ -66,8 +66,9 @@ def init(**kwargs) -> None:
 
     OVERTAKING_POINTS = Queue()
 
-
-    if P.getValue("save_solution_csv") == "$":
+    if P.getValue("save_solution_csv") == "":
+        P.update("save_solution_csv", None)
+    elif P.getValue("save_solution_csv") == "$":
         P.update("save_solution_csv", kwargs.get("logfile").name + ".csv")
 
     if P.getValue("reference") is not None:

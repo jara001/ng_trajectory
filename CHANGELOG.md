@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- GitHub URL to the package manifest.
+
+### Changed
+- Criterions
+    - _Profile_
+        - Solutions are saved as CSV by default. Pass empty string / `None` to `save_solution_csv` to disable it.
+
 ## 1.9.3 - 2023-06-06
 ### Added
 - Criterions
