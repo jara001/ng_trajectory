@@ -8,7 +8,7 @@
 from ng_trajectory.interpolators.utils import *
 import ng_trajectory.plot as ngplot
 
-from ng_trajectory.segmentators.utils import gridCompute
+from ng_trajectory.segmentators.utils import gridCompute, pointToMap, validCheck
 
 from . import transform
 
@@ -277,6 +277,10 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     # TODO: Actually reduce the array to reduce the problem dimension
     if len(P.getValue("fixed_segments")) > 0:
         for _fs in P.getValue("fixed_segments"):
+            if not validCheck(pointToMap(_fs)):
+                print ("Warning: Skipped segment fixed by '%s' as it is outside of the valid area." % _fs, file = sys.stderr)
+                continue
+
             _dists = [
                 numpy.min(
                     numpy.sqrt(

@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
+- Optimizers
+    - _Matryoshka_
+        - Skip segments fixed by points that are outside of the valid area.
 - GitHub URL to the package manifest.
 
 ### Changed
