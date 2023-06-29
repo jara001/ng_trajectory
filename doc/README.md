@@ -266,7 +266,7 @@ _lr (float) = 0.139 [Distance from center of mass to the rear axle [m]]
 reference (str) = None [Name of the file to load (x, y, t) reference path that cannot be close.]
 reference_dist (float) = 1.0 [Minimum allowed distance from the reference at given time [m].]
 reference_rotate (int) = 0 [Number of points to rotate the reference trajectory.]
-save_solution_csv (str) = None [When given, save final trajectory to this file as CSV. Use '$' to use log name instead.]
+save_solution_csv (str) = $ [When non-empty, save final trajectory to this file as CSV. Use '$' to use log name instead.]
 
 Init (viz.) parameters:
 plot (bool) = False [Whether a graphical representation should be created.]
@@ -276,6 +276,7 @@ plot_solution (bool) = False [Whether the optimized solution should be plotted. 
 plot_timelines (bool) = False [Whether the lines between points in the same time should be plotted.]
 plot_timelines_size (float) = 1 [Size of the points of the timelines endpoints. 0 = disabled]
 plot_timelines_width (float) = 0.6 [Linewidth of the timelines. 0 = disabled]
+plot_overtaking (bool) = True [Whether to plot places where an overtaking occurs. (Has to be supported by optimizer.)]
 ```
 
 
@@ -509,7 +510,7 @@ _lr (float) = 0.139 [Distance from center of mass to the rear axle [m]]
 reference (str) = None [Name of the file to load (x, y, t) reference path that cannot be close.]
 reference_dist (float) = 1.0 [Minimum allowed distance from the reference at given time [m].]
 reference_rotate (int) = 0 [Number of points to rotate the reference trajectory.]
-save_solution_csv (str) = None [When given, save final trajectory to this file as CSV. Use '$' to use log name instead.]
+save_solution_csv (str) = $ [When non-empty, save final trajectory to this file as CSV. Use '$' to use log name instead.]
 sampling_distance (float) = 1.0 [[m] Distance of super-sampling before the interpolation, skipped when 0.]
 distance (float) = 0 [[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.]
 fixed_points (list) = [] [Points to be used in the selection upon calling 'select'.]
@@ -522,6 +523,7 @@ plot_solution (bool) = False [Whether the optimized solution should be plotted. 
 plot_timelines (bool) = False [Whether the lines between points in the same time should be plotted.]
 plot_timelines_size (float) = 1 [Size of the points of the timelines endpoints. 0 = disabled]
 plot_timelines_width (float) = 0.6 [Linewidth of the timelines. 0 = disabled]
+plot_overtaking (bool) = True [Whether to plot places where an overtaking occurs. (Has to be supported by optimizer.)]
 ```
 
 
