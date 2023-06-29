@@ -42,7 +42,7 @@ P.createAdd("_lr", 0.139, float, "Distance from center of mass to the rear axle 
 P.createAdd("reference", None, str, "Name of the file to load (x, y, t) reference path that cannot be close.", "init")
 P.createAdd("reference_dist", 1.0, float, "Minimum allowed distance from the reference at given time [m].", "init")
 P.createAdd("reference_rotate", 0, int, "Number of points to rotate the reference trajectory.", "init")
-P.createAdd("save_solution_csv", None, str, "When given, save final trajectory to this file as CSV. Use '$' to use log name instead.", "init")
+P.createAdd("save_solution_csv", "$", str, "When non-empty, save final trajectory to this file as CSV. Use '$' to use log name instead.", "init")
 P.createAdd("plot", False, bool, "Whether a graphical representation should be created.", "init (viz.)")
 P.createAdd("plot_reference", False, bool, "Whether the reference trajectory should be plotted.", "init (viz.)")
 P.createAdd("plot_reference_width", 0.4, float, "Linewidth of the reference trajectory. 0 = disabled", "init (viz.)")
@@ -50,6 +50,7 @@ P.createAdd("plot_solution", False, bool, "Whether the optimized solution should
 P.createAdd("plot_timelines", False, bool, "Whether the lines between points in the same time should be plotted.", "init (viz.)")
 P.createAdd("plot_timelines_size", 1, float, "Size of the points of the timelines endpoints. 0 = disabled", "init (viz.)")
 P.createAdd("plot_timelines_width", 0.6, float, "Linewidth of the timelines. 0 = disabled", "init (viz.)")
+P.createAdd("plot_overtaking", True, bool, "Whether to plot places where an overtaking occurs. (Has to be supported by optimizer.)", "init (viz.)")
 
 
 ######################
@@ -64,10 +65,13 @@ def init(**kwargs) -> None:
 
     P.updateAll(kwargs)
 
-    OVERTAKING_POINTS = Queue()
+    # Recreating the Queue here makes the parent process use
+    # different Queue than the ProcessPool.
+    #OVERTAKING_POINTS = Queue()
 
-
-    if P.getValue("save_solution_csv") == "$":
+    if P.getValue("save_solution_csv") == "":
+        P.update("save_solution_csv", None)
+    elif P.getValue("save_solution_csv") == "$":
         P.update("save_solution_csv", kwargs.get("logfile").name + ".csv")
 
     if P.getValue("reference") is not None:
@@ -205,7 +209,10 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
 
     # Locate points where overtaking occurs
     # Centerline is used to obtain track progression.
-    if REFERENCE is not None and CENTERLINE is not None:
+    # Do not do this when not optimizing; just to avoid having duplicate marker(s).
+    if P.getValue("plot_overtaking") and REFERENCE is not None and CENTERLINE is not None and overflown.get("optimization", True):
+        # It does not actually plot, just sends the data via Queue to the parent process.
+        # That said, plotting has to be handled by the optimizer.
         if REFERENCE_PROGRESS is None:
             REFERENCE_PROGRESS = [
                 trajectoryClosestIndex(CENTERLINE, REFERENCE[_i, :2])

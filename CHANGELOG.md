@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.9.4 - 2023-06-29
+### Added
+- Criterions
+    - _Profile_
+        - Parameter `plot_overtaking` to plot the places where an overtaking occurred during the optimization.
+- Optimizers
+    - _Matryoshka_
+        - Skip segments fixed by points that are outside of the valid area.
+        - Save all overtaking points into a file at the end of the cascade step.
+- GitHub URL to the package manifest.
+
+### Changed
+- Criterions
+    - _Profile_
+        - Solutions are saved as CSV by default. Pass empty string / `None` to `save_solution_csv` to disable it.
+
+### Fixed
+- Criterions
+    - _Profile_
+        - Properly use Queue to display the overtaking points.
+
 ## 1.9.3 - 2023-06-06
 ### Added
 - Criterions
