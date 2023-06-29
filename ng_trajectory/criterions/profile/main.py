@@ -50,6 +50,7 @@ P.createAdd("plot_solution", False, bool, "Whether the optimized solution should
 P.createAdd("plot_timelines", False, bool, "Whether the lines between points in the same time should be plotted.", "init (viz.)")
 P.createAdd("plot_timelines_size", 1, float, "Size of the points of the timelines endpoints. 0 = disabled", "init (viz.)")
 P.createAdd("plot_timelines_width", 0.6, float, "Linewidth of the timelines. 0 = disabled", "init (viz.)")
+P.createAdd("plot_overtaking", True, bool, "Whether to plot places where an overtaking occurs. (Has to be supported by optimizer.)", "init (viz.)")
 
 
 ######################
@@ -209,7 +210,9 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
     # Locate points where overtaking occurs
     # Centerline is used to obtain track progression.
     # Do not do this when not optimizing; just to avoid having duplicate marker(s).
-    if REFERENCE is not None and CENTERLINE is not None and overflown.get("optimization", True):
+    if P.getValue("plot_overtaking") and REFERENCE is not None and CENTERLINE is not None and overflown.get("optimization", True):
+        # It does not actually plot, just sends the data via Queue to the parent process.
+        # That said, plotting has to be handled by the optimizer.
         if REFERENCE_PROGRESS is None:
             REFERENCE_PROGRESS = [
                 trajectoryClosestIndex(CENTERLINE, REFERENCE[_i, :2])

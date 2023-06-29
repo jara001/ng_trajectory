@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
+- Criterions
+    - _Profile_
+        - Parameter `plot_overtaking` to plot the places where an overtaking occurred during the optimization.
 - Optimizers
     - _Matryoshka_
         - Skip segments fixed by points that are outside of the valid area.
