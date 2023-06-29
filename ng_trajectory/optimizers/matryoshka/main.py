@@ -370,6 +370,9 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
 
     ## Plot overtaking points
     if len(overtaking) > 0:
+        with open(LOGFILE.name + ".overtaking", "w") as f:
+            f.write(str(numpy.asarray(overtaking).tolist()))
+
         ngplot.pointsScatter(
             numpy.asarray(overtaking), #numpy.asarray(OVERTAKING_POINTS),
             s = 10,

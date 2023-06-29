@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Optimizers
     - _Matryoshka_
         - Skip segments fixed by points that are outside of the valid area.
+        - Save all overtaking points into a file at the end of the cascade step.
 - GitHub URL to the package manifest.
 
 ### Changed
