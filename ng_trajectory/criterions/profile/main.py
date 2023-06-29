@@ -64,7 +64,9 @@ def init(**kwargs) -> None:
 
     P.updateAll(kwargs)
 
-    OVERTAKING_POINTS = Queue()
+    # Recreating the Queue here makes the parent process use
+    # different Queue than the ProcessPool.
+    #OVERTAKING_POINTS = Queue()
 
     if P.getValue("save_solution_csv") == "":
         P.update("save_solution_csv", None)
@@ -206,7 +208,8 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
 
     # Locate points where overtaking occurs
     # Centerline is used to obtain track progression.
-    if REFERENCE is not None and CENTERLINE is not None:
+    # Do not do this when not optimizing; just to avoid having duplicate marker(s).
+    if REFERENCE is not None and CENTERLINE is not None and overflown.get("optimization", True):
         if REFERENCE_PROGRESS is None:
             REFERENCE_PROGRESS = [
                 trajectoryClosestIndex(CENTERLINE, REFERENCE[_i, :2])

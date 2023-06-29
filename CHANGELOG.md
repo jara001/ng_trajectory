@@ -15,6 +15,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - _Profile_
         - Solutions are saved as CSV by default. Pass empty string / `None` to `save_solution_csv` to disable it.
 
+### Fixed
+- Criterions
+    - _Profile_
+        - Properly use Queue to display the overtaking points.
+
 ## 1.9.3 - 2023-06-06
 ### Added
 - Criterions
