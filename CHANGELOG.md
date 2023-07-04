@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Criterions
     - _Profile_
         - Parameter `favor_overtaking` that is added as a penalty to the lap time when overtaking does not occur.
+        - Parameter `reference_laptime` to set the lap time of the reference instead of estimating it.
 - Expose all parameters in plotter for `figureSave`, `trackPlot`, `bordersPlot` and `indicesPlot`.
 
 ### Changed
@@ -20,6 +21,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - _Profile_
         - Properly detect overtaking points when crossing "0" progress.
         - Return correct lap time on non-closed path.
+        - Reference is properly rotated, so the virtual car does not slow down at wrong places.
 - Bound version of `bayesian-optimization<=1.4.0` to resolve import errors.
 
 ## 1.9.4 - 2023-06-29
