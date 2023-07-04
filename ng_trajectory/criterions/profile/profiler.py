@@ -408,8 +408,8 @@ def profileCompute(points: numpy.ndarray, overlap: int = 0, fd: TextIO = None, l
         except:
             if not math.isclose(_ac, a_acc_max) and not math.isclose(_ac, -a_break_max):
                 raise
-    elif lap_time:
-        _t = numpy.vstack((_t, _t[0]))
+    elif lap_time: # no overlap; use the last time values
+        _t = numpy.vstack((_t, _t[-1]))
         _t[0] = 0
 
     if save is not None:

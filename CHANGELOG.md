@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Criterions
     - _Profile_
         - Properly detect overtaking points when crossing "0" progress.
+        - Return correct lap time on non-closed path.
 - Bound version of `bayesian-optimization<=1.4.0` to resolve import errors.
 
 ## 1.9.4 - 2023-06-29
