@@ -81,6 +81,8 @@ P.createAdd("load_matryoshka", None, str, "Name of the file to load Matryoshka f
 P.createAdd("plot_group_indices", True, bool, "Whether group indices should be shown on the track.", "init (viz.)")
 P.createAdd("plot_group_borders", True, bool, "Whether group borders should be shown on the track.", "init (viz.)")
 P.createAdd("fixed_segments", [], list, "Points to be used instead their corresponding segment.", "init")
+P.createAdd("_experimental_use_cma", False, bool, "When true, use CMA instead of GA.", "init")
+P.createAdd("_experimental_no_pool", False, bool, "When true, ThreadPool is omitted and optimization is run on a single core only.")
 
 
 ######################
@@ -332,8 +334,16 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
                 ngplot.pointsScatter(transform.matryoshkaMap(_m, gridpoints), marker="x", s=0.1)
 
     # Optimizer definition
-    instrum = nevergrad.Instrumentation(nevergrad.var.Array(len(MATRYOSHKA), 2).bounded(0, 1))
-    OPTIMIZER = nevergrad.optimizers.DoubleFastGADiscreteOnePlusOne(instrumentation = instrum, budget = budget, num_workers = workers)
+    # nevergrad#1250
+    instrum = nevergrad.p.Instrumentation(nevergrad.p.Array(lower=0, upper=1, shape=(len(MATRYOSHKA), 2)))
+
+    if P.getValue("_experimental_no_pool"):
+        workers = 1
+
+    if P.getValue("_experimental_use_cma"):
+        OPTIMIZER = nevergrad.optimizers.ParametrizedCMA(popsize = 20, popsize_factor = 1, inopts = {"CMA_rankmu": 0.001, "CMA_rankone": 0.01, "CMA_stds": 0.02})(parametrization = instrum, budget = budget, num_workers = workers)
+    else:
+        OPTIMIZER = nevergrad.optimizers.DoubleFastGADiscreteOnePlusOne(parametrization = instrum, budget = budget, num_workers = workers)
 
 
 def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
@@ -349,12 +359,15 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
 
     overtaking = []
 
-    with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
-        recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
+    if P.getValue("_experimental_no_pool"):
+        recommendation = OPTIMIZER.minimize(_opt)
+    else:
+        with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
+            recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
 
-        if hasattr(CRITERION, "OVERTAKING_POINTS"):
-            while CRITERION.OVERTAKING_POINTS.qsize() > 0:
-                overtaking.append(CRITERION.OVERTAKING_POINTS.get(False))
+    #    if hasattr(CRITERION, "OVERTAKING_POINTS"):
+    #        while CRITERION.OVERTAKING_POINTS.qsize() > 0:
+    #           overtaking.append(CRITERION.OVERTAKING_POINTS.get(False))
 
     points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p])[0] for i, p in enumerate(numpy.asarray(recommendation.args[0])) ]
 

@@ -145,6 +145,8 @@ else:
 # Package
 ######################
 
+print("RUNNING EXPERIMENTAL CMA-ENABLED VERSION WITH NEVERGRAD 0.6.0")
+
 #from . import utils
 from .main import execute, configurationLoad, configurationMerge
 
