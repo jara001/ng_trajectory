@@ -53,6 +53,7 @@ P.createAdd("plot_timelines", False, bool, "Whether the lines between points in 
 P.createAdd("plot_timelines_size", 1, float, "Size of the points of the timelines endpoints. 0 = disabled", "init (viz.)")
 P.createAdd("plot_timelines_width", 0.6, float, "Linewidth of the timelines. 0 = disabled", "init (viz.)")
 P.createAdd("plot_overtaking", True, bool, "Whether to plot places where an overtaking occurs. (Has to be supported by optimizer.)", "init (viz.)")
+P.createAdd("favor_overtaking", 0, float, "Penalty value to add to the lap time when overtaking does not occur.", "init")
 
 
 ######################
@@ -264,6 +265,9 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
 
             prev_rd = rd
             prev_pd = pd
+
+        if not overtaken:
+            _t[-1] += P.getValue("favor_overtaking")
 
     return float(_t[-1])
 

@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
+- Criterions
+    - _Profile_
+        - Parameter `favor_overtaking` that is added as a penalty to the lap time when overtaking does not occur.
 - Expose all parameters in plotter for `figureSave`, `trackPlot`, `bordersPlot` and `indicesPlot`.
 
 ### Changed
