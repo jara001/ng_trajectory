@@ -16,6 +16,8 @@ import ng_trajectory.plot as ngplot
 
 from multiprocessing import Queue
 
+from itertools import chain # Join generators
+
 
 # Global variables
 CENTERLINE = None
@@ -150,7 +152,7 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
             ts = int(_t[-1]) - 1
 
             if P.getValue("plot_timelines"):
-                for ts in range(int(_t[-1])):
+                for ts in (range(int(_t[-1])) if overlap > 0 else chain(range(int(_t[-1])+1), _t[-1])):
                     _closest = numpy.abs(numpy.subtract(REFERENCE[:, 2], ts)).argmin()
 
                     if _closest >= len(REFERENCE) - 1:

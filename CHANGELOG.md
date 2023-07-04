@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Added
 - Expose all parameters in plotter for `figureSave`, `trackPlot`, `bordersPlot` and `indicesPlot`.
 
+### Changed
+- Criterions
+    - _Profile_
+        - Non-closed paths display more points when `plot_timelines` is set to True.
+
 ### Fixed
 - Criterions
     - _Profile_
