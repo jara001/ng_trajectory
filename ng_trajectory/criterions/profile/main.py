@@ -116,6 +116,9 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
             _ci = 0
             __t = 0
 
+            # Selected last
+            selected_last = False
+
             while True:
                 # Find closest point in time domain
                 _ci = (abs(_t[:-1] + __t - rt)).argmin()
@@ -123,7 +126,11 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
                 # In case that we select the last point
                 # Do it again for next repetition of the trajectory
                 if _ci == len(_t) - 2:
+                    if selected_last:
+                        # Extra condition for non-closed paths.
+                        break
                     __t += _t[-1]
+                    selected_last = True
                 else:
                     break
 
