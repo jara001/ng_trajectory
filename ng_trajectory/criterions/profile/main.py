@@ -220,16 +220,41 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
             ]
 
         overtaken = False
+        prev_rd = REFERENCE_PROGRESS[0]
+        prev_pd = trajectoryClosestIndex(CENTERLINE, points[closest_indices[0], :2])
+        #reference_end = trajectoryClosestIndex(CENTERLINE, points[-1, :2])
         for _i, (rx, ry, _) in enumerate(REFERENCE):
             rd = REFERENCE_PROGRESS[_i]                    # nejblizsi i ve stejnem case
             pd = trajectoryClosestIndex(CENTERLINE, points[closest_indices[_i], :2])
 
-            if rd > 50 and pd > rd and not overtaken:
+            # This sequence should ensure that only correct overtaking points are selected
+            # and it should be comfortable with rotating the centerline (i.e., having the
+            # 0 points somewhere along the way).
+            #if rd > reference_end:
+            #    break
+
+            if prev_rd > rd:
+                rd += len(CENTERLINE)
+
+            if prev_pd > pd:
+                pd += len(CENTERLINE)
+
+            # This should apply only for non-closed paths.
+            if pd - prev_pd > 50:
+                if overlap > 0:
+                    print ("WARNING: Detected jump in the trajectory track progress.")
+                    print (f"rx: {rx}\try: {ry}\trt: {_}\nrd: {rd}\tpd: {pd}\nprev_rd: {prev_rd}\tprev_pd: {prev_pd}")
+                break
+
+            #if rd > 50 and pd > rd and not overtaken:
+            if pd > rd and not overtaken:
                 overtaken = True
                 OVERTAKING_POINTS.put(points[closest_indices[_i], :2])
             #elif pd < rd and overtaken:
             #    overtaken = False
 
+            prev_rd = rd
+            prev_pd = pd
 
     return float(_t[-1])
 
