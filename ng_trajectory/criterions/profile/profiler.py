@@ -304,7 +304,7 @@ def saveState(filename: str, points: numpy.ndarray, t: numpy.ndarray, v: numpy.n
                     "vy_mps": v[_i] * math.sin(_beta),
                     "a_mps2": a[_i],
                     "omega_radps": v[_i] * math.cos(_beta) * k[_i],
-                    "delta_rad": (_lf + _lr) * k[_i]
+                    "delta_rad": math.atan((_lf + _lr) * k[_i])
                 }
             )
 
