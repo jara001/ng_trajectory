@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Return correct lap time on non-closed path.
         - Reference is properly rotated, so the virtual car does not slow down at wrong places.
         - Properly compute delta in the saved trajectory.
+        - Properly compute heading in the saved trajectory.
 - Bound version of `bayesian-optimization<=1.4.0` to resolve import errors.
 
 ## 1.9.4 - 2023-06-29

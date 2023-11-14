@@ -320,8 +320,8 @@ def saveState(filename: str, points: numpy.ndarray, t: numpy.ndarray, v: numpy.n
     d = numpy.cumsum(d)
 
 
-    # Heading (psi)
-    psi = numpy.asarray([
+    # Direction (angle from the point towards the next one)
+    direction = numpy.asarray([
         math.atan2(
             y[(_i + 1) % len(points)] - _y,
             x[(_i + 1) % len(points)] - _x
@@ -345,7 +345,7 @@ def saveState(filename: str, points: numpy.ndarray, t: numpy.ndarray, v: numpy.n
                     "d_m": d[_i],
                     "x_m": x[_i],
                     "y_m": y[_i],
-                    "psi_rad": psi[_i],
+                    "psi_rad": direction[_i] - _beta,
                     "k_radpm": k[_i],
                     "vx_mps": v[_i] * math.cos(_beta),
                     "vy_mps": v[_i] * math.sin(_beta),
