@@ -191,6 +191,9 @@ def figureCreate() -> matplotlib.figure.Figure:
 def axisEqual(figure: matplotlib.figure.Figure = None) -> List[float]:
     """Equal axis on current / selected figure.
 
+    Arguments:
+    figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+
     Returns:
     xmin, xmax, ymin, ymax -- the axis limits
     """
@@ -201,12 +204,22 @@ def axisEqual(figure: matplotlib.figure.Figure = None) -> List[float]:
 
 
 @plot_only
-def figureSave(filename: str, figure: matplotlib.figure.Figure = None) -> None:
-    """Save figure into a file."""
+def figureSave(filename: str, figure: matplotlib.figure.Figure = None, *, bbox_inches = "tight", dpi = 300, pad_inches = 0, **kwargs) -> None:
+    """Save figure into a file.
+
+    Arguments:
+    filename -- path to the file where to save the image, str
+    figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+
+    Keyword-only arguments (same as matplotlib.pyplot.savefig):
+    bbox_inches -- boundary box in inches, str or float, defaults to 'tight'
+    dpi -- the image resolution, float > 0, defaults to 300
+    pad_inches -- padding around the image with tight bbox, float, defaults to 0
+    """
     if figure is None:
         figure = pyplot.gcf()
 
-    figure.savefig(filename, bbox_inches="tight", dpi=300, pad_inches=0)
+    figure.savefig(filename, bbox_inches=bbox_inches, dpi=dpi, pad_inches=pad_inches, **kwargs)
 
 
 @plot_only
@@ -217,7 +230,11 @@ def figureShow() -> None:
 
 @plot_only
 def figureClose(figure: matplotlib.figure.Figure = None) -> None:
-    """Close figure."""
+    """Close figure.
+
+    Arguments:
+    figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+    """
     pyplot.close(figure)
 
 
@@ -225,46 +242,61 @@ def figureClose(figure: matplotlib.figure.Figure = None) -> None:
 # Type plot functions
 ######################
 
-def trackPlot(track: numpy.ndarray, figure: matplotlib.figure.Figure = None) -> None:
+def trackPlot(track: numpy.ndarray, figure: matplotlib.figure.Figure = None, *, s = 1, color = "gainsboro", **kwargs) -> None:
     """Plot a track to selected figure.
 
     Arguments:
     track -- points of the track valid area, nx2 numpy.ndarray
     figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+
+    Keyword-only arguments (same as matplotlib.pyplot.scatter):
+    s --  marker size in points**2, scalar or array-like with shape (n, ), defaults to 1
+    color -- marker color for the track, color or sequence, defaults to 'gainsboro'
     """
-    pointsScatter(track, figure, s=1, color="gainsboro")
+    pointsScatter(track, figure, s=s, color=color, **kwargs)
 
 
-def bordersPlot(borders: List[numpy.ndarray], colored: bool = True, figure: matplotlib.figure.Figure = None) -> None:
+def bordersPlot(borders: List[numpy.ndarray], colored: bool = True, figure: matplotlib.figure.Figure = None, *, linewidth = 0.6, linestyle = "dotted", color = "gray", **kwargs) -> None:
     """Plot borders of the segments to a selected figure.
 
     Arguments:
     borders -- border points of the groups, n-list of x2 numpy.ndarray
     colored -- when True, plot is done colored, otherwise single color, bool, default True
     figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+
+    Keyword-only arguments (same as matplotlib.pyplot.plot):
+    linewidth -- float, defaults to 0.6
+    linestyle -- str, defaults to 'dotted'
+    color -- color or sequence, defaults to 'gray'
     """
 
     if colored:
         #groupsScatter(borders, figure, s=1)
-        groupsPlot(borders, figure, linewidth=0.6, linestyle="dotted")
+        groupsPlot(borders, figure, linewidth=linewidth, linestyle=linestyle, **kwargs)
     else:
         #groupsScatter(borders, figure, s=1, color="gray")
-        groupsPlot(borders, figure, linewidth=0.6, linestyle="dotted", color="gray")
+        groupsPlot(borders, figure, linewidth=linewidth, linestyle=linestyle, color=color, **kwargs)
 
 
-def indicesPlot(points: numpy.ndarray, figure: matplotlib.figure.Figure = None) -> None:
+def indicesPlot(points: numpy.ndarray, figure: matplotlib.figure.Figure = None, *, verticalalignment = "center", horizontalalignment = "center", fontsize = 18, **kwargs) -> None:
     """Show an index of each element on its location.
 
     Arguments:
     points -- locations where to show the indices, nx2 numpy.ndarray
     figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+
+    Keyword-only arguments (same as matplotlib.text.Text):
+    verticalalignment -- str, defaults to 'center'
+    horizontalalignment -- str, defaults to 'center'
+    fontsize -- float, defaults to 18
     """
 
     for i, point in enumerate(points):
         labelText(point, i,
-            verticalalignment = "center",
-            horizontalalignment = "center",
-            fontsize = 18
+            verticalalignment = verticalalignment,
+            horizontalalignment = horizontalalignment,
+            fontsize = fontsize,
+            **kwargs
         )
 
 

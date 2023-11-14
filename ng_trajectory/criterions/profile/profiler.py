@@ -262,6 +262,53 @@ def saveState(filename: str, points: numpy.ndarray, t: numpy.ndarray, v: numpy.n
     success -- True if saved, otherwise False
 
     Note: This is inspired by the 'ng_trajectory_ros' wrapper.
+
+    TODO: Resolve this.
+    FIXME: This is probably not correct. Below I put the information from Tomas:
+        _beta = math.atan(_lr * k[_i])  # << k[_i] in the CoG
+        "k_radpm": k[_i],  # << k[i] in the CoG
+        "vx_mps": v[_i] * math.cos(_beta),  # << k[_i] and v[_i] in the CoG
+        "vy_mps": v[_i] * math.sin(_beta),  # << k[_i] and v[_i] in the CoG
+        "a_mps2": a[_i],  # << a[_i] in the center of gravity
+        "omega_radps": v[_i] * math.cos(_beta) * k[_i], # << k[_i] and v[_i] in the CoG
+        "delta_rad": np.atan((_lf + _lr) * k[_i])  # << k[_i] in the center of rear axle
+
+        Purely rear axle should be:
+            # _beta not required
+            writer.writerow(
+                {
+                    "t_s": t[_i],
+                    "d_m": d[_i],
+                    "x_m": x[_i],
+                    "y_m": y[_i],
+                    "psi_rad": psi[_i],
+                    "k_radpm": k[_i],
+                    "vx_mps": v[_i],
+                    "vy_mps": 0,
+                    "a_mps2": a[_i],
+                    "omega_radps": v[_i] * k[_i],
+                    "delta_rad": math.atan((_lf + _lr) * k[_i])
+                }
+            )
+
+        Purely CoG should be:
+            _beta = math.asin(_lr * k[_i])
+
+            writer.writerow(
+                {
+                    "t_s": t[_i],
+                    "d_m": d[_i],
+                    "x_m": x[_i],
+                    "y_m": y[_i],
+                    "psi_rad": psi[_i] - _beta,
+                    "k_radpm": k[_i],
+                    "vx_mps": v[_i] * math.cos(_beta),
+                    "vy_mps": v[_i] * math.sin(_beta),
+                    "a_mps2": a[_i],
+                    "omega_radps": v[_i] * k[_i],
+                    "delta_rad": math.atan((_lf + _lr)/_lr * math.tan(_beta))
+                }
+            )
     """
 
     x, y, k = points[:, :3].T
@@ -273,8 +320,8 @@ def saveState(filename: str, points: numpy.ndarray, t: numpy.ndarray, v: numpy.n
     d = numpy.cumsum(d)
 
 
-    # Heading (psi)
-    psi = numpy.asarray([
+    # Direction (angle from the point towards the next one)
+    direction = numpy.asarray([
         math.atan2(
             y[(_i + 1) % len(points)] - _y,
             x[(_i + 1) % len(points)] - _x
@@ -298,13 +345,13 @@ def saveState(filename: str, points: numpy.ndarray, t: numpy.ndarray, v: numpy.n
                     "d_m": d[_i],
                     "x_m": x[_i],
                     "y_m": y[_i],
-                    "psi_rad": psi[_i],
+                    "psi_rad": direction[_i] - _beta,
                     "k_radpm": k[_i],
                     "vx_mps": v[_i] * math.cos(_beta),
                     "vy_mps": v[_i] * math.sin(_beta),
                     "a_mps2": a[_i],
                     "omega_radps": v[_i] * math.cos(_beta) * k[_i],
-                    "delta_rad": (_lf + _lr) * k[_i]
+                    "delta_rad": math.atan((_lf + _lr) * k[_i])
                 }
             )
 
@@ -408,8 +455,8 @@ def profileCompute(points: numpy.ndarray, overlap: int = 0, fd: TextIO = None, l
         except:
             if not math.isclose(_ac, a_acc_max) and not math.isclose(_ac, -a_break_max):
                 raise
-    elif lap_time:
-        _t = numpy.vstack((_t, _t[0]))
+    elif lap_time: # no overlap; use the last time values
+        _t = numpy.vstack((_t, _t[-1]))
         _t[0] = 0
 
     if save is not None:

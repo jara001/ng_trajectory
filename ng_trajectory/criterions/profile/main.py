@@ -16,6 +16,8 @@ import ng_trajectory.plot as ngplot
 
 from multiprocessing import Queue
 
+from itertools import chain # Join generators
+
 
 # Global variables
 CENTERLINE = None
@@ -42,6 +44,7 @@ P.createAdd("_lr", 0.139, float, "Distance from center of mass to the rear axle 
 P.createAdd("reference", None, str, "Name of the file to load (x, y, t) reference path that cannot be close.", "init")
 P.createAdd("reference_dist", 1.0, float, "Minimum allowed distance from the reference at given time [m].", "init")
 P.createAdd("reference_rotate", 0, int, "Number of points to rotate the reference trajectory.", "init")
+P.createAdd("reference_laptime", 0, float, "Lap time of the given reference. 0 = estimated from data", "init")
 P.createAdd("save_solution_csv", "$", str, "When non-empty, save final trajectory to this file as CSV. Use '$' to use log name instead.", "init")
 P.createAdd("plot", False, bool, "Whether a graphical representation should be created.", "init (viz.)")
 P.createAdd("plot_reference", False, bool, "Whether the reference trajectory should be plotted.", "init (viz.)")
@@ -51,6 +54,7 @@ P.createAdd("plot_timelines", False, bool, "Whether the lines between points in 
 P.createAdd("plot_timelines_size", 1, float, "Size of the points of the timelines endpoints. 0 = disabled", "init (viz.)")
 P.createAdd("plot_timelines_width", 0.6, float, "Linewidth of the timelines. 0 = disabled", "init (viz.)")
 P.createAdd("plot_overtaking", True, bool, "Whether to plot places where an overtaking occurs. (Has to be supported by optimizer.)", "init (viz.)")
+P.createAdd("favor_overtaking", 0, float, "Penalty value to add to the lap time when overtaking does not occur.", "init")
 
 
 ######################
@@ -76,8 +80,18 @@ def init(**kwargs) -> None:
 
     if P.getValue("reference") is not None:
         REFERENCE = numpy.load(P.getValue("reference"))
-        REFERENCE = numpy.hstack((numpy.roll(REFERENCE[:, :2], -P.getValue("reference_rotate"), axis=0), REFERENCE[:, 2:]))
-        print ("Loaded reference with '%d' points." % len(REFERENCE), file = kwargs.get("logfile", sys.stdout))
+        #REFERENCE = numpy.hstack((numpy.roll(REFERENCE[:, :2], -P.getValue("reference_rotate"), axis=0), REFERENCE[:, 2:]))
+        # TODO: Lap time should be given, not estimated like this.
+        lap_time = P.getValue("reference_laptime")
+
+        if lap_time == 0.0:
+            # Lap time estimate
+            lap_time = REFERENCE[-1, 2] + numpy.mean([REFERENCE[-1, 2]-REFERENCE[-2, 2], REFERENCE[1, 2]-REFERENCE[0, 2]])
+
+        REFERENCE = numpy.roll(REFERENCE, -P.getValue("reference_rotate"), axis=0)
+        REFERENCE[:, 2] = REFERENCE[:, 2] - REFERENCE[0, 2]
+        REFERENCE[REFERENCE[:, 2] < 0, 2] += lap_time
+        print ("Loaded reference with '%d' points, lap time %fs." % (len(REFERENCE), lap_time), file = kwargs.get("logfile", sys.stdout))
     else:
         REFERENCE = None
 
@@ -116,6 +130,9 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
             _ci = 0
             __t = 0
 
+            # Selected last
+            selected_last = False
+
             while True:
                 # Find closest point in time domain
                 _ci = (abs(_t[:-1] + __t - rt)).argmin()
@@ -123,7 +140,11 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
                 # In case that we select the last point
                 # Do it again for next repetition of the trajectory
                 if _ci == len(_t) - 2:
+                    if selected_last:
+                        # Extra condition for non-closed paths.
+                        break
                     __t += _t[-1]
+                    selected_last = True
                 else:
                     break
 
@@ -143,7 +164,7 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
             ts = int(_t[-1]) - 1
 
             if P.getValue("plot_timelines"):
-                for ts in range(int(_t[-1])):
+                for ts in (range(int(_t[-1])) if overlap > 0 else chain(range(int(_t[-1])+1), _t[-1])):
                     _closest = numpy.abs(numpy.subtract(REFERENCE[:, 2], ts)).argmin()
 
                     if _closest >= len(REFERENCE) - 1:
@@ -220,16 +241,44 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
             ]
 
         overtaken = False
+        prev_rd = REFERENCE_PROGRESS[0]
+        prev_pd = trajectoryClosestIndex(CENTERLINE, points[closest_indices[0], :2])
+        #reference_end = trajectoryClosestIndex(CENTERLINE, points[-1, :2])
         for _i, (rx, ry, _) in enumerate(REFERENCE):
             rd = REFERENCE_PROGRESS[_i]                    # nejblizsi i ve stejnem case
             pd = trajectoryClosestIndex(CENTERLINE, points[closest_indices[_i], :2])
 
-            if rd > 50 and pd > rd and not overtaken:
+            # This sequence should ensure that only correct overtaking points are selected
+            # and it should be comfortable with rotating the centerline (i.e., having the
+            # 0 points somewhere along the way).
+            #if rd > reference_end:
+            #    break
+
+            if prev_rd > rd:
+                rd += len(CENTERLINE)
+
+            if prev_pd > pd:
+                pd += len(CENTERLINE)
+
+            # This should apply only for non-closed paths.
+            if pd - prev_pd > 50:
+                if overlap > 0:
+                    print ("WARNING: Detected jump in the trajectory track progress.")
+                    print (f"rx: {rx}\try: {ry}\trt: {_}\nrd: {rd}\tpd: {pd}\nprev_rd: {prev_rd}\tprev_pd: {prev_pd}")
+                break
+
+            #if rd > 50 and pd > rd and not overtaken:
+            if pd > rd and not overtaken:
                 overtaken = True
                 OVERTAKING_POINTS.put(points[closest_indices[_i], :2])
             #elif pd < rd and overtaken:
             #    overtaken = False
 
+            prev_rd = rd
+            prev_pd = pd
+
+        if not overtaken:
+            _t[-1] += P.getValue("favor_overtaking")
 
     return float(_t[-1])
 

@@ -64,7 +64,7 @@ setup(
         "Topic :: Scientific/Engineering",
         "Typing :: Typed",
     ],
-    install_requires=['nevergrad==0.3.0', "scipy>=0.18.0", "numpy>=1.12.0,<1.24", "Pillow>=4.2.0", "tqdm"],
+    install_requires=['nevergrad==0.3.0', "scipy>=0.18.0", "numpy>=1.12.0,<1.24", "Pillow>=4.2.0", "tqdm", "bayesian-optimization<=1.4.0"],
     python_requires='>=3.6',
     extras_require={
         "plot_support": "matplotlib"

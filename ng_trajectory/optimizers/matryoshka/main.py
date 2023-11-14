@@ -81,6 +81,7 @@ P.createAdd("load_matryoshka", None, str, "Name of the file to load Matryoshka f
 P.createAdd("plot_group_indices", True, bool, "Whether group indices should be shown on the track.", "init (viz.)")
 P.createAdd("plot_group_borders", True, bool, "Whether group borders should be shown on the track.", "init (viz.)")
 P.createAdd("fixed_segments", [], list, "Points to be used instead their corresponding segment.", "init")
+P.createAdd("_experimental_mm_max", -1, int, "(Experimental) Limit MM to cover only first n segments.", "init")
 
 
 ######################
@@ -334,7 +335,8 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
             for _m in MATRYOSHKA:
                 ngplot.pointsScatter(transform.matryoshkaMap(_m, gridpoints), marker="x", s=0.1)
-
+    if P.getValue("_experimental_mm_max") > 0:
+        MATRYOSHKA = MATRYOSHKA[0:P.getValue("_experimental_mm_max")]
     # Optimizer definition
     instrum = nevergrad.Instrumentation(nevergrad.var.Array(len(MATRYOSHKA), 2).bounded(0, 1))
     OPTIMIZER = nevergrad.optimizers.DoubleFastGADiscreteOnePlusOne(instrumentation = instrum, budget = budget, num_workers = workers)

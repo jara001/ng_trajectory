@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.9.5 - 2023-11-14
+### Added
+- Criterions
+    - _Profile_
+        - Parameter `favor_overtaking` that is added as a penalty to the lap time when overtaking does not occur.
+        - Parameter `reference_laptime` to set the lap time of the reference instead of estimating it.
+- Optimizers
+    - _Matryoshka_
+        - Experimental parameter '_experimental_mm_max' that limits mapping to only first 'n' segments.
+- Segmentators
+    - Function `pointsToWorld` to convert coordinates of multiple cells at once.
+- Expose all parameters in plotter for `figureSave`, `trackPlot`, `bordersPlot` and `indicesPlot`.
+
+### Changed
+- Criterions
+    - _Profile_
+        - Non-closed paths display more points when `plot_timelines` is set to True.
+
+### Fixed
+- Criterions
+    - _Profile_
+        - Properly detect overtaking points when crossing "0" progress.
+        - Return correct lap time on non-closed path.
+        - Reference is properly rotated, so the virtual car does not slow down at wrong places.
+        - Properly compute delta in the saved trajectory.
+        - Properly compute heading in the saved trajectory.
+- Bound version of `bayesian-optimization<=1.4.0` to resolve import errors.
+
 ## 1.9.4 - 2023-06-29
 ### Added
 - Criterions
