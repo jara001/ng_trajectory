@@ -77,6 +77,7 @@ For the optimization itself, Nevergrad is used.
 ```html
 Init parameters:
 fixed_segments (list) = [] [Points to be used instead their corresponding segment.]
+_experimental_mm_max (int) = -1 [(Experimental) Limit MM to cover only first n segments.]
 
 Init (matryoshka) parameters:
 hold_matryoshka (bool) = False [Whether the transformation should be created only once.]
@@ -266,7 +267,9 @@ _lr (float) = 0.139 [Distance from center of mass to the rear axle [m]]
 reference (str) = None [Name of the file to load (x, y, t) reference path that cannot be close.]
 reference_dist (float) = 1.0 [Minimum allowed distance from the reference at given time [m].]
 reference_rotate (int) = 0 [Number of points to rotate the reference trajectory.]
+reference_laptime (float) = 0 [Lap time of the given reference. 0 = estimated from data]
 save_solution_csv (str) = $ [When non-empty, save final trajectory to this file as CSV. Use '$' to use log name instead.]
+favor_overtaking (float) = 0 [Penalty value to add to the lap time when overtaking does not occur.]
 
 Init (viz.) parameters:
 plot (bool) = False [Whether a graphical representation should be created.]
@@ -510,7 +513,9 @@ _lr (float) = 0.139 [Distance from center of mass to the rear axle [m]]
 reference (str) = None [Name of the file to load (x, y, t) reference path that cannot be close.]
 reference_dist (float) = 1.0 [Minimum allowed distance from the reference at given time [m].]
 reference_rotate (int) = 0 [Number of points to rotate the reference trajectory.]
+reference_laptime (float) = 0 [Lap time of the given reference. 0 = estimated from data]
 save_solution_csv (str) = $ [When non-empty, save final trajectory to this file as CSV. Use '$' to use log name instead.]
+favor_overtaking (float) = 0 [Penalty value to add to the lap time when overtaking does not occur.]
 sampling_distance (float) = 1.0 [[m] Distance of super-sampling before the interpolation, skipped when 0.]
 distance (float) = 0 [[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.]
 fixed_points (list) = [] [Points to be used in the selection upon calling 'select'.]
