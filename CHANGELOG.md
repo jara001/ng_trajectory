@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - _Profile_
         - Parameter `favor_overtaking` that is added as a penalty to the lap time when overtaking does not occur.
         - Parameter `reference_laptime` to set the lap time of the reference instead of estimating it.
+- Optimizers
+    - _Matryoshka_
+        - Experimental parameter '_experimental_mm_max' that limits mapping to only first 'n' segments.
 - Segmentators
     - Function `pointsToWorld` to convert coordinates of multiple cells at once.
 - Expose all parameters in plotter for `figureSave`, `trackPlot`, `bordersPlot` and `indicesPlot`.
