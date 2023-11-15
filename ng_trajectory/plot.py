@@ -1,6 +1,6 @@
 #!/usr/bin/env python3.6
 # plot.py
-"""## Plot functions for ng_trajectory
+r"""## Plot functions for ng_trajectory
 
 From the user side (i.e., configuration file), only dynamic plotting is available.
 However, all plotting (package-wise) should be controlled by variable `plot` that
@@ -9,25 +9,28 @@ is set to False by default.
 Dynamic plotting is defined using a custom key in the JSON. Following example
 resembles what is a "standard" and most used configuration:
 ```json
-"plot": true,
-"plot_args": [
-    {
-        "_figure": {
-            "function": "axis",
-            "_args": [ "equal" ]
-        },
-        "trackPlot": [ "@track" ]
-    },
-    {
-        "pointsPlot": {
-            "_args": [ "@result" ]
-        },
-        "pointsScatter": {
-            "_args": [ "@rcandidate" ]
-        }
-    }
-]
+{
+	"plot": true,
+	"plot_args": [
+		{
+			"_figure": {
+				"function": "axis",
+				"_args": [ "equal" ]
+			},
+			"trackPlot": [ "@track" ]
+		},
+		{
+			"pointsPlot": {
+				"_args": [ "@result" ]
+			},
+			"pointsScatter": {
+				"_args": [ "@rcandidate" ]
+			}
+		}
+	]
+}
 ```
+
 Note: This creates a figure with equal axis, underlying track, optimized control
 points of the trajectory and their interpolation.
 
@@ -37,14 +40,18 @@ the second one is executed after optimization finishes.
 
 Commands in the `plot_args` are executed in order, key-wise. Basic syntax is
 ```json
-"func": [ "arg1", "arg2" ]
+{
+	"func": [ "arg1", "arg2" ]
+}
 ```
 
 which sends all arguments to the function, or
 ```json
-"func": {
-    "_args": [ "arg1", "arg2" ],
-    "kw_arg": 4
+{
+	"func": {
+		"_args": [ "arg1", "arg2" ],
+		"kw_arg": 4
+	}
 }
 ```
 
@@ -87,7 +94,7 @@ of the variable):
 - tcandidate -- Control points of the best solution in Matryoshka space.
 - result -- Optimized trajectory (interpolation of rcandidate).
 - figure -- Currently used figure for plotting.
-- + any variable defined in the current loop from the configuration file.
+- \+ any variable defined in the current loop from the configuration file.
 
 
 ### Matplotlib wrapper
@@ -97,12 +104,14 @@ with argument `function` with the name of the required function.
 
 For example, to make the axis equal, one can use this:
 ```json
-"_figure": {
-    "function": "axis",
-    "_args": [ "equal" ]
+{
+	"_figure": {
+		"function": "axis",
+		"_args": [ "equal" ]
+	}
 }
 ```
-"""  # noqa: D400,E501
+"""  # noqa: D400,E501,W191
 ######################
 # Imports & Globals
 ######################

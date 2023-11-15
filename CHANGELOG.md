@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Changed
 - Update all files to mitigate majority of the flake8 errors.
 
+### Fixed
+- Plot documentation is now properly formatted.
+
 ## 1.9.5 - 2023-11-14
 ### Added
 - Criterions

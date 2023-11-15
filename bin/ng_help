@@ -318,7 +318,11 @@ if __name__ == "__main__":
                         print ()
 
                 # Print plot instructions
-                print ("\n%s" % ng_trajectory.plot.__doc__, end = "")
+                print (
+                    "\n%s"
+                    % squishText(ng_trajectory.plot.__doc__),
+                    end = ""
+                )
 
                 exit (4)
 
