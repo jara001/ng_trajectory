@@ -6,4 +6,4 @@ This penalizer detects all misplaced points.
 The penalty is calculated as a distance between invalid point
 and valid points.
 """
-from .main import init, penalize, INVALID_POINTS
+from .main import init, penalize, INVALID_POINTS  # noqa: F401

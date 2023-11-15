@@ -11,16 +11,18 @@ from _version import Version
 # Used for the long_description.  It's nice, because now 1) we have a top level
 # README file and 2) it's easier to type in the README file than to put a raw
 # string in below ...
-#def read(fname):
-#    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+# def read(fname):
+#     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
-VERSION = str(Version(os.popen("git describe --tags --dirty --always").read()[1:-1]))
+VERSION = str(
+    Version(os.popen("git describe --tags --dirty --always").read()[1:-1])
+)
 
 if os.path.exists("VERSION"):
     STORED = open("VERSION", "r").read()
 
     if ".dev" in VERSION:
-        _len = len(VERSION[:VERSION.index(".dev")+4])
+        _len = len(VERSION[:VERSION.index(".dev") + 4])
     else:
         _len = len(VERSION)
 
@@ -41,7 +43,7 @@ with open("VERSION", "w") as file:
 
 # Also store the version to be seen from the code
 with open("./ng_trajectory/version.py", "w") as file:
-    file.write("__version__ = '%s'" % VERSION)
+    file.write("__version__ = '%s'  # noqa: D100,W292" % VERSION)
 
 
 setup(
@@ -54,7 +56,7 @@ setup(
     keywords = "trajectory Nevergrad",
     url = "https://github.com/jara001/ng_trajectory",
     packages=find_packages(),
-    #long_description=read('README'),
+    # long_description=read('README'),
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -64,10 +66,24 @@ setup(
         "Topic :: Scientific/Engineering",
         "Typing :: Typed",
     ],
-    install_requires=['nevergrad==0.3.0', "scipy>=0.18.0", "numpy>=1.12.0,<1.24", "Pillow>=4.2.0", "tqdm", "bayesian-optimization<=1.4.0"],
+    install_requires=[
+        'nevergrad==0.3.0',
+        "scipy>=0.18.0",
+        "numpy>=1.12.0,<1.24",
+        "Pillow>=4.2.0",
+        "tqdm",
+        "bayesian-optimization<=1.4.0"
+    ],
     python_requires='>=3.6',
     extras_require={
         "plot_support": "matplotlib"
     },
-    scripts=['bin/ng_run', 'bin/ng_generate_data', 'bin/ng_help', 'bin/ng_curvature_gui', 'bin/ng_graph', 'bin/ng_plot'],
+    scripts=[
+        'bin/ng_run',
+        'bin/ng_generate_data',
+        'bin/ng_help',
+        'bin/ng_curvature_gui',
+        'bin/ng_graph',
+        'bin/ng_plot'
+    ],
 )

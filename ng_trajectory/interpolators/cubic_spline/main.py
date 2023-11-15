@@ -1,6 +1,9 @@
 #!/usr/bin/env python3.6
 # main.py
 """Interpolate points of the path by cubic spline.
+
+Using scipy.interpolate.CubicSpline. Curvature is computed
+using K = (x' * y'' - y' * x'') / ( x'**2 + y'**2 )**(3/2).
 """
 ######################
 # Imports & Globals
@@ -10,9 +13,10 @@ import numpy
 
 from scipy.interpolate import CubicSpline
 
+from ng_trajectory.parameter import ParameterList
+
 
 # Parameters
-from ng_trajectory.parameter import *
 P = ParameterList()
 P.createAdd("int_size", 400, int, "Number of points in the interpolation.", "")
 P.createAdd("closed_loop", True, bool, "When set, interpolation creates a closed loop.", "init")
@@ -24,11 +28,13 @@ P.createAdd("closed_loop", True, bool, "When set, interpolation creates a closed
 
 def init(**kwargs) -> None:
     """Initialize interpolator."""
-
     P.updateAll(kwargs)
 
 
-def interpolate(points: numpy.ndarray, int_size: int = 400, **overflown) -> numpy.ndarray:
+def interpolate(
+        points: numpy.ndarray,
+        int_size: int = 400,
+        **overflown) -> numpy.ndarray:
     """Interpolate points using cubic spline.
 
     Arguments:
@@ -37,7 +43,8 @@ def interpolate(points: numpy.ndarray, int_size: int = 400, **overflown) -> nump
     **overflown -- arguments not caught by previous parts
 
     Returns:
-    ipoints -- coordinates (x, y) and curvature of interpolated points, int_sizex3 numpy.ndarray
+    ipoints -- coordinates (x, y) and curvature of interpolated points,
+               int_sizex3 numpy.ndarray
 
     Note: It is expected that the input trajectory is continuous (end-start).
 
@@ -53,7 +60,6 @@ def interpolate(points: numpy.ndarray, int_size: int = 400, **overflown) -> nump
         First and last point are not the same.
         Reduced default int_size from 440 to 400.
     """
-
     if P.getValue("closed_loop"):
         _points = numpy.vstack((points, points[0, :]))
         _bc_type = "periodic"
@@ -62,14 +68,21 @@ def interpolate(points: numpy.ndarray, int_size: int = 400, **overflown) -> nump
         _bc_type = "natural"
 
     x, y = _points.T
-    i = numpy.arange(len(_points))
 
-    distance = numpy.cumsum( numpy.sqrt( numpy.sum( numpy.diff(_points, axis=0)**2, axis=1 ) ) )
+    distance = numpy.cumsum(
+        numpy.sqrt(
+            numpy.sum(
+                numpy.diff(_points, axis=0)**2,
+                axis = 1
+            )
+        )
+    )
     distance = numpy.insert(distance, 0, 0) / distance[-1]
 
     alpha = numpy.linspace(0, 1, int_size, endpoint = False)
 
-    # CubicSpline allows forcing 2nd order differentiability on spline start/end
+    # CubicSpline allows forcing a 2nd order differentiability on the spline
+    # start/end
     ipol = CubicSpline(distance, _points, axis=0, bc_type=_bc_type)(alpha)
 
     # 2nd order derivative
@@ -81,20 +94,23 @@ def interpolate(points: numpy.ndarray, int_size: int = 400, **overflown) -> nump
     ipol2 = CubicSpline(distance, _points, axis=0, bc_type=_bc_type)(alpha, 2)
     ipol1 = CubicSpline(distance, _points, axis=0, bc_type=_bc_type)(alpha, 1)
 
-    return numpy.hstack((ipol, (
-                        numpy.divide(
-                            numpy.subtract(
-                                numpy.multiply(ipol1[:, 0], ipol2[:, 1]),
-                                numpy.multiply(ipol1[:, 1], ipol2[:, 0])
-                            ),
-                            numpy.sqrt(
-                                numpy.power(
-                                    numpy.add(
-                                        numpy.power(ipol1[:, 0], 2),
-                                        numpy.power(ipol1[:, 1], 2)
-                                    ),
-                                3)
-                            )
-                        )
-                    )[:, numpy.newaxis]
-            ))
+    return numpy.hstack((
+        ipol,
+        (
+            numpy.divide(
+                numpy.subtract(
+                    numpy.multiply(ipol1[:, 0], ipol2[:, 1]),
+                    numpy.multiply(ipol1[:, 1], ipol2[:, 0])
+                ),
+                numpy.sqrt(
+                    numpy.power(
+                        numpy.add(
+                            numpy.power(ipol1[:, 0], 2),
+                            numpy.power(ipol1[:, 1], 2)
+                        ),
+                        3
+                    )
+                )
+            )
+        )[:, numpy.newaxis]
+    ))

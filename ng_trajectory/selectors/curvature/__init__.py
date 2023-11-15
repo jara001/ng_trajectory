@@ -24,4 +24,4 @@ Note: The number of segments is determined differently:
  - -2 is selection based on dy
  - -3 is selection based on curvature
 """
-from .main import init, select
+from .main import init, select  # noqa: F401

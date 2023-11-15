@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 # ng_plot.py
-"""Script for generating images from ng_trajectory files.
-"""
+"""Script for generating images from ng_trajectory files."""
 ######################
 # Imports & Globals
 ######################
 
-import sys, os, argparse
+import argparse
 
 import ng_trajectory.interpolators.cubic_spline as cspline
 import ng_trajectory.criterions.profile.main as profile
@@ -15,10 +14,11 @@ import ng_trajectory.plot as ngplot
 import matplotlib.pyplot
 import matplotlib.colors
 
-import numpy, json
+import numpy
+import json
 
 # GIFs
-import io#, imageio
+import io  # , imageio
 from PIL import Image
 
 # Progress
@@ -46,51 +46,69 @@ Output is generated according to the number of passed files.
 )
 
 # Arguments
-PARSER.add_argument("map_file",
+PARSER.add_argument(
+    "map_file",
+
     nargs = 1,
     help = "Path to the valid_points file.",
     type = str,
-    #required = True,
+    # required = True,
 )
 
-PARSER.add_argument("input_file",
+PARSER.add_argument(
+    "input_file",
+
     nargs = "+",
     help = "Path to the ng_trajectory file.",
     type = argparse.FileType("r"),
 )
 
-PARSER.add_argument("-O",
+PARSER.add_argument(
+    "-O",
+
     dest = "outfile",
     help = "Set the output filename.",
     type = str,
     default = None,
-    #required = True,
+    # required = True,
 )
 
-PARSER.add_argument("-v",
+PARSER.add_argument(
+    "-v",
+
     dest = "verbose",
     help = "Give more output.",
     action = "store_true",
 )
 
-PARSER.add_argument("-d",
+PARSER.add_argument(
+    "-d",
+
     dest = "duration",
     help = "Duration of the GIF sequence.",
     default = 200,
     type = int,
 )
 
-PARSER.add_argument("--velocity",
+PARSER.add_argument(
+    "--velocity",
+
     dest = "velocity",
     help = "Compute and show velocity on the track.",
     action = "store_true",
 )
 
-PARSER.add_argument("--cmap",
+PARSER.add_argument(
+    "--cmap",
+
     nargs = "?",
     choices = list(matplotlib._cm.datad),
     dest = "cmap",
-    help = "Colormap used for displaying the velocity. Same as matplotlib colormaps. See https://matplotlib.org/stable/tutorials/colors/colormaps.html",
+    help = (
+        "Colormap used for displaying the velocity. "
+        "Same as matplotlib colormaps. "
+        "See https://matplotlib.org/stable/tutorials/colors/colormaps.html"
+    ),
     default = "gnuplot2",
     type = str,
     # https://stackoverflow.com/questions/17728109/python-dont-display-choices-with-argparse
@@ -106,13 +124,21 @@ _PROFILE_SETTINGS = {
     "a_break_max": 6.0
 }
 
-PROFILER_GROUP = PARSER.add_argument_group("profiler arguments", "Parameters used for the profiler (with '--velocity').")
+PROFILER_GROUP = PARSER.add_argument_group(
+    "profiler arguments",
+    "Parameters used for the profiler (with '--velocity')."
+)
 
 for name, parameter in profile.P.parameters.items():
-    PROFILER_GROUP.add_argument("--" + name,
+    PROFILER_GROUP.add_argument(
+        "--" + name,
+
         dest = name,
         help = parameter.description + " (%(type)s, default: %(default)s)",
-        default = _PROFILE_SETTINGS.get(name) if name in _PROFILE_SETTINGS else parameter.default,
+        default = (
+            _PROFILE_SETTINGS.get(name) if name in _PROFILE_SETTINGS
+            else parameter.default
+        ),
         type = parameter.type,
         metavar = "VALUE",
     )
@@ -126,7 +152,7 @@ for name, parameter in profile.P.parameters.items():
 ######################
 
 def figureGenerate(solution, args):
-    """Generates a figure according to the settings.
+    """Generate a figure according to the settings.
 
     Arguments:
     solution -- waypoints of the solution to be interpolated, numpy.ndarray
@@ -152,14 +178,21 @@ def figureGenerate(solution, args):
         # Compute velocity
         _v, _a, _t = profiler.profileCompute(iline, 400)
 
-        _sc = ngplot.pointsScatter(iline, f, s = 1, c = _v, cmap = args.cmap, norm = matplotlib.colors.Normalize(vmin = 0.0))
+        _sc = ngplot.pointsScatter(
+            iline,
+            f,
+            s = 1,
+            c = _v,
+            cmap = args.cmap,
+            norm = matplotlib.colors.Normalize(vmin = 0.0)
+        )
         f.colorbar(_sc)
 
 
     # https://www.tutorialspoint.com/how-to-convert-matplotlib-figure-to-pil-image-object
     if args.outfile is not None:
         img_buf = io.BytesIO()
-        #matplotlib.pyplot.savefig(img_buf, format='png')
+        # matplotlib.pyplot.savefig(img_buf, format='png')
         ngplot.figureSave(img_buf)
 
         ngplot.figureClose()
@@ -181,7 +214,12 @@ if __name__ == "__main__":
 
     if args.verbose:
         print ("Received arguments:")
-        print ("\n".join([ "\t%s: %s" % (key, value) for key, value in args._get_kwargs() ]))
+        print (
+            "\n".join([
+                "\t%s: %s"
+                % (key, value) for key, value in args._get_kwargs()
+            ])
+        )
 
 
     # Obtain map from the file
@@ -225,10 +263,17 @@ if __name__ == "__main__":
     # Load images to Pillow
     # https://stackoverflow.com/questions/753190/programmatically-generate-video-or-animated-gif-in-python
     if args.outfile is not None:
-        imgs = [ Image.open(i) for i in images ]
+        imgs = [Image.open(i) for i in images]
         img = imgs[0]
 
         if len(imgs) > 1:
-            img.save(args.outfile + ".gif", format = "GIF", append_images = imgs[1:], save_all = True, duration = args.duration, loop = 0)
+            img.save(
+                args.outfile + ".gif",
+                format = "GIF",
+                append_images = imgs[1:],
+                save_all = True,
+                duration = args.duration,
+                loop = 0
+            )
         elif len(imgs) == 1:
             img.save(args.outfile + ".png", format = "PNG")

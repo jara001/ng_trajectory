@@ -7,4 +7,4 @@ of the individual track parts from the group centers.
 Note: Even though this is fast, it can missalign points (e.g., when
 they are behind a close wall).
 """
-from .main import init, segmentate
+from .main import init, segmentate  # noqa: F401

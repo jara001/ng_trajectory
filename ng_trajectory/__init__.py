@@ -6,37 +6,37 @@
 ######################
 
 # Computation engine (math), generally faster?
-import math
+import math                                                     # noqa: F401
 
 # Computation engine (numpy)
-import numpy
+import numpy                                                    # noqa: F401
 
 # Nevergrad
-import nevergrad
+import nevergrad                                                # noqa: F401
 
 # Time measurement
-import time
+import time                                                     # noqa: F401
 
 # Custom printing
-import sys
+import sys                                                      # noqa: F401
 
 # Parallel computing of genetic algorithm
-from concurrent import futures
+from concurrent import futures                                  # noqa: F401
 
 # JSON importing
-import json
+import json                                                     # noqa: F401
 
 # Thread-safe writing to the file
-from threading import Lock
+from threading import Lock                                      # noqa: F401
 
 # Computation engine (scipy) / interpolation
-from scipy.interpolate import CubicSpline, bisplrep, bisplev
+from scipy.interpolate import CubicSpline, bisplrep, bisplev    # noqa: F401
 
 # Support for type hints
-from typing import List, Tuple, Callable, Dict, TextIO
+from typing import List, Tuple, Callable, Dict, TextIO          # noqa: F401
 
 # Version of the package
-from .version import __version__
+from .version import __version__                                # noqa: F401
 
 
 # Optional packages
@@ -46,58 +46,67 @@ SHAPELY_AVAILABLE = None
 
 
 try:
-    import rospy, rospkg
+    import rospy                                                # noqa: F401
+    import rospkg                                               # noqa: F401
 
     ROS_AVAILABLE = True
 
-except:
+except ImportError:
     print ("ROS support is not available.")
     ROS_AVAILABLE = False
 
 
 try:
     import matplotlib
-    from matplotlib import pyplot
+    from matplotlib import pyplot                               # noqa: F401
 
     PLOT_AVAILABLE = True
 
-except:
+except ImportError:
     print ("Matplotlib is not available.")
     # Mimic matplotlib for Typing
-    matplotlib = type("matplotlib", (object, ),
-            {
-                "figure":
-                    type("figure", (object, ),
-                        {
-                            "Figure": 1
-                        }
-                    ),
-                "collections":
-                    type("collection", (object, ),
-                        {
-                            "PathCollection": 1
-                        }
-                    ),
-                "lines":
-                    type("lines", (object, ),
-                        {
-                            "Line2D": type("line2d", (object, ), {})
-                        }
-                    ),
-            }
+    matplotlib = type(
+        "matplotlib",
+        (object, ),
+        {
+            "figure":
+                type(
+                    "figure",
+                    (object, ),
+                    {
+                        "Figure": 1
+                    }
+                ),
+            "collections":
+                type(
+                    "collection",
+                    (object, ),
+                    {
+                        "PathCollection": 1
+                    }
+                ),
+            "lines":
+                type(
+                    "lines",
+                    (object, ),
+                    {
+                        "Line2D": type("line2d", (object, ), {})
+                    }
+                ),
+        }
     )
     PLOT_AVAILABLE = False
 
 
 try:
-    import shapely
+    import shapely                                              # noqa: F401
 
-    from shapely.geometry import Polygon
-    from shapely.geometry.polygon import LinearRing
+    from shapely.geometry import Polygon                        # noqa: F401
+    from shapely.geometry.polygon import LinearRing             # noqa: F401
 
     SHAPELY_AVAILABLE = True
 
-except:
+except ImportError:
     print ("Shapely is not available.")
     SHAPELY_AVAILABLE = False
 
@@ -106,7 +115,7 @@ except:
 # ROS dependencies
 ######################
 
-if ( ROS_AVAILABLE ):
+if ROS_AVAILABLE:
     # Message types
     # ColorRGBA
     from std_msgs.msg import ColorRGBA
@@ -145,12 +154,16 @@ else:
 # Package
 ######################
 
-#from . import utils
-from .main import execute, configurationLoad, configurationMerge
+# from . import utils
+from .main import (  # noqa: E402,F401
+    execute,
+    configurationLoad,
+    configurationMerge
+)
 
 
 ######################
 # Configuration
 ######################
 
-#from .configuration import configurationLoad
+# from .configuration import configurationLoad

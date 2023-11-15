@@ -14,4 +14,4 @@ everytime.
      IEEE Conferenceon Computational Intelligence and
      Games (CIG). 108–115. ISSN: 2325-4289
 """
-from .main import init, select
+from .main import init, select  # noqa: F401

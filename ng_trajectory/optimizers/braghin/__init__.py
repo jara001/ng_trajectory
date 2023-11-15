@@ -13,4 +13,4 @@ The optimization itself is done using Nevergrad.
      Race driver model. Computers & Structures 86, 13 (July
      2008), 1503–1516.
 """
-from .main import init, optimize
+from .main import init, optimize  # noqa: F401

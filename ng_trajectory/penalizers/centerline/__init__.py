@@ -27,5 +27,5 @@ is 10times less successful than 'max'.
 ```
 
 [1]: https://en.wikipedia.org/wiki/Huber_loss
-"""
-from .main import init, penalize, INVALID_POINTS
+"""  # noqa: W191
+from .main import init, penalize, INVALID_POINTS  # noqa: F401

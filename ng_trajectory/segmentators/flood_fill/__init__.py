@@ -4,4 +4,4 @@
 This segmentator splits the track into segments by flood
 fill algorithm from the centers.
 """
-from .main import init, segmentate
+from .main import init, segmentate  # noqa: F401

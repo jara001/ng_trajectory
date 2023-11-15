@@ -21,7 +21,9 @@ from typing import Tuple
 # Utilities (Trajectory)
 ######################
 
-def pointsInterpolate(points: numpy.ndarray, int_size: int = 440) -> Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]:
+def pointsInterpolate(
+        points: numpy.ndarray,
+        int_size: int = 440) -> Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]:  # noqa: E501
     """Interpolate points using cubic spline.
 
     Arguments:
@@ -29,7 +31,8 @@ def pointsInterpolate(points: numpy.ndarray, int_size: int = 440) -> Tuple[numpy
     int_size -- number of points in the interpolation, int, default 440
 
     Returns:
-    ipoints -- coordinates (x, y) of the interpolated path, int_sizex2 numpy.ndarray
+    ipoints -- coordinates (x, y) of the interpolated path,
+                int_sizex2 numpy.ndarray
     dipoints -- coordinates (x, y) of the first order derviation of the path,
                 int_sizex2 numpy.ndarray
     d2ipoints -- coordinates (x, y) of the second order derviation of the path,
@@ -48,7 +51,6 @@ def pointsInterpolate(points: numpy.ndarray, int_size: int = 440) -> Tuple[numpy
         Purely numpy / scipy.
         First and last point are not the same.
     """
-
     _points = numpy.vstack((points, points[0, :]))
 
     # Throw away additional information
@@ -56,16 +58,25 @@ def pointsInterpolate(points: numpy.ndarray, int_size: int = 440) -> Tuple[numpy
         _points = _points[:, :2]
 
     x, y = _points.T
-    i = numpy.arange(len(_points))
 
-    distance = numpy.cumsum( numpy.sqrt( numpy.sum( numpy.diff(_points, axis=0)**2, axis=1 ) ) )
+    distance = numpy.cumsum(
+        numpy.sqrt(
+            numpy.sum(
+                numpy.diff(_points, axis = 0)**2,
+                axis = 1
+            )
+        )
+    )
     distance = numpy.insert(distance, 0, 0) / distance[-1]
 
-    alpha = numpy.linspace(0, 1, int_size, endpoint = True) # True? False? (bylo False)
+    # TODO: Not sure whether True or False here.
+    alpha = numpy.linspace(0, 1, int_size, endpoint = True)
 
-    # CubicSpline allows forcing 2nd order differentiability on spline start/end
-    ipol = CubicSpline(distance, _points, axis=0, bc_type="periodic")(alpha)
-    ipol1 = CubicSpline(distance, _points, axis=0, bc_type="periodic")(alpha, 1)
-    ipol2 = CubicSpline(distance, _points, axis=0, bc_type="periodic")(alpha, 2)
+    # CubicSpline allows forcing a 2nd order differentiability on the spline
+    # start/end
+    cs = CubicSpline(distance, _points, axis = 0, bc_type = "periodic")
+    ipol = cs(alpha)
+    ipol1 = cs(alpha, 1)
+    ipol2 = cs(alpha, 2)
 
     return (ipol, ipol1, ipol2)

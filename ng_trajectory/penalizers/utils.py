@@ -1,6 +1,8 @@
 #!/usr/bin/env python3.6
 # utils.py3
 """Various utilities for penalizers.
+
+Created to shrink the code inside the penalizers.
 """
 ######################
 # Imports & Globals
@@ -10,10 +12,13 @@ import numpy
 
 from typing import List, Tuple
 
-from ng_trajectory.segmentators.utils import pointToMap, validCheck#, pointInBounds
+from ng_trajectory.parameter import ParameterList
+from ng_trajectory.segmentators.utils import (
+    pointToMap,
+    validCheck,
+)
 
 # Parameters
-from ng_trajectory.parameter import *
 P = ParameterList()
 P.createAdd("method", "max", str, "Optimization method for final penalty -- min / max / sum / avg.", "Init.")
 P.createAdd("huber_loss", False, bool, "Whether to use Huber loss for computing the fitness.", "Init.")
@@ -43,7 +48,9 @@ METHODS = {
     "avg": {
         "function": lambda old, new: old + new,
         "initial": 0,
-        "after": lambda result, invalid_count: result / invalid_count if invalid_count > 0 else result,
+        "after": lambda result, invalid_count: (
+            result / invalid_count if invalid_count > 0 else result
+        ),
     },
 }
 
@@ -65,17 +72,18 @@ def eInvalidPoints(points: numpy.ndarray) -> List[Tuple[int, List[float]]]:
     points -- points to check, nx2 numpy.ndarray
 
     Return:
-    yield (_i, _p) -- invalid points with their indices, m-list of (int, [float])
+    yield (_i, _p) -- invalid points with their indices,
+                      m-list of (int, [float])
     """
-
     for _i, _p in enumerate(points):
         try:
-            # Depending on the context (i.e., how often something happens) it might be better to just
-            # avoid 'pointInBounds' and catch the exception.
-            # If there are many points outside the map it should be better to call the function instead
-            # of try-except.
-            #if not pointInBounds(_p) or not validCheck(pointToMap(_p)):
+            # Depending on the context (i.e., how often something happens)
+            # it might be better to just avoid 'pointInBounds' and catch
+            # the exception.
+            # If there are many points outside the map it should be better
+            # to call the function instead of try-except.
+            # if not pointInBounds(_p) or not validCheck(pointToMap(_p)):
             if not validCheck(pointToMap(_p)):
                 yield _i, _p
-        except:
+        except IndexError:
             yield _i, _p

@@ -1,6 +1,9 @@
 #!/usr/bin/env python3.6
 # main.py
 """Compute criterion using speed profile and lap time.
+
+[1] R. N. Jazar, Advanced Vehicle Dynamics. Cham: Springer International
+Publishing, 2019. doi: 10.1007/978-3-030-13062-6.
 """
 ######################
 # Imports & Globals
@@ -11,7 +14,7 @@ import math
 
 
 # Parameters
-from ng_trajectory.parameter import *
+from ng_trajectory.parameter import ParameterList
 P = ParameterList()
 P.createAdd("overlap", 0, int, "Size of the trajectory overlap. 0 disables this.", "")
 
@@ -64,7 +67,7 @@ S = lambda value, limit: max(min(value, limit), -limit)
 # Equations
 ######################
 
-"""
+r"""
 Forces on 'z-axis', i.e. oriented down to the surface. The original
 version assumes load transfer:
 
@@ -83,7 +86,7 @@ F_zf = lambda omega, v_y: P.getValue("m") * P.getValue("g") * P.getValue("l_r") 
 F_zr = lambda omega, v_y: P.getValue("m") * P.getValue("g") * P.getValue("l_f") / (P.getValue("l_f") + P.getValue("l_r")) - P.getValue("m") * omega * v_y * P.getValue("h") / (P.getValue("l_f") + P.getValue("l_r"))
 
 
-"""
+r"""
 Tire forces based on elliptic combined tire forces:
 
 $$
@@ -110,7 +113,7 @@ F_yf = lambda omega, v_y: -F_zf(omega, v_y) * P.getValue("C_af") * 0
 F_yr = lambda omega, v_y: -F_zr(omega, v_y) * P.getValue("C_ar") * 0
 
 
-"""
+r"""
 Bicycle model is desribed by following set of equations
 (without control part):
 
@@ -125,7 +128,7 @@ F_y = lambda delta, omega, v_y: F_yf(omega, v_y) * math.cos(delta) + F_yr(omega,
 M_z = lambda delta, omega, v_y: P.getValue("l_f") * F_yf(omega, v_y) * math.cos(delta) + P.getValue("l_f") * F_xf(omega, v_y) * math.sin(delta) - P.getValue("l_r") * F_yr(omega, v_y)
 
 
-"""
+r"""
 Aerodynamic forces acting on the car are simplified to:
 
 $$
@@ -135,7 +138,7 @@ $$
 F_a = lambda v_x: 0.5 * P.getValue("ro") * P.getValue("cl") * P.getValue("A") * v_x * v_x
 
 
-"""
+r"""
 Equations of motion are (without the control part):
 
 $$
@@ -163,7 +166,6 @@ def forward_pass(points: numpy.ndarray):
     v_fwd -- velocities in the points after forward pass, nx1 numpy.ndarray
     v_max -- maximum permissible velocities in the points, nx1 numpy.ndarray
     """
-
     v_fwd = numpy.zeros(len(points))
     v_max = numpy.zeros(len(points))
 
@@ -173,17 +175,17 @@ def forward_pass(points: numpy.ndarray):
         P.getValue("v_0"),
         math.sqrt(
             math.sqrt(
-                ((min(P.getValue("C_sf"), P.getValue("C_sr")) * P.getValue("s_s"))**2 * P.getValue("m")**2 * P.getValue("g")**2)/(_ca**2 - 2 * _ca * P.getValue("m") * abs(points[0, 2]) * math.tan(beta) + P.getValue("m")**2 * points[0, 2]**2 * math.tan(beta)**2 + P.getValue("m")**2 * points[0, 2]**2)
+                ((min(P.getValue("C_sf"), P.getValue("C_sr")) * P.getValue("s_s"))**2 * P.getValue("m")**2 * P.getValue("g")**2) / (_ca**2 - 2 * _ca * P.getValue("m") * abs(points[0, 2]) * math.tan(beta) + P.getValue("m")**2 * points[0, 2]**2 * math.tan(beta)**2 + P.getValue("m")**2 * points[0, 2]**2)
             )
         )
     )
 
     for i in range(len(points)):
-        if i == len(points)-1:
+        if i == len(points) - 1:
             break
 
         _x, _y, _k = points[i, :]
-        _x1, _y1, _k1 = points[(i + 1)%len(points), :]
+        _x1, _y1, _k1 = points[(i + 1) % len(points), :]
 
 
         # Distance between points
@@ -197,23 +199,23 @@ def forward_pass(points: numpy.ndarray):
             # Compute maximum permissible steady-state vehicle speed
             # Given zero longitudinal force
             # Edit: Actually not. It is without Fa only.
-            #v_fwd[i + 1] = math.sqrt(
-            #    math.sqrt(
-            #        ((min(P.getValue("C_sf"), P.getValue("C_sr")) * P.getValue("s_s"))**2 * P.getValue("g")**2 * (1/_k1)**2)/(1 + math.tan(beta)**2)
-            #    )
-            #)
+            # v_fwd[i + 1] = math.sqrt(
+            #     math.sqrt(
+            #         ((min(P.getValue("C_sf"), P.getValue("C_sr")) * P.getValue("s_s"))**2 * P.getValue("g")**2 * (1/_k1)**2)/(1 + math.tan(beta)**2)
+            #     )
+            # )
             # With aerodynamics:
             _ca = 0.5 * P.getValue("ro") * P.getValue("cl") * P.getValue("A")
             v_fwd[i + 1] = math.sqrt(
                 math.sqrt(
-                    ((min(P.getValue("C_sf"), P.getValue("C_sr")) * P.getValue("s_s"))**2 * P.getValue("m")**2 * P.getValue("g")**2)/(_ca**2 - 2 * _ca * P.getValue("m") * _k1 * math.tan(beta) + P.getValue("m")**2 * _k1**2 * math.tan(beta)**2 + P.getValue("m")**2 * _k1**2)
+                    ((min(P.getValue("C_sf"), P.getValue("C_sr")) * P.getValue("s_s"))**2 * P.getValue("m")**2 * P.getValue("g")**2) / (_ca**2 - 2 * _ca * P.getValue("m") * _k1 * math.tan(beta) + P.getValue("m")**2 * _k1**2 * math.tan(beta)**2 + P.getValue("m")**2 * _k1**2)
                 )
             )
 
 
             # Constrain it with the maximum allowed speed
             v_fwd[i + 1] = min(v_fwd[i + 1], P.getValue("v_lim"))
-            v_max[i+1] = v_fwd[i+1]
+            v_max[i + 1] = v_fwd[i + 1]
 
 
             # Compute acceleration target, i.e., how much we have to accelerate
@@ -228,7 +230,7 @@ def forward_pass(points: numpy.ndarray):
 
             if _a_lim < 0:
                 # FIXME: Možná tady je mínus?
-                a_lim = math.sqrt(-_a_lim) #*-1
+                a_lim = math.sqrt(-_a_lim)  # *-1
             else:
                 a_lim = math.sqrt(_a_lim)
 
@@ -245,12 +247,12 @@ def forward_pass(points: numpy.ndarray):
 
 
         # Compute acceleration (use all constraints together)
-        #a = S(a_tar, S(a_lim, P.getValue("a_acc_max")))
+        # a = S(a_tar, S(a_lim, P.getValue("a_acc_max")))
         a = min(min(a_tar, a_lim), P.getValue("a_acc_max"))
-        #print(v_fwd[i], v_fwd[i+1], v_max[i+1], a_tar, a_lim, a)
+        # print(v_fwd[i], v_fwd[i+1], v_max[i+1], a_tar, a_lim, a)
 
         # Modify velocity of the next point
-        v_fwd[i+1] = math.sqrt(v_fwd[i]**2 + 2 * a * ds)
+        v_fwd[i + 1] = math.sqrt(v_fwd[i]**2 + 2 * a * ds)
 
 
     return v_fwd, v_max
@@ -269,21 +271,20 @@ def backward_pass(points: numpy.ndarray, v_fwd: numpy.ndarray):
     a -- accelerations in the points, nx1 numpy.ndarray
     t -- time required to reach target point, nx1 numpy.ndarray
     """
-
     v = numpy.zeros(len(points))
     a = numpy.zeros(len(points))
     dt = numpy.zeros(len(points))
 
     v[-1] = v_fwd[-1]
 
-    #beta = 0
+    # beta = 0
     mu = (min(P.getValue("C_sf"), P.getValue("C_sr")) * P.getValue("s_s"))
 
     for i in reversed(range(len(points))):
         if i == 0:
             break
         _x, _y, _k = points[i, :]
-        _x1, _y1, _k1 = points[(i - 1)%len(points), :]
+        _x1, _y1, _k1 = points[(i - 1) % len(points), :]
 
 
         # Distance between points
@@ -304,7 +305,7 @@ def backward_pass(points: numpy.ndarray, v_fwd: numpy.ndarray):
 
             if _a_lim < 0:
                 # FIXME: Možná tady je mínus?
-                a_lim = math.sqrt(-_a_lim) #*-1
+                a_lim = math.sqrt(-_a_lim)  # *-1
             else:
                 a_lim = math.sqrt(_a_lim)
 
@@ -321,21 +322,21 @@ def backward_pass(points: numpy.ndarray, v_fwd: numpy.ndarray):
 
 
         # Compute acceleration (use all constraints together)
-        #a = S(a_tar, S(a_lim, P.getValue("a_break_max")))
+        # a = S(a_tar, S(a_lim, P.getValue("a_break_max")))
         a[i - 1] = min(min(a_tar, a_lim), P.getValue("a_break_max"))
 
 
         # Modify velocity of the next point
         try:
             v[i - 1] = math.sqrt(v[i]**2 + 2 * a[i - 1] * ds)
-        except:
+        except ValueError:
             print (v[i], v[i - 1], a, ds, _x, _y, _k, _x1, _y1, _k1)
-            #raise
+            # raise
             v[i - 1] = 0
 
 
         # Compute time required to drive over ds
-        dt[i] = ds / ( (v[i] + v[i - 1]) / 2 )
+        dt[i] = ds / ((v[i] + v[i - 1]) / 2)
 
 
     return v, a, numpy.cumsum(dt)
@@ -353,10 +354,10 @@ def computeProfile(points):
 
     Returns:
     v -- speed profile of the trajectory, [m.s^-1], nx1 numpy.ndarray
-    a -- final acceleration profile of the trajectory, [m.s^-2], nx1 numpy.ndarray
+    a -- final acceleration profile of the trajectory, [m.s^-2],
+         nx1 numpy.ndarray
     t -- time of reaching the points of the trajectory, [s], nx1 numpy.ndarray
     """
-
     # Add overlap if requested
     if P.getValue("overlap") > 0:
         _points = addOverlap(points, P.getValue("overlap"))
@@ -384,7 +385,6 @@ def computeProfile(points):
 
 def init(**kwargs) -> None:
     """Initialize criterion."""
-
     P.updateAll(kwargs, reset = False)
 
 
@@ -399,7 +399,6 @@ def compute(points: numpy.ndarray, **overflown) -> float:
     t -- time of reaching the last point of the trajectory, [s], float
          minimization criterion
     """
-
     P.updateAll(overflown, reset = False)
 
     _, _, t = computeProfile(points)

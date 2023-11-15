@@ -664,7 +664,7 @@ _penalizers.borderlines_
 
 Borderlines penalizer.
 
-Borderlines are sets of points on the borders between to adjacent segments. We have borderlines for each segment and for each neighbour
+Borderlines are sets of points on the borders between two adjacent segments. We have borderlines for each segment and for each neighbour
 (usually resulting into n * 2 arrays).
 
 This penalizer detects all misplaced points. Each point is associated with a borderline based upon its location -- e.g., points in between selected points of segments #5 and #6 belong to borderline 5-6.
@@ -720,68 +720,63 @@ silent_stub (bool) = False [When set, the application does not report that an al
 
 ## Plot functions for ng_trajectory
 
-From the user side (i.e., configuration file), only dynamic plotting is available.
-However, all plotting (package-wise) should be controlled by variable `plot` that
-is set to False by default.
+From the user side (i.e., configuration file), only dynamic plotting is available. However, all plotting (package-wise) should be controlled by variable `plot` that is set to False by default.
 
-Dynamic plotting is defined using a custom key in the JSON. Following example
-resembles what is a "standard" and most used configuration:
+Dynamic plotting is defined using a custom key in the JSON. Following example resembles what is a "standard" and most used configuration:
 ```json
-"plot": true,
-"plot_args": [
-    {
-        "_figure": {
-            "function": "axis",
-            "_args": [ "equal" ]
-        },
-        "trackPlot": [ "@track" ]
-    },
-    {
-        "pointsPlot": {
-            "_args": [ "@result" ]
-        },
-        "pointsScatter": {
-            "_args": [ "@rcandidate" ]
-        }
-    }
-]
+{
+	"plot": true,
+	"plot_args": [
+		{
+			"_figure": {
+				"function": "axis",
+				"_args": [ "equal" ]
+			},
+			"trackPlot": [ "@track" ]
+		},
+		{
+			"pointsPlot": {
+				"_args": [ "@result" ]
+			},
+			"pointsScatter": {
+				"_args": [ "@rcandidate" ]
+			}
+		}
+	]
+}
 ```
-Note: This creates a figure with equal axis, underlying track, optimized control
-points of the trajectory and their interpolation.
 
-The list in `plot_args` contains two dictionaries. The first one is executed
-before the optimization (and even before initialization of algorithms), whereas
-the second one is executed after optimization finishes.
+Note: This creates a figure with equal axis, underlying track, optimized control points of the trajectory and their interpolation.
+
+The list in `plot_args` contains two dictionaries. The first one is executed before the optimization (and even before initialization of algorithms), whereas the second one is executed after optimization finishes.
 
 Commands in the `plot_args` are executed in order, key-wise. Basic syntax is
 ```json
-"func": [ "arg1", "arg2" ]
+{
+	"func": [ "arg1", "arg2" ]
+}
 ```
 
 which sends all arguments to the function, or
 ```json
-"func": {
-    "_args": [ "arg1", "arg2" ],
-    "kw_arg": 4
+{
+	"func": {
+		"_args": [ "arg1", "arg2" ],
+		"kw_arg": 4
+	}
 }
 ```
 
-which calls `func` with the arguments stored in `_args`, appended with other
-arguments as kwargs.
+which calls `func` with the arguments stored in `_args`, appended with other arguments as kwargs.
 
 Note: Keys starting with `_` are treated differently; and are removed from kwargs.
 
-Since it is not possible to have a dictionary with repeating keys, you can use
-a meta character `-`. Dash, and everything after it is discarded during dynamic
-plotting.
+Since it is not possible to have a dictionary with repeating keys, you can use a meta character `-`. Dash, and everything after it is discarded during dynamic plotting.
 
-To pass a variable to the function, write its name prefixed with `@`. In case
-that the variable is not available, an exception is raised.
+To pass a variable to the function, write its name prefixed with `@`. In case that the variable is not available, an exception is raised.
 
 
-### Available functions
-Following functions are available for plotting, however only the first three
-are usually used:
+### Available functions Following functions are available for plotting, however only the first three are usually used:
 
 - trackPlot
 - pointsScatter
@@ -795,9 +790,7 @@ are usually used:
 - labelText
 
 
-### Available variables
-Following variables are available for plotting (by setting the value to `@` + name
-of the variable):
+### Available variables Following variables are available for plotting (by setting the value to `@` + name of the variable):
 
 - track -- All valid points of the track.
 - fitness -- Fitness value of the best solution.
@@ -805,18 +798,18 @@ of the variable):
 - tcandidate -- Control points of the best solution in Matryoshka space.
 - result -- Optimized trajectory (interpolation of rcandidate).
 - figure -- Currently used figure for plotting.
-- + any variable defined in the current loop from the configuration file.
+- \+ any variable defined in the current loop from the configuration file.
 
 
-### Matplotlib wrapper
-In addition, it is possible to call literally any function related to `pyplot` or
-`figure` from the matplotlib. To do this, call function `_pyplot`/`_figure`
-with argument `function` with the name of the required function.
+### Matplotlib wrapper In addition, it is possible to call literally any function related to `pyplot` or
+`figure` from the matplotlib. To do this, call function `_pyplot`/`_figure` with argument `function` with the name of the required function.
 
 For example, to make the axis equal, one can use this:
 ```json
-"_figure": {
-    "function": "axis",
-    "_args": [ "equal" ]
+{
+	"_figure": {
+		"function": "axis",
+		"_args": [ "equal" ]
+	}
 }
 ```

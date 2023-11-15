@@ -1,6 +1,8 @@
 #!/usr/bin/env python3.6
 # main.py
 """Compute criterion using curvature of the path.
+
+Optimize using sum( (k_i)^2 ).
 """
 ######################
 # Imports & Globals

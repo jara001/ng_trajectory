@@ -1,12 +1,16 @@
 #!/usr/bin/env python3.6
 # main.py
 """Imitate selector by returning a fixed set of points.
+
+This is used just for simple testing / enforcing a candidate.
 """
 ######################
 # Imports & Globals
 ######################
 
-import numpy, sys
+import numpy
+
+from ng_trajectory.parameter import ParameterList
 
 from typing import List
 
@@ -16,7 +20,6 @@ POINTS = 0
 
 
 # Parameters
-from ng_trajectory.parameter import *
 P = ParameterList()
 P.createAdd("points", "", list, "Points to be returned upon calling 'select', list of points", "init")
 
@@ -25,12 +28,14 @@ P.createAdd("points", "", list, "Points to be returned upon calling 'select', li
 # Functions
 ######################
 
-def init(points: List[List[float]] = "",
+def init(
+        points: List[List[float]] = "",
         **kwargs) -> None:
     """Initialize selector.
 
     Arguments:
-    points -- points to be returned upon calling select, list of nx2 points, default ""
+    points -- points to be returned upon calling select,
+              list of nx2 points, default ""
     """
     global POINTS
 
@@ -50,5 +55,4 @@ def select(points: numpy.ndarray, remain: int, **overflown) -> numpy.ndarray:
 
     Note: Remain is ignored.
     """
-
     return POINTS[:, :2]

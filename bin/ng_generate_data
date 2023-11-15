@@ -1,13 +1,14 @@
 #!/usr/bin/env python3.6
 #!ARGS::../../f1tenth-v1/base_overlay/src/storage/stage/map/torcs/Ruudskogen.pgm
 # ng_generate_data.py
-"""Script for generating *.npy data from maps.
-"""
+"""Script for generating *.npy data from maps."""
 ######################
 # Imports & Globals
 ######################
 
-import sys, os, argparse
+import sys
+import os
+import argparse
 
 # Load PIL with preserved typing
 # https://stackoverflow.com/questions/58236138/pil-and-python-static-typing
@@ -21,11 +22,11 @@ import numpy
 import yaml
 
 # ng_trajectory utilities
-#from ng_trajectory.optimizers.matryoshka.transform import pointsFilter
+# from ng_trajectory.optimizers.matryoshka.transform import pointsFilter
 
 
 # Typing
-from typing import List, Generator
+from typing import List
 
 
 # Custom types
@@ -37,13 +38,25 @@ class ReadableFile(object):
     """
 
     def __init__(self):
+        """Initialize the custom type."""
         super(ReadableFile, self).__init__()
 
     def __call__(self, filename):
+        """Check whether the file is readable.
 
+        Arguments:
+        filename -- name of the file to check, str
+
+        Raises:
+        argparse.ArgumentTypeError when not readable
+        """
         if not os.access(filename, os.R_OK):
             raise argparse.ArgumentTypeError(
-                ("permission denied '%s'" if os.access(filename, os.F_OK) else "no such file '%s'") % filename
+                (
+                    "permission denied '%s'"
+                    if os.access(filename, os.F_OK)
+                    else "no such file '%s'"
+                ) % filename
             )
 
         return filename
@@ -51,7 +64,9 @@ class ReadableFile(object):
 
 # Global variables
 HOOD4 = numpy.asarray([[-1, 0], [0, -1], [1, 0], [0, 1]])
-HOOD8 = numpy.asarray([[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]])
+HOOD8 = numpy.asarray([
+    [-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]
+])
 PARSER = argparse.ArgumentParser(
     prog = "ng_generate_data",
     formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -63,66 +78,85 @@ Notes:
 - YAML file is loaded and replaced with its arguments.
 - An image is generated at the end, showing the processed data. Centerline points
   (unfiltered) are shown green, while the results (start points) are shown red.
-    """,
+    """,  # noqa: E501
 )
 
 # Arguments
-PARSER.add_argument("input_file",
+PARSER.add_argument(
+    "input_file",
+
     nargs = "?",
     help = "Input source image, %%s",
     type = ReadableFile(),
     metavar = "INPUT_FILE",
 )
 
-PARSER.add_argument("-f",
+PARSER.add_argument(
+    "-f",
+
     dest = "file",
     help = "Input source image, %%s",
     type = ReadableFile(),
     metavar = "INPUT_FILE",
 )
 
-PARSER.add_argument("-r", "--resize",
+PARSER.add_argument(
+    "-r",
+    "--resize",
+
     dest = "resize",
     help = "Ratio to resize the source image, %%f",
     default = 1.0,
     type = float,
 )
 
-PARSER.add_argument("--resolution",
+PARSER.add_argument(
+    "--resolution",
+
     dest = "resolution",
     help = "Resolution of the map inside source image, %%f",
     default = 1.0,
     type = float,
 )
 
-PARSER.add_argument("--ox",
+PARSER.add_argument(
+    "--ox",
+
     dest = "originx",
     help = "Location of origin by the x-axis, %%f meters",
     default = 0.0,
     type = float,
 )
 
-PARSER.add_argument("--oy",
+PARSER.add_argument(
+    "--oy",
+
     dest = "originy",
     help = "Location of origin by the y-axis, %%f meters",
     default = 0.0,
     type = float,
 )
 
-PARSER.add_argument("-y",
+PARSER.add_argument(
+    "-y",
+
     dest = "yaml",
     help = "Input YAML file",
     type = ReadableFile(),
 )
 
-PARSER.add_argument("-v",
+PARSER.add_argument(
+    "-v",
+
     dest = "verbose",
     help = "Give more output.",
     default = 0,
     action = "count",
 )
 
-PARSER.add_argument("--inflate",
+PARSER.add_argument(
+    "--inflate",
+
     dest = "inflate",
     help = "Inflation size, %%d cells",
     default = 0,
@@ -141,11 +175,11 @@ def printv(*a, **kw) -> None:
 
 
 def savev(im, filename: str) -> None:
-    """Saves an image when verbose is set to >=2."""
+    """Save an image when verbose is set to >=2."""
     if args.verbose >= 2:
         try:
             _image = P.fromarray(im)
-        except:
+        except TypeError:
             _image = P.fromarray(numpy.asarray(im, dtype = numpy.uint8).copy())
 
         _image.convert("L")
@@ -164,26 +198,29 @@ def pointsFilter(points: numpy.ndarray, grid: float = None) -> numpy.ndarray:
     Note: It is expected that points are aligned to a square grid.
     Note: Extended version from Matryoshka transform.
     """
-
     _points = []
 
     # Obtain grid size if not set
     _grid = grid if grid else numpy.min(
+        [
+            numpy.min(numpy.subtract(u[1:], u[:-1])) for u in
             [
-                numpy.min( numpy.subtract(u[1:], u[:-1]) ) for u in
-                    [
-                        numpy.unique( points[:, d] ) for d in range(points.shape[1])
-                    ]
+                numpy.unique(points[:, d]) for d in range(points.shape[1])
             ]
-        )
+        ]
+    )
 
     # Convert points to cell-oriented list
     _cells = [
-            [ int( numpy.round(_p[_d] / _grid) ) for _d in range(points.shape[1]) ] for _p in points
-        ]
+        [
+            int(numpy.round(_p[_d] / _grid)) for _d in range(points.shape[1])
+        ] for _p in points
+    ]
     _cells_copy = [
-            [ int( numpy.round(_p[_d] / _grid) ) for _d in range(points.shape[1]) ] for _p in points
-        ]
+        [
+            int(numpy.round(_p[_d] / _grid)) for _d in range(points.shape[1])
+        ] for _p in points
+    ]
 
     # Treat points as list
     pointsL = points.tolist()
@@ -198,32 +235,50 @@ def pointsFilter(points: numpy.ndarray, grid: float = None) -> numpy.ndarray:
         # _X_  _X_  _X_  _XX  _X_  _X_  _X_  XX_
         # ___  ___  ___  ___  __X  _X_  X__  ___
         # Convert points to a cell
-        _cell = [ int( numpy.round(_p[_d] / _grid) ) for _d in range(points.shape[1]) ]
+        _cell = [
+            int(numpy.round(_p[_d] / _grid)) for _d in range(points.shape[1])
+        ]
 
         # Ranges
         _xr = range(-1, 2)
         _yr = range(-1, 2)
 
         # Count number of points in the area (x-wise, y-wise)
-        x = [ sum([ [ _cell[0] + _x, _cell[1] + _y ] in _cells for _y in _yr ]) for _x in _xr ]
-        y = [ sum([ [ _cell[0] + _x, _cell[1] + _y ] in _cells for _x in _xr ]) for _y in _yr ]
-        x_sum = sum([ _x > 0 for _x in x ])
-        y_sum = sum([ _y > 0 for _y in y ])
+        x = [
+            sum([
+                [_cell[0] + _x, _cell[1] + _y] in _cells for _y in _yr
+            ]) for _x in _xr
+        ]
+        y = [
+            sum([
+                [_cell[0] + _x, _cell[1] + _y] in _cells for _x in _xr
+            ]) for _y in _yr
+        ]
+        x_sum = sum([_x > 0 for _x in x])
+        y_sum = sum([_y > 0 for _y in y])
 
         # Count the points on HOOD4
         # _._
         # ...
         # _._
-        x_4 = sum([ [ _cell[0] + _x, _cell[1]      ] in _cells for _x in _xr ])
-        y_4 = sum([ [ _cell[0],      _cell[1] + _y ] in _cells for _y in _yr ])
+        x_4 = sum([[_cell[0] + _x, _cell[1]] in _cells for _x in _xr])
+        y_4 = sum([[_cell[0], _cell[1] + _y] in _cells for _y in _yr])
 
-        # Second part resolves issues with multiple centerlines being improperly filtered
+        # Second part resolves issues with multiple centerlines
+        # being improperly filtered
         # __X  _XX  _X_  __X  __X
         # _XX  _XX  _XX  _XX  _XX
         # __X  __X  __X  _XX  _X_
         # and their rotations
-        if ( ( x_sum < 3 ) and ( y_sum < 3 ) ) or \
-            (x_sum + y_sum == 5 and (x_4 == y_4 == 2 or (x_4 + y_4 == 3 and 3 in x + y))):
+        if (
+            (
+                x_sum < 3 and y_sum < 3
+            )
+            or (
+                x_sum + y_sum == 5
+                and (x_4 == y_4 == 2 or (x_4 + y_4 == 3 and 3 in x + y))
+            )
+        ):
             # Return nearby points back to the loop
             for _xr in range(-1, 2):
                 for _yr in range(-1, 2):
@@ -231,10 +286,13 @@ def pointsFilter(points: numpy.ndarray, grid: float = None) -> numpy.ndarray:
                         continue
 
                     # Get index of the cell
-                    _nearbyc = [ _cell[0] + _xr, _cell[1] + _yr ]
+                    _nearbyc = [_cell[0] + _xr, _cell[1] + _yr]
 
                     # Find whether it is a valid border cell and try to find it
-                    if _nearbyc in _cells_copy and pointsL[_cells_copy.index(_nearbyc)] in _points:
+                    if (
+                        _nearbyc in _cells_copy
+                        and pointsL[_cells_copy.index(_nearbyc)] in _points
+                    ):
                         _nearbyp = pointsL[_cells_copy.index(_nearbyc)]
                         _points.remove(_nearbyp)
                         pointsL.append(_nearbyp)
@@ -263,7 +321,6 @@ def getWalls(im: Image) -> List[numpy.ndarray]:
     Sources:
     https://stackoverflow.com/questions/46083880/fill-in-a-hollow-shape-using-python-and-pillow-pil
     """
-
     # Duplicate image
     _im = im.copy()
 
@@ -304,7 +361,10 @@ def getWalls(im: Image) -> List[numpy.ndarray]:
             )
         )
 
-        sys.stdout.write("\rObtaining walls... %03.2f%%" % (100.0 - (100.0 * _im.histogram()[wall_color] / starting_value)))
+        sys.stdout.write(
+            "\rObtaining walls... %03.2f%%"
+            % (100.0 - (100.0 * _im.histogram()[wall_color] / starting_value))
+        )
 
     print (" - DONE")
 
@@ -315,13 +375,18 @@ def getWalls(im: Image) -> List[numpy.ndarray]:
 
     if args.verbose:
         print ("Found %d walls:" % len(walls))
-        print ("\n".join(["\t Wall %d: length %d" % (_i + 1, len(wall)) for _i, wall in enumerate(walls)]))
+        print (
+            "\n".join([
+                "\t Wall %d: length %d" % (_i + 1, len(wall))
+                for _i, wall in enumerate(walls)
+            ])
+        )
 
     return walls
 
 
 def inflateWalls(im: Image) -> Image:
-    """Inflates the walls by a certain amount.
+    """Inflate the walls by a certain amount.
 
     Arguments:
     im -- loaded image
@@ -329,7 +394,6 @@ def inflateWalls(im: Image) -> Image:
     Returns:
     _im -- inflated image
     """
-
     # Duplicate image
     _im = im.copy()
 
@@ -339,7 +403,7 @@ def inflateWalls(im: Image) -> Image:
     # Name colors (just in case)
     try:
         WALL, UNKN, FREE = numpy.unique(nd)
-    except:
+    except ValueError:
         WALL, FREE = numpy.unique(nd)
 
 
@@ -362,7 +426,10 @@ def inflateWalls(im: Image) -> Image:
         )
 
         # Throw away points that are outside the image and remove duplicits
-        _hood = numpy.unique(_hood[~numpy.any((_hood < 0) | (_hood >= nd.shape), axis = 1), :], axis = 0)
+        _hood = numpy.unique(
+            _hood[~numpy.any((_hood < 0) | (_hood >= nd.shape), axis = 1), :],
+            axis = 0
+        )
 
         # Find all other points
         # Copy is required as argwhere returns 2xn array with nx2 view,
@@ -374,7 +441,10 @@ def inflateWalls(im: Image) -> Image:
         z = intersectArrays(_hood, _not_wall)
         nd[z[:, 0], z[:, 1]] = WALL
 
-        printv("\tLoop %d: %d of wall cells" % (_i + 1, len(numpy.argwhere(nd == WALL))))
+        printv(
+            "\tLoop %d: %d of wall cells"
+            % (_i + 1, len(numpy.argwhere(nd == WALL)))
+        )
 
     print (" - DONE")
 
@@ -397,20 +467,18 @@ def intersectArrays(arr1: numpy.ndarray, arr2: numpy.ndarray) -> numpy.ndarray:
     Source:
     # https://stackoverflow.com/questions/9269681/intersection-of-2d-numpy-ndarrays
     """
-
-    arr1_view = arr1.view([('',arr1.dtype)]*arr1.shape[1])
-    arr2_view = arr2.view([('',arr2.dtype)]*arr2.shape[1])
+    arr1_view = arr1.view([('', arr1.dtype)] * arr1.shape[1])
+    arr2_view = arr2.view([('', arr2.dtype)] * arr2.shape[1])
     intersected = numpy.intersect1d(arr1_view, arr2_view)
     return intersected.view(arr1.dtype).reshape(-1, arr1.shape[1])
 
 
 def processImage(im: Image) -> None:
-    """Loads an image from the file and generates .npy data.
+    """Load an image from the file and generates .npy data.
 
     Arguments:
     im -- loaded image
     """
-
     # Inflate walls if required
     if args.inflate > 0:
         im = inflateWalls(im)
@@ -426,11 +494,11 @@ def processImage(im: Image) -> None:
     # Name colors (just in case)
     try:
         WALL, UNKN, FREE = numpy.unique(nd)
-    except:
+    except ValueError:
         WALL, FREE = numpy.unique(nd)
 
 
-    ## Inflate walls
+    # # Inflate walls # #
 
     # Obtain all empty spaces
     _free = numpy.argwhere(nd == FREE).copy()
@@ -445,7 +513,7 @@ def processImage(im: Image) -> None:
     starting_value = len(_free)
 
     # Until there are no more free elements left
-    while len(_free) > 0 and max([ len(wall) for wall in walls]) > 0:
+    while len(_free) > 0 and max([len(wall) for wall in walls]) > 0:
 
         # Obtain all walls of one color and replicate it
         # https://stackoverflow.com/questions/53239242/how-to-duplicate-each-row-of-a-matrix-n-times-numpy
@@ -458,15 +526,20 @@ def processImage(im: Image) -> None:
         )
 
         # Throw away points that are outside the image and remove duplicits
-        _hood = numpy.unique(_hood[~numpy.any((_hood < 0) | (_hood >= nd.shape), axis = 1), :], axis = 0)
+        _hood = numpy.unique(
+            _hood[~numpy.any((_hood < 0) | (_hood >= nd.shape), axis = 1), :],
+            axis = 0
+        )
 
         # Find all free points that are also in the neighbourhood
-        _new_wall = _hood[numpy.where(nd_walls[_hood[:, 0], _hood[:, 1]] == 0)[0], :]
+        _new_wall = _hood[
+            numpy.where(nd_walls[_hood[:, 0], _hood[:, 1]] == 0)[0], :
+        ]
 
         # Mark newly found walls
         nd[_new_wall[:, 0], _new_wall[:, 1]] = _w + 1
         nd_walls[_new_wall[:, 0], _new_wall[:, 1]] = _w + 1
-        
+
         # Save these walls for the next iteration
         walls[_w] = _new_wall
 
@@ -474,7 +547,10 @@ def processImage(im: Image) -> None:
         _w = (_w + 1) % len(walls)
         _free = numpy.argwhere(nd == FREE).copy()
 
-        sys.stdout.write("\rInflating map... %03.2f%%" % (100.0 - (100.0 * len(_free) / starting_value)))
+        sys.stdout.write(
+            "\rInflating map... %03.2f%%"
+            % (100.0 - (100.0 * len(_free) / starting_value))
+        )
 
     print (" - DONE")
     printv ("Covered all of %d free cells." % starting_value)
@@ -487,7 +563,7 @@ def processImage(im: Image) -> None:
         printv ("Saved inflated map to 'inflated.png'.")
 
 
-    ## Obtain centerline
+    # # Obtain centerline # #
     sys.stdout.write("\rGenerating centerline...")
 
     border = []
@@ -510,7 +586,10 @@ def processImage(im: Image) -> None:
         )
 
         # Throw away points that are outside the image and remove duplicits
-        _hood = numpy.unique(_hood[~numpy.any((_hood < 0) | (_hood >= nd.shape), axis = 1), :], axis = 0)
+        _hood = numpy.unique(
+            _hood[~numpy.any((_hood < 0) | (_hood >= nd.shape), axis = 1), :],
+            axis = 0
+        )
 
         # Find all points of other walls
         # Copy is required as argwhere returns 2xn array with nx2 view,
@@ -532,16 +611,19 @@ def processImage(im: Image) -> None:
     printv ("Centerline has length %d." % len(border))
 
 
-    ## Remove duplicits of centerline points
+    # # Remove duplicits of centerline points # #
     border = numpy.unique(border, axis = 0)
 
 
-    ## Filter centerline points
+    # # Filter centerline points # #
     sys.stdout.write("\rFiltering points...")
     filtered_border = pointsFilter(border).tolist()
     if len(filtered_border) < 1:
         print (" - FAILED")
-        printv ("Using the centerline of largest wall, as filter removed everything.")
+        printv (
+            "Using the centerline of largest wall, "
+            "as filter removed everything."
+        )
         printv ("Centerline has %d points." % wall_len_1)
         filtered_border = border.tolist()[0:wall_len_1]
     else:
@@ -549,7 +631,7 @@ def processImage(im: Image) -> None:
         printv ("Reduced centerline to %d points." % len(filtered_border))
 
 
-    ## Sort centerline points
+    # # Sort centerline points # #
     # Note: This is an adapted version from 'ng_trajectory:trajectorySort()'.
     sorted_points = []
     _filtered_border = filtered_border.copy()
@@ -562,7 +644,10 @@ def processImage(im: Image) -> None:
         point = None
 
         for p in _filtered_border:
-            dist = numpy.hypot(p[0] - sorted_points[-1][0], p[1] - sorted_points[-1][1])
+            dist = numpy.hypot(
+                p[0] - sorted_points[-1][0],
+                p[1] - sorted_points[-1][1]
+            )
 
             if dist < min_dist:
                 min_dist = dist
@@ -571,14 +656,17 @@ def processImage(im: Image) -> None:
         sorted_points.append(point)
         _filtered_border.remove(point)
 
-        sys.stdout.write("\rSorting points... %03.2f%%" % (100.0 - (100.0 * len(_filtered_border) / starting_value)))
+        sys.stdout.write(
+            "\rSorting points... %03.2f%%"
+            % (100.0 - (100.0 * len(_filtered_border) / starting_value))
+        )
 
     print (" - DONE")
 
     sorted_points = numpy.asarray(sorted_points)
 
 
-    ## Create and save image of the situation
+    # # Create and save image of the situation # #
     sys.stdout.write("\rSaving the data...")
 
     nnd = numpy.asarray(im.convert("RGB"))
@@ -586,14 +674,14 @@ def processImage(im: Image) -> None:
         nnd[border[:, 0], border[:, 1]] = [0, 255, 0]
         for x, y in filtered_border:
             nnd[x, y] = [255, 0, 0]
-    except:
+    except IndexError:
         pass
 
     nndi = P.fromarray(nnd)
     nndi.save("generated_data.png")
 
 
-    ## Save into npy
+    # # Save into npy # #
 
     start_points = numpy.asarray(sorted_points).astype(float)
 
@@ -602,7 +690,7 @@ def processImage(im: Image) -> None:
     start_points[:, 0] = numpy.abs(start_points[:, 0])
 
     # Convert to real units (if required)
-    if args.resolution != 1.0:# or args.resize != 1.0:
+    if args.resolution != 1.0:  # or args.resize != 1.0:
         start_points *= args.resolution / args.resize
 
     # Move the origin (if required)
@@ -622,7 +710,7 @@ def processImage(im: Image) -> None:
     valid_points[:, 0] = numpy.abs(valid_points[:, 0])
 
     # Convert to real units (if required)
-    if args.resolution != 1.0:# or args.resize != 1.0:
+    if args.resolution != 1.0:  # or args.resize != 1.0:
         valid_points *= args.resolution / args.resize
 
     # Move the origin (if required)
@@ -636,9 +724,9 @@ def processImage(im: Image) -> None:
 
     print (" - DONE")
 
-    
+
 def loadImage(filename: str) -> Image:
-    """Loads an image from the file and prepares it for processing.
+    """Load an image from the file and prepares it for processing.
 
     Arguments:
     filename -- path to the file, str
@@ -650,9 +738,11 @@ def loadImage(filename: str) -> Image:
     https://stackoverflow.com/questions/1065945/how-to-reduce-color-palette-with-pil
     https://stackoverflow.com/questions/236692/how-do-i-convert-any-image-to-a-4-color-paletted-image-using-the-python-imaging-l
     """
-
     im = P.open(filename)
-    im = im.resize((int(im.size[0]*args.resize), int(im.size[1]*args.resize)), resample = P.BILINEAR)
+    im = im.resize(
+        (int(im.size[0] * args.resize), int(im.size[1] * args.resize)),
+        resample = P.BILINEAR
+    )
 
     has_alpha = False
 
@@ -665,18 +755,23 @@ def loadImage(filename: str) -> Image:
         # TODO: Check whether RGBA works as well.
         if im.mode == "LA" or im.mode == "RGBA":
             # Save alpha channel and convert it into two colors
-            alpha_nd = numpy.asarray(im.split()[-1].quantize(2, method = 1), dtype = int)
+            alpha_nd = numpy.asarray(
+                im.split()[-1].quantize(2, method = 1),
+                dtype = int
+            )
 
             has_alpha = True
 
         im = im.convert("L")
 
-        #print ("Unsupported image mode %s, currently only %s is/are supported."
-        #    % (
-        #        im.mode,
-        #        ["L"],
-        #    ), file = sys.stderr
-        #)
+        # print (
+        #     "Unsupported image mode %s, "
+        #     "currently only %s is/are supported."
+        #     % (
+        #         im.mode,
+        #         ["L"],
+        #     ), file = sys.stderr
+        # )
 
     # Obtain three most used colors
     colors = []
@@ -705,7 +800,9 @@ def loadImage(filename: str) -> Image:
 
     # Quantize colors in the image
     # For some reason 'method = 1' is much worse for resized images.
-    im = im.quantize(3, method = 0)#palette = imQ) <- Palette is broken with rescaled images? (returns 4 colors instead of 3)
+    im = im.quantize(3, method = 0)
+    # Note: Tried to use 'palette = imQ', but it looks like that the palette
+    #       is broken with rescaled images? (returns 4 colors instead of 3)
 
     # Convert the image back to grayscale
     im = im.convert("L")
@@ -722,8 +819,9 @@ def loadImage(filename: str) -> Image:
     # Not used now, as it seems that it is not necessary with
     # im.quantize(method = 0)
 
-    ## Fix missaligned colors
-    # When changing the size, free space can appear outside the track and unknown inside.
+    # # Fix missaligned colors # #
+    # When changing the size, free space can appear outside
+    # the track and unknown inside.
 
     # Obtain numpy array to locate colors
     nd = numpy.asarray(im)
@@ -764,11 +862,14 @@ def loadImage(filename: str) -> Image:
         # Recast image to numpy
         nd = numpy.asarray(im)
 
-        sys.stdout.write("\rClearing resize fragments... %03.2f%%" % (100.0 - (100.0 * im.histogram()[FREE] / starting_value)))
+        sys.stdout.write(
+            "\rClearing resize fragments... %03.2f%%"
+            % (100.0 - (100.0 * im.histogram()[FREE] / starting_value))
+        )
 
     print (" - DONE")
 
-    # 3: Finally, fill the inside section back again to free        
+    # 3: Finally, fill the inside section back again to free
     PDraw.floodfill(
         im,
         xy = (int(c), int(r)),
@@ -801,15 +902,18 @@ if __name__ == "__main__":
         index = 0
         for index, _arg in enumerate(sys.argv):
             if _arg == "-y":
-                del sys.argv[index+1], sys.argv[index]
+                del sys.argv[index + 1], sys.argv[index]
                 break
 
         # Load yaml into the args
         if "image" in yaml_data:
             _image = str(yaml_data.get("image"))
 
-            sys.argv.insert(index,
-                _image if os.path.isabs(_image) or os.path.exists(_image) else os.path.dirname(args.yaml) + os.sep + _image
+            sys.argv.insert(
+                index,
+                _image
+                if os.path.isabs(_image) or os.path.exists(_image)
+                else os.path.dirname(args.yaml) + os.sep + _image
             )
             sys.argv.insert(index, "-f")
 
@@ -831,13 +935,20 @@ if __name__ == "__main__":
 
     if args.verbose:
         print ("Interpreted arguments:")
-        print ("\n".join([ "\t%s: %s" % (key, value) for key, value in args._get_kwargs() ]))
+        print (
+            "\n".join([
+                "\t%s: %s" % (key, value) for key, value in args._get_kwargs()
+            ])
+        )
 
 
     # Use positional file if optional not given
     if args.file is None:
         if args.input_file is None:
-            print ("Expected argument with path to the source image.", file=sys.stderr)
+            print (
+                "Expected argument with path to the source image.",
+                file=sys.stderr
+            )
             exit(10)
         else:
             args.file = args.input_file
@@ -845,5 +956,3 @@ if __name__ == "__main__":
     # Run the program
     im = loadImage(args.file)
     processImage(im)
-
-
