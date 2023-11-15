@@ -1,6 +1,9 @@
 #!/usr/bin/env python3.6
 # main.py
 """Penalize the incorrect solution by distance to the segments.
+
+The penalty is calculated as a distance between invalid point
+and valid points of associated segment.
 """
 ######################
 # Imports & Globals
@@ -10,9 +13,22 @@ import numpy
 
 import ng_trajectory.plot as ngplot
 
-from ng_trajectory.interpolators.utils import pointDistance, trajectoryClosest, trajectoryClosestIndex, trajectoryFarthest
+from ng_trajectory.interpolators.utils import (
+    pointDistance,
+    trajectoryClosest,
+    trajectoryClosestIndex,
+    trajectoryFarthest,
+)
+from ng_trajectory.parameter import ParameterList
 from ng_trajectory.penalizers.utils import eInvalidPoints
-from ng_trajectory.segmentators.utils import *
+from ng_trajectory.segmentators.utils import (
+    borderCheck,
+    gridCompute,
+    hood8Obtain,
+    pointToMap,
+    pointToWorld,
+    validCheck,
+)
 
 # Optimization methods
 from ng_trajectory.penalizers import utils
@@ -30,7 +46,6 @@ MAP_GRID = None
 
 
 # Parameters
-from ng_trajectory.parameter import *
 P = ParameterList()
 P.createAdd("debug", False, bool, "Whether debug plot is ought to be shown.", "Init.")
 for _, param in utils.P.iterate():
@@ -41,7 +56,10 @@ for _, param in utils.P.iterate():
 # Utilities
 ######################
 
-def arraySlice(points: numpy.ndarray, index1: int, index2: int) -> numpy.ndarray:
+def arraySlice(
+        points: numpy.ndarray,
+        index1: int,
+        index2: int) -> numpy.ndarray:
     """Obtain a slice of an array of points.
 
     Arguments:
@@ -52,7 +70,8 @@ def arraySlice(points: numpy.ndarray, index1: int, index2: int) -> numpy.ndarray
     Returns:
     slice -- slice of the input array, mx(>=2) numpy.ndarray
 
-    Note: In constrast to standard slice operator (:) we allow wrapping around 0.
+    Note: In constrast to standard slice operator (:)
+          we allow wrapping around 0.
     """
     if index2 > index1:
         return points[index1:index2, :]
@@ -66,11 +85,18 @@ def arraySlice(points: numpy.ndarray, index1: int, index2: int) -> numpy.ndarray
 # Functions
 ######################
 
-def init(start_points: numpy.ndarray, map: numpy.ndarray, map_origin: numpy.ndarray, map_grid: float, map_last: numpy.ndarray, **kwargs) -> None:
+def init(
+        start_points: numpy.ndarray,
+        map: numpy.ndarray,
+        map_origin: numpy.ndarray,
+        map_grid: float,
+        map_last: numpy.ndarray,
+        **kwargs) -> None:
     """Initialize penalizer.
 
     Arguments:
-    start_points -- initial line on the track, should be a centerline, nx2 numpy.ndarray
+    start_points -- initial line on the track, should be a centerline,
+                    nx2 numpy.ndarray
     """
     global DEBUG, MAP, MAP_ORIGIN, MAP_GRID, CENTERLINE
 
@@ -107,15 +133,27 @@ def init(start_points: numpy.ndarray, map: numpy.ndarray, map_origin: numpy.ndar
         print ("Penalizer: Updating the centerline.")
 
 
-def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points: numpy.ndarray, grid: float, penalty: float = 100, **overflown) -> float:
-    """Get a penalty for the candidate solution based on number of incorrectly placed points.
+def penalize(
+        points: numpy.ndarray,
+        candidate: List[numpy.ndarray],
+        valid_points: numpy.ndarray,
+        grid: float,
+        penalty: float = 100,
+        **overflown) -> float:
+    """Get a penalty for the candidate solution.
+
+    Penalty is based on the number of incorrectly placed points
+    with respect to the associated segment.
 
     Arguments:
     points -- points to be checked, nx(>=2) numpy.ndarray
-    candidate -- raw candidate (non-interpolated points), m-list of 1x2 numpy.ndarray
+    candidate -- raw candidate (non-interpolated points),
+                 m-list of 1x2 numpy.ndarray
     valid_points -- valid area of the track, px2 numpy.ndarray
-    grid -- when set, use this value as a grid size, otherwise it is computed, float
-    penalty -- constant used for increasing the penalty criterion, float, default 100
+    grid -- when set, use this value as a grid size, otherwise it is computed,
+            float
+    penalty -- constant used for increasing the penalty criterion,
+               float, default 100
     **overflown -- arguments not caught by previous parts
 
     Returns:
@@ -179,7 +217,13 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     for _id in _invalids:
         for _i in [-1, 1]:
             if (_id + _i) % len(points) not in _invalids:
-                _space_id = (len([ _cpm for _cpm in _candidate_points_mapping if _cpm <= _id ]) - 1) % len(candidate)
+                _space_id = (
+                    len([
+                        _cpm
+                        for _cpm in _candidate_points_mapping
+                        if _cpm <= _id
+                    ]) - 1
+                ) % len(candidate)
 
                 _edge_pairs.append((_id, (_id + _i) % len(points), _space_id))
 
@@ -206,15 +250,29 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
             _temp_close_point = None
 
             for _area_index in sorted(numpy.argwhere(
-                numpy.hypot(_distances[:, 0], _distances[:, 1]) <= numpy.hypot(_grid[0], _grid[1])
-            ), key = lambda x: pointDistance(valid_points[x[0], :2], points[out])):
+                numpy.hypot(
+                    _distances[:, 0], _distances[:, 1]
+                ) <= numpy.hypot(_grid[0], _grid[1])
+            ), key = lambda x: pointDistance(
+                valid_points[x[0], :2], points[out])
+            ):
                 if _area_index[0] == _close_index:
                     continue
 
-                _is_border_point = borderCheck(pointToMap(valid_points[_area_index[0], :2]))
+                _is_border_point = borderCheck(
+                    pointToMap(
+                        valid_points[_area_index[0], :2]
+                    )
+                )
 
-                if _temp_close_point is None or (not _temp_close_point[0] and _is_border_point):
-                    _temp_close_point = (_is_border_point, valid_points[_area_index[0], :2])
+                if (
+                    _temp_close_point is None
+                    or (not _temp_close_point[0] and _is_border_point)
+                ):
+                    _temp_close_point = (
+                        _is_border_point,
+                        valid_points[_area_index[0], :2]
+                    )
 
                 _discovered.append((
                     valid_points[_area_index[0], :2],
@@ -230,29 +288,49 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
         )
 
         # ~d. Find the farthest centerline point~
-        #if DEBUG:
-        #   ngplot.pointsPlot(numpy.asarray([_close_point[:2], trajectoryFarthest(arraySlice(CENTERLINE, _candidate_centerline_mapping[space_id], _candidate_centerline_mapping[(space_id+1)%len(candidate)]), points[out])]))
+        # if DEBUG:
+        #    ngplot.pointsPlot(numpy.asarray([
+        #         _close_point[:2],
+        #         trajectoryFarthest(arraySlice(
+        #             CENTERLINE,
+        #             _candidate_centerline_mapping[space_id],
+        #             _candidate_centerline_mapping[(space_id+1)%len(candidate)]
+        #         ),
+        #         points[out]
+        #         )
+        #     ]))
 
-        # d. Actually, find the distance (and also direction) to corresponding centerline point
+        # d. Actually, find the distance (and also direction)
+        #    to corresponding centerline point
         _id1 = _candidate_points_mapping[space_id]
-        _id2 = _candidate_points_mapping[(space_id+1)%len(candidate)]
+        _id2 = _candidate_points_mapping[(space_id + 1) % len(candidate)]
 
-        space_length = (len(points) - _id1 + _id2 if _id2 < _id1 else _id2 - _id1)
+        space_length = (
+            len(points) - _id1 + _id2 if _id2 < _id1
+            else _id2 - _id1
+        )
 
         # Procentual index of the invalid point
         relative_index = (out - _id1) / space_length
 
         # And now get the centerline point
         _id1 = _candidate_centerline_mapping[space_id]
-        _id2 = _candidate_centerline_mapping[(space_id+1)%len(candidate)]
+        _id2 = _candidate_centerline_mapping[(space_id + 1) % len(candidate)]
 
-        space_center_length = (len(CENTERLINE) - _id1 + _id2 if _id2 < _id1 else _id2 - _id1)
+        space_center_length = (
+            len(CENTERLINE) - _id1 + _id2 if _id2 < _id1
+            else _id2 - _id1
+        )
 
-        center_index = (int(space_center_length * relative_index) + _id1) % len(CENTERLINE)
+        center_index = (
+            int(space_center_length * relative_index) + _id1
+        ) % len(CENTERLINE)
         _center_indices.append(center_index)
 
         if DEBUG:
-            ngplot.pointsPlot(numpy.asarray([_close_point[:2], CENTERLINE[center_index, :2]]))
+            ngplot.pointsPlot(
+                numpy.asarray([_close_point[:2], CENTERLINE[center_index, :2]])
+            )
 
 
     # 4. Merge the edges etc. to make pairs for linking
@@ -261,7 +339,13 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     _i = 0
     while _i < len(_edges):
         # Border A, border B, index A, index B, center index A
-        _merged.append((_edges[_i], _edges[_i + 1], _edge_pairs[_i][0], _edge_pairs[_i + 1][0], _center_indices[_i]))
+        _merged.append((
+            _edges[_i],
+            _edges[_i + 1],
+            _edge_pairs[_i][0],
+            _edge_pairs[_i + 1][0],
+            _center_indices[_i]
+        ))
         _i += 2
 
 
@@ -270,7 +354,8 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
 
     for _A, _B, _iA, _iB, _cA in _merged:
         # We do a slightly nasty thing to speed this up.
-        # We crawl the border on the grid map, finding the farthest point there.
+        # We crawl the border on the grid map,
+        # finding the farthest point there.
         # This should be also the farthest point in real world.
         # ... and then we just find the closest point in real world.
 
@@ -284,7 +369,7 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
         _current = _start
 
         while True:
-            #print (len(_stack), _current)
+            # print (len(_stack), _current)
 
             # Expand
             for _hood in hood8Obtain(_current):
@@ -294,7 +379,10 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
                 _observed.append(_hood.tolist())
 
                 if validCheck(_hood) and borderCheck(_hood):
-                    _stack.append((_hood.tolist(), pointDistance(_hood, _hint)))
+                    _stack.append((
+                        _hood.tolist(),
+                        pointDistance(_hood, _hint)
+                    ))
 
 
             # Sort them
@@ -314,7 +402,12 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
         # And now find the farthest point from the invalids
         __dists = []
         for _i in range(_iA, _iB + 1):
-            farthest = pointToWorld(trajectoryFarthest(numpy.asarray(_visited), pointToMap(points[_i, :2])))
+            farthest = pointToWorld(
+                trajectoryFarthest(
+                    numpy.asarray(_visited),
+                    pointToMap(points[_i, :2])
+                )
+            )
 
             __dists.append(
                 pointDistance(
@@ -338,15 +431,32 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
         _dists.append(__d)
 
         if DEBUG:
-            ngplot.pointsScatter(numpy.asarray([pointToWorld(point) for point in _observed]), color = "purple")
-            ngplot.pointsScatter(numpy.asarray([pointToWorld(point) for point in _visited]), color = "pink")
+            ngplot.pointsScatter(
+                numpy.asarray([pointToWorld(point) for point in _observed]),
+                color = "purple"
+            )
+            ngplot.pointsScatter(
+                numpy.asarray([pointToWorld(point) for point in _visited]),
+                color = "pink"
+            )
 
 
     if DEBUG:
         if len(_discovered) > 0:
-            ngplot.pointsScatter(numpy.asarray([point for point, border in _discovered]), color=[ ("red" if border else "yellow") for point, border in _discovered ], marker="o")
+            ngplot.pointsScatter(
+                numpy.asarray([point for point, border in _discovered]),
+                color = [
+                    ("red" if border else "yellow")
+                    for point, border in _discovered
+                ],
+                marker = "o"
+            )
         if len(_edges) > 0:
-            ngplot.pointsScatter(numpy.asarray(_edges), color="green", marker="o")
+            ngplot.pointsScatter(
+                numpy.asarray(_edges),
+                color = "green",
+                marker="o"
+            )
 
     if len(_dists) == 0:
         return 0

@@ -18,8 +18,14 @@ from typing import Dict
 class Parameter(object):
     """Object that represents a parameter."""
 
-    def __init__(self, name: str, default: any, type: any = None, description: str = "", group: str = ""):
-        """Initializes a parameter object.
+    def __init__(
+            self,
+            name: str,
+            default: any,
+            type: any = None,
+            description: str = "",
+            group: str = ""):
+        """Initialize a parameter object.
 
         name -- name of the parameter, str
         default -- default value of the parameter, any
@@ -29,7 +35,6 @@ class Parameter(object):
 
         Note: Groups are used to distinguish init/run parameters.
         """
-
         self.name = name
         self.default = default
         self.value = default
@@ -39,25 +44,30 @@ class Parameter(object):
 
 
     def get(self):
-        """Obtains value of the parameter."""
+        """Obtain value of the parameter."""
         return self.value
 
 
     def set(self, value: any):
-        """Sets a value to the parameter."""
+        """Set a value to the parameter."""
         self.value = value
 
 
     def reset(self):
-        """Resets the value of the parameter to the default value."""
+        """Reset the value of the parameter to the default value."""
         self.value = self.default
 
 
     def __str__(self):
-        """Formats the parameter as a string."""
-        return "%s (%s) = %s [%s]" % (self.name, str(self.type.__name__), str(self.value), str(self.description))
-
-
+        """Format the parameter as a string."""
+        return (
+            "%s (%s) = %s [%s]" % (
+                self.name,
+                str(self.type.__name__),
+                str(self.value),
+                str(self.description)
+            )
+        )
 
 
 ######################
@@ -68,16 +78,17 @@ class ParameterList(object):
     """Object that represents a list of parameters."""
 
     def __init__(self):
+        """Initialize ParameterList object."""
         self.parameters = {}
 
 
     def add(self, parameter: Parameter):
-        """Adds a parameter to the list."""
+        """Add a parameter to the list."""
         self.parameters[parameter.name] = parameter
 
 
     def createAdd(self, *args, **kwargs):
-        """Creates and add parameter to the list."""
+        """Create and add parameter to the list."""
         _parameter = Parameter(*args, **kwargs)
         self.parameters[_parameter.name] = _parameter
 
@@ -88,12 +99,12 @@ class ParameterList(object):
 
 
     def get(self, name: str):
-        """Obtains a parameter."""
+        """Obtain a parameter."""
         return self.parameters.get(name)
 
 
     def getValue(self, name: str):
-        """Obtains value of a parameter."""
+        """Obtain value of a parameter."""
         return self.parameters.get(name).get()
 
 
@@ -104,23 +115,23 @@ class ParameterList(object):
 
 
     def reset(self, name: str):
-        """Resets a value of a parameter to its default state."""
+        """Reset a value of a parameter to its default state."""
         self.parameters.get(name).reset()
 
 
     def resetAll(self):
-        """Resets values of all parameters to their default states."""
+        """Reset values of all parameters to their default states."""
         for _p in self.parameters:
             self.reset(_p)
 
 
     def update(self, name: str, value: any):
-        """Updates a value of a parameter."""
+        """Update a value of a parameter."""
         self.parameters.get(name).set(value)
 
 
     def updateAll(self, kwargs: Dict[str, any], reset: bool = True):
-        """Updates values of all parameters.
+        """Update values of all parameters.
 
         reset -- When True all parameters are reset first.
         """
@@ -133,5 +144,7 @@ class ParameterList(object):
 
 
     def __str__(self):
-        """Formats the list as a string."""
-        return "\n".join([ str(parameter) for parameter in self.parameters.values() ])
+        """Format the list as a string."""
+        return "\n".join([
+            str(parameter) for parameter in self.parameters.values()
+        ])

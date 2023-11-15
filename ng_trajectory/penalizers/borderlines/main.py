@@ -1,6 +1,10 @@
 #!/usr/bin/env python3.6
 # main.py
 """Penalize the incorrect solution by distance to appropriate borderline.
+
+Borderlines are sets of points on the borders between two adjacent
+segments. We have borderlines for each segment and for each neighbour
+(usually resulting into n * 2 arrays).
 """
 ######################
 # Imports & Globals
@@ -8,7 +12,10 @@
 
 import numpy
 
-from ng_trajectory.segmentators.utils import *
+from ng_trajectory.segmentators.utils import (
+    gridCompute,
+    pointToMap
+)
 
 from typing import List, Dict
 
@@ -18,17 +25,13 @@ INVALID_POINTS = []
 BORDERLINES = None
 
 
-# Parameters
-#from ng_trajectory.parameter import *
-#P = ParameterList()
-#P.createAdd("int_size", 400, int, "Number of points in the interpolation.", "")
-
-
 ######################
 # Utilities
 ######################
 
-def borderlinesCreate(valid_points: numpy.ndarray, group_centers: numpy.ndarray) -> Dict[int, Dict[int, numpy.ndarray]]:
+def borderlinesCreate(
+        valid_points: numpy.ndarray,
+        group_centers: numpy.ndarray) -> Dict[int, Dict[int, numpy.ndarray]]:
     """Create borderlines for later penalty computation.
 
     valid_points -- valid area of the track, nx2 numpy.ndarray
@@ -37,7 +40,7 @@ def borderlinesCreate(valid_points: numpy.ndarray, group_centers: numpy.ndarray)
     global MAP, MAP_ORIGIN, MAP_GRID
 
     # Create empty borderlines map
-    borderlines_map = { i: {} for i in range(len(group_centers)) }
+    borderlines_map = {i: {} for i in range(len(group_centers))}
 
     # Go through every point on the map (only those that belong to any segment)
     _valids = numpy.where(MAP < 100)
@@ -55,18 +58,29 @@ def borderlinesCreate(valid_points: numpy.ndarray, group_centers: numpy.ndarray)
 
                 try:
                     _cell = MAP[cell[0] + _a, cell[1] + _b]
-                except:
+                except IndexError:
                     continue
 
                 # Store it if its another segment
-                if _cell < 100 and _cell != MAP[tuple(cell)]: # Otherwise we also get "neighbours to itself".
-                    borderlines_map[MAP[tuple(cell)]][(cell[0] + _a, cell[1] + _b)] = _cell
+                # Without this we also get "neighbours to itself".
+                if _cell < 100 and _cell != MAP[tuple(cell)]:
+                    borderlines_map[
+                        MAP[tuple(cell)]
+                    ][(cell[0] + _a, cell[1] + _b)] = _cell
                 # ... also in case that we are using reservations
-                #elif _cell < 200 and _cell != MAP[tuple(cell)]:
-                #    borderlines_map[MAP[tuple(cell)]][(cell[0] + _a, cell[1] + _b)] = _cell - 100
+                # elif _cell < 200 and _cell != MAP[tuple(cell)]:
+                #     borderlines_map[
+                #         MAP[tuple(cell)]
+                #     ][(cell[0] + _a, cell[1] + _b)] = _cell - 100
 
 
-    borderlines_real = { i: { j: [] for j in range(len(group_centers)) } for i in range(len(group_centers)) }
+    borderlines_real = {
+        i: {
+            j: []
+            for j in range(len(group_centers))
+        }
+        for i in range(len(group_centers))
+    }
 
 
     for p in valid_points:
@@ -78,17 +92,33 @@ def borderlinesCreate(valid_points: numpy.ndarray, group_centers: numpy.ndarray)
             # Create all combinations of borderlines in real coordinates
             for i in range(len(group_centers)):
                 if tuple(pointToMap(p)) in borderlines_map[i]:
-                    borderlines_real[i][borderlines_map[i][tuple(pointToMap(p))]].append(p)
+                    borderlines_real[i][
+                        borderlines_map[i][tuple(pointToMap(p))]
+                    ].append(p)
 
     # Finally process the borderlines
-    return { i: { j: numpy.asarray(borderlines_real[i][j]) for j in range(len(group_centers)) if len(borderlines_real[i][j]) > 0 } for i in range(len(group_centers)) }
+    return {
+        i: {
+            j: numpy.asarray(borderlines_real[i][j])
+            for j in range(len(group_centers))
+            if len(borderlines_real[i][j]) > 0
+        }
+        for i in range(len(group_centers))
+    }
 
 
 ######################
 # Functions
 ######################
 
-def init(valid_points: numpy.ndarray, map: numpy.ndarray, map_origin: numpy.ndarray, map_grid: float, map_last: numpy.ndarray, group_centers: numpy.ndarray, **kwargs) -> None:
+def init(
+        valid_points: numpy.ndarray,
+        map: numpy.ndarray,
+        map_origin: numpy.ndarray,
+        map_grid: float,
+        map_last: numpy.ndarray,
+        group_centers: numpy.ndarray,
+        **kwargs) -> None:
     """Initialize penalizer.
 
     Arguments:
@@ -111,15 +141,26 @@ def init(valid_points: numpy.ndarray, map: numpy.ndarray, map_origin: numpy.ndar
     BORDERLINES = borderlinesCreate(valid_points, group_centers)
 
 
-def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points: numpy.ndarray, grid: float, penalty: float = 100, **overflown) -> float:
-    """Get a penalty for the candidate solution based on number of incorrectly placed points.
+def penalize(
+        points: numpy.ndarray,
+        candidate: List[numpy.ndarray],
+        valid_points: numpy.ndarray,
+        grid: float,
+        penalty: float = 100,
+        **overflown) -> float:
+    """Get a penalty for the candidate solution.
+
+    Penalty is based on the number of incorrectly placed points.
 
     Arguments:
     points -- points to be checked, nx(>=2) numpy.ndarray
-    candidate -- raw candidate (non-interpolated points), m-list of 1x2 numpy.ndarray
+    candidate -- raw candidate (non-interpolated points),
+                 m-list of 1x2 numpy.ndarray
     valid_points -- valid area of the track, px2 numpy.ndarray
-    grid -- when set, use this value as a grid size, otherwise it is computed, float
-    penalty -- constant used for increasing the penalty criterion, float, default 100
+    grid -- when set, use this value as a grid size, otherwise it is computed,
+            float
+    penalty -- constant used for increasing the penalty criterion,
+               float, default 100
     **overflown -- arguments not caught by previous parts
 
     Returns:
@@ -137,7 +178,7 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
                 numpy.sum(
                     numpy.power(
                         numpy.subtract(
-                            points[:, :2], #START_POINTS[:, :2], #_points[:, :2],
+                            points[:, :2],
                             candidate[i]
                         ),
                         2
@@ -151,25 +192,35 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     # Check if all interpolated points are valid
     # Note: This is required for low number of groups.
     invalid = 1000
-    any_invalid = False
     INVALID_POINTS.clear()
 
     for _ip, _p in enumerate(points):
-        if not numpy.any(numpy.all(numpy.abs( numpy.subtract(valid_points, _p[:2]) ) < _grid, axis = 1)):
+        if not numpy.any(
+            numpy.all(
+                numpy.abs(numpy.subtract(valid_points, _p[:2])) < _grid,
+                axis = 1
+            )
+        ):
 
             # Store invalid point
             INVALID_POINTS.append(_p)
 
-            # Note: Trying borderlines here, it works the same, just the meaning of 'invalid' is different.
-            # Note: We used to have '<' here, however that failed with invalid index 0.
-            _segment_id = len([ _plm for _plm in _points_line_mapping if _plm <= _ip ]) - 1
+            # Note: Trying borderlines here, it works the same,
+            #       just the meaning of 'invalid' is different.
+            # Note: We used to have '<' here, however that failed
+            #       with invalid index 0.
+            _segment_id = len(
+                [_plm for _plm in _points_line_mapping if _plm <= _ip]
+            ) - 1
 
             _invalid = numpy.max(
                 numpy.sqrt(
                     numpy.sum(
                         numpy.power(
                             numpy.subtract(
-                                BORDERLINES[_segment_id][(_segment_id + 1) % len(candidate)],
+                                BORDERLINES[_segment_id][
+                                    (_segment_id + 1) % len(candidate)
+                                ],
                                 _p[:2]
                             ),
                             2

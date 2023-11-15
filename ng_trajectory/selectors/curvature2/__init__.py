@@ -29,4 +29,4 @@ to the closest path point).
 Note: Parameter 'remain' of the select function is
 completely ignored.
 """
-from .main import init, select
+from .main import init, select  # noqa: F401

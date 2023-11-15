@@ -1,12 +1,13 @@
 #!/usr/bin/env python3.6
 # ng_help.py
-"""Script for displaying help for ng_trajectory components.
-"""
+"""Script for displaying help for ng_trajectory components."""
 ######################
 # Imports & Globals
 ######################
 
-import sys, os, getopt, re
+import sys
+import getopt
+import re
 
 import ng_trajectory
 import ng_trajectory.optimizers as optimizers
@@ -54,21 +55,34 @@ Arguments:"""
 ######################
 
 def print_available_algorithms(modules: list, decoration: str = ""):
+    """Print all available algorithms in a module."""
     # Get size of the longest item between the algorithms
-    column_width = len(max([alg for module in modules for alg in module.__all__], key = len)) + 2 * len(decoration)
+    column_width = len(
+        max([alg for module in modules for alg in module.__all__], key = len)
+    ) + 2 * len(decoration)
 
     for module in modules:
         print("\n%s" % decoration + module.__name__ + ".*%s\n" % decoration)
-        #column_width = len(max([alg for alg in module.__all__], key = len))
-        print ("\n".join(
-                [ "- %s  %s" % (("%s%s%s" % (decoration, algorithm, decoration)).ljust(column_width), str(module.__getattribute__(algorithm).__doc__).split("\n", 1)[0])
-                    for algorithm in module.__all__ if algorithm != "utils"
+        # column_width = len(max([alg for alg in module.__all__], key = len))
+        print (
+            "\n".join(
+                [
+                    "- %s  %s" % (
+                        (
+                            "%s%s%s"
+                            % (decoration, algorithm, decoration)
+                        ).ljust(column_width),
+                        str(
+                            module.__getattribute__(algorithm).__doc__
+                        ).split("\n", 1)[0]
+                    ) for algorithm in module.__all__ if algorithm != "utils"
                 ]
             )
         )
 
 
 def print_parameters(P, group_only: bool = False):
+    """Print all parameters from a ParameterList."""
     # Sort into groups
     gP = {}
     for _name, _param in P.dict().items():
@@ -91,15 +105,16 @@ def print_parameters(P, group_only: bool = False):
             print ()
 
         print (_g.capitalize() + " parameters:" if _g != "" else "Parameters:")
-        print ("\n".join([ str(_p) for _p in gP.get(_g)]))
+        print ("\n".join([str(_p) for _p in gP.get(_g)]))
 
 
 def squishText(text: str):
+    """Squish text to look nicer in the Markdown format."""
     # Find solo newlines and convert them into spaces.
-    text1 = re.sub("(.)\n([^\t\-(\n`{}\[\])])", r"\1 \2", text)
+    text1 = re.sub(r"(.)\n([^\t\-(\n`{}\[\])])", r"\1 \2", text)
 
     # Replace lists
-    text2 = re.sub("\(([0-9][0-9]*)\)", r"\1.", text1)
+    text2 = re.sub(r"\(([0-9][0-9]*)\)", r"\1.", text1)
 
     # Cleanup spaces
     text3 = re.sub(" [ ]*", " ", text2)
@@ -116,8 +131,14 @@ if __name__ == "__main__":
     try:
         opts, args = getopt.getopt(
             sys.argv[1:],
-            "".join([ info.get("short") for opt, info in PARAMETERS.items() if "short" in info ]),
-            [ info.get("long") for opt, info in PARAMETERS.items() if "long" in info ],
+            "".join([
+                info.get("short")
+                for opt, info in PARAMETERS.items() if "short" in info
+            ]),
+            [
+                info.get("long")
+                for opt, info in PARAMETERS.items() if "long" in info
+            ],
         )
     except getopt.GetoptError as e:
         print ("Unable to process arguments: %s" % e, file = sys.stderr)
@@ -128,32 +149,88 @@ if __name__ == "__main__":
         for param, info in PARAMETERS.items():
             if opt in ("-h", "--help"):
                 print (HELP)
-                print ("\n".join([ " %s\n\t\t%s" % (", ".join((["-" + i.get("short").replace(":", "")] if "short" in i else []) + (["--" + i.get("long").replace("=", "")] if "long" in i else [])), i.get("help", "")) for o, i in PARAMETERS.items() ]))
+                print (
+                    "\n".join([
+                        " %s\n\t\t%s"
+                        % (
+                            ", ".join(
+                                (
+                                    ["-" + i.get("short").replace(":", "")]
+                                    if "short" in i else []
+                                )
+                                + (
+                                    ["--" + i.get("long").replace("=", "")]
+                                    if "long" in i else []
+                                )
+                            ),
+                            i.get("help", "")
+                        ) for o, i in PARAMETERS.items()
+                    ])
+                )
                 exit (0)
 
             if opt in ("-a", "--algorithm"):
                 if "." in arg:
                     module, algorithm = arg.split(".")
 
-                    if module in dir(ng_trajectory) and algorithm in dir(ng_trajectory.__getattribute__(module)):
-                        print ("%s\n\n%s" % (arg, ng_trajectory.__getattribute__(module).__getattribute__(algorithm).__doc__))
+                    if (
+                        module in dir(ng_trajectory)
+                        and algorithm in dir(
+                            ng_trajectory.__getattribute__(module)
+                        )
+                    ):
+                        print (
+                            "%s\n\n%s"
+                            % (
+                                arg,
+                                ng_trajectory.__getattribute__(
+                                    module
+                                ).__getattribute__(
+                                    algorithm
+                                ).__doc__
+                            )
+                        )
 
-                        if "P" in dir(ng_trajectory.__getattribute__(module).__getattribute__(algorithm).main):
+                        if "P" in dir(
+                            ng_trajectory.__getattribute__(
+                                module
+                            ).__getattribute__(
+                                algorithm
+                            ).main
+                        ):
                             print ()
-                            print_parameters(ng_trajectory.__getattribute__(module).__getattribute__(algorithm).main.P)
+                            print_parameters(
+                                ng_trajectory.__getattribute__(
+                                    module
+                                ).__getattribute__(
+                                    algorithm
+                                ).main.P
+                            )
 
                         exit(0)
                 else:
                     if arg in dir(ng_trajectory):
-                        print ("%s\n\n%s" % (arg, ng_trajectory.__getattribute__(arg).__doc__))
+                        print (
+                            "%s\n\n%s"
+                            % (
+                                arg,
+                                ng_trajectory.__getattribute__(arg).__doc__
+                            )
+                        )
 
-                        if "__all__" in dir(ng_trajectory.__getattribute__(arg)):
+                        if "__all__" in dir(
+                            ng_trajectory.__getattribute__(arg)
+                        ):
                             print ("\nAvailable algorithms:")
-                            print_available_algorithms([ng_trajectory.__getattribute__(arg)])
+                            print_available_algorithms(
+                                [ng_trajectory.__getattribute__(arg)]
+                            )
 
                         if "P" in dir(ng_trajectory.__getattribute__(arg)):
                             print ()
-                            print_parameters(ng_trajectory.__getattribute__(arg).P)
+                            print_parameters(
+                                ng_trajectory.__getattribute__(arg).P
+                            )
 
                         exit (0)
 
@@ -168,9 +245,19 @@ if __name__ == "__main__":
                 print ("## Available algorithms:")
 
                 # 2) Print all the modules (in detail)
-                for module in [optimizers, criterions, interpolators, segmentators, selectors, penalizers]:
+                for module in [
+                    optimizers,
+                    criterions,
+                    interpolators,
+                    segmentators,
+                    selectors,
+                    penalizers
+                ]:
                     # Name of the module
-                    print ("\n### %s" % module.__name__.split(".")[-1].capitalize())
+                    print (
+                        "\n### %s"
+                        % module.__name__.split(".")[-1].capitalize()
+                    )
 
                     # Documentation for the component
                     print (squishText(module.__doc__))
@@ -182,28 +269,51 @@ if __name__ == "__main__":
                     # Show all details for each algorithm
                     for algorithm in module.__all__:
                         if algorithm != "utils":
-                            print ("\n#### %s" % re.sub("_", " ", algorithm.title()))
-                            print ("_%s.%s_" % (module.__name__.split(".")[-1], algorithm))
-                            print ("\n%s" % squishText(module.__getattribute__(algorithm).__doc__))
+                            print (
+                                "\n#### %s"
+                                % re.sub("_", " ", algorithm.title())
+                            )
+                            print (
+                                "_%s.%s_"
+                                % (module.__name__.split(".")[-1], algorithm)
+                            )
+                            print (
+                                "\n%s"
+                                % squishText(
+                                    module.__getattribute__(algorithm).__doc__
+                                )
+                            )
 
-                            if "P" in dir(module.__getattribute__(algorithm).main):
+                            if "P" in dir(
+                                module.__getattribute__(algorithm).main
+                            ):
                                 print ()
                                 print ("```html")
-                                print_parameters(module.__getattribute__(algorithm).main.P)
+                                print_parameters(
+                                    module.__getattribute__(algorithm).main.P
+                                )
                                 print ("```")
                                 print ()
 
                 # Print general parameters
                 if "P" in dir(ng_trajectory.main):
                     print ()
-                    params = print_parameters(ng_trajectory.main.P, group_only = True)
+                    params = print_parameters(
+                        ng_trajectory.main.P,
+                        group_only = True
+                    )
 
                     for group in params.keys():
-                        print ("## " + group.capitalize() + " parameters:" if group != "" else "## Parameters:")
+                        print (
+                            "## " + group.capitalize() + " parameters:"
+                            if group != "" else "## Parameters:"
+                        )
 
                         print ()
                         print ("```html")
-                        print ("\n".join([ str(_p) for _p in params.get(group)]))
+                        print (
+                            "\n".join([str(_p) for _p in params.get(group)])
+                        )
                         print ("```")
                         print ()
 
@@ -215,7 +325,14 @@ if __name__ == "__main__":
     print ("%s" % (ng_trajectory.main.__doc__))
 
     print ("Available algorithms:")
-    print_available_algorithms([optimizers, criterions, interpolators, segmentators, selectors, penalizers])
+    print_available_algorithms([
+        optimizers,
+        criterions,
+        interpolators,
+        segmentators,
+        selectors,
+        penalizers
+    ])
 
     if "P" in dir(ng_trajectory.main):
         print ()

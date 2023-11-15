@@ -10,12 +10,10 @@ Suggested and designed by Ondra Benedikt.
 
 import numpy as np
 
-try:
-    from ng_trajectory import pyplot as plt
-except:
-    pass
+import ng_trajectory.plot as ngplot
+from ng_trajectory.plot import PLOT_AVAILABLE
 
-from ng_trajectory import PLOT_AVAILABLE
+from ng_trajectory.parameter import ParameterList
 
 from scipy.interpolate import interp1d
 from scipy.signal import find_peaks
@@ -25,7 +23,6 @@ from typing import Dict
 
 
 # Parameters
-from ng_trajectory.parameter import *
 P = ParameterList()
 P.createAdd("track_name", "unknown", str, "Name of the track.", "")
 P.createAdd("plot", False, bool, "Whether the images are generated.", "")
@@ -51,8 +48,11 @@ removeOverlap = lambda points, overlap: points[overlap:-overlap]
 # Utility functions
 ######################
 
-def mergePeaks(peaks_indices: np.ndarray, other: Dict[str, np.ndarray], threshold: int) -> np.ndarray:
-    """Merges close peaks.
+def mergePeaks(
+        peaks_indices: np.ndarray,
+        other: Dict[str, np.ndarray],
+        threshold: int) -> np.ndarray:
+    """Merge close peaks.
 
     Arguments:
     peaks_indices -- indices of detected peaks, nx1 numpy.ndarray
@@ -64,11 +64,14 @@ def mergePeaks(peaks_indices: np.ndarray, other: Dict[str, np.ndarray], threshol
 
     Note: For this function 'peak_heights' is required in 'other'.
     """
-
     merged_peaks = []
 
     _indices = peaks_indices.tolist()
-    _peaks = sorted(zip(_indices, other.get("peak_heights").tolist()), key = lambda x: x[1], reverse = True)
+    _peaks = sorted(
+        zip(_indices, other.get("peak_heights").tolist()),
+        key = lambda x: x[1],
+        reverse = True
+    )
 
     while len(_peaks) > 0:
         _peak, _ = _peaks.pop(0)
@@ -80,7 +83,7 @@ def mergePeaks(peaks_indices: np.ndarray, other: Dict[str, np.ndarray], threshol
 
         nearby = set.intersection(
             set(_indices),
-            set([ _peak + _i - int(threshold / 2) for _i in range(threshold) ])
+            set([_peak + _i - int(threshold / 2) for _i in range(threshold)])
         )
 
         merged_peaks.append(int((_peak + sum(nearby)) / (1 + len(nearby))))
@@ -107,7 +110,7 @@ def init(**kwargs) -> None:
 def select(
         points: np.ndarray,
         remain: int,
-    **overflown) -> np.ndarray:
+        **overflown) -> np.ndarray:
     """Select points from the path uniformly.
 
     Arguments:
@@ -118,70 +121,91 @@ def select(
     Returns:
     rpoints -- list of points, remainx2 numpy.ndarray
 
-    Note: Since in this version we are not able to set the number of points, raise an exception for positive numbers.
+    Note: Since in this version we are not able to set the number of points,
+          raise an exception for positive numbers.
     FIXME: It fails horribly when the number of peaks is low (like 1 or 2).
     """
-
     if remain > 0:
-        raise ValueError("Exact number of points cannot be handled by 'curvature' selector.")
+        raise ValueError(
+            "Exact number of points cannot be handled by 'curvature' selector."
+        )
 
     # Update parameters
     P.updateAll(overflown)
 
     # Repair points array
-    # Sometimes the last point is the same as the first, and we do not want that.
+    # Sometimes the last point is the same as the first,
+    # and we do not want that.
     if (points[0] == points[-1]).all():
         points = points[0:-1]
 
 
     # Interpolate points
-    n_interpolation_points = int(len(points)/P.getValue("interpolation_factor"))
-    # Note: In version <=1.4.2 we used overlap_size as half of the points length,
-    #       which however sometimes led to places without peaks (as they were
-    #       in different parts of the overlap). Using whole length solves this issue,
-    #       but also increases the required computation time.
+    n_interpolation_points = int(
+        len(points) / P.getValue("interpolation_factor")
+    )
+    # Note: In version <=1.4.2 we used overlap_size as half of the points
+    #       length, which however sometimes led to places without peaks
+    #       (as they were in different parts of the overlap). Using whole
+    #       length solves this issue, but also increases the required
+    #       computation time.
     overlap_size = int(n_interpolation_points)
     alpha = cf.get_linspace(n_interpolation_points)
-    delta = alpha[1] - alpha[0]
 
-    ipoints = cf.interpolate_points(points, n_interpolation_points, P.getValue("downsample_factor"))
+    ipoints = cf.interpolate_points(
+        points,
+        n_interpolation_points,
+        P.getValue("downsample_factor")
+    )
 
-    distance = np.cumsum( np.sqrt(np.sum( np.diff(ipoints, axis=0)**2, axis=1 )) )
-    distance = np.insert(distance, 0, 0)/distance[-1]
+    distance = np.cumsum(np.sqrt(np.sum(np.diff(ipoints, axis=0)**2, axis=1)))
+    distance = np.insert(distance, 0, 0) / distance[-1]
 
     ipoints = addOverlap(ipoints, overlap_size)
 
 
     # Compute curvature and derivatives
-    K = cf.get_curvature(ipoints, n_interpolation_points+2*overlap_size)
+    K = cf.get_curvature(ipoints, n_interpolation_points + 2 * overlap_size)
 
-    ipoints_derivatives = cf.get_derivatives(ipoints, n_interpolation_points+2*overlap_size)
-    dx = ipoints_derivatives[:,0]
-    dy = ipoints_derivatives[:,1]
+    ipoints_derivatives = cf.get_derivatives(
+        ipoints,
+        n_interpolation_points + 2 * overlap_size
+    )
+    dx = ipoints_derivatives[:, 0]
+    dy = ipoints_derivatives[:, 1]
 
-    ipoints_derivatives2 = cf.get_derivatives(ipoints_derivatives, n_interpolation_points+2*overlap_size)
-    dx2 = ipoints_derivatives2[:,0]
-    dy2 = ipoints_derivatives2[:,1]
+    ipoints_derivatives2 = cf.get_derivatives(
+        ipoints_derivatives,
+        n_interpolation_points + 2 * overlap_size
+    )
+    dx2 = ipoints_derivatives2[:, 0]
+    dy2 = ipoints_derivatives2[:, 1]
 
 
     # Visualize peaks
     all_peaks = []
 
-    if P.getValue("plot"):
-        figP, axs = plt.subplots(3, 1, figsize=(15,15))
+    if P.getValue("plot") and PLOT_AVAILABLE:
+        figP, axs = ngplot.pyplot.subplots(3, 1, figsize = (15, 15))
 
     i = 0
     for arr, lbl in zip([dx2, dy2, K], ["dx2", "dy2", "K"]):
-        #arr_s = np.abs(arr) #cf.smoothen(np.abs(arr), 3)
-        #arr_s = arr_s / max(arr_s)  # normalize
+        # arr_s = np.abs(arr) # cf.smoothen(np.abs(arr), 3)
+        # arr_s = arr_s / max(arr_s)  # normalize
         arr_s = arr / max(np.abs(arr))
 
         # Detect peaks separately on both sides
-        peaks, adds = find_peaks(arr_s, height = P.getValue("peaks_height"))#, distance = 5)
-        peaks2, adds2 = find_peaks(-arr_s, height = P.getValue("peaks_height"))#, distance = 5)
+        peaks, adds = find_peaks(
+            arr_s,
+            height = P.getValue("peaks_height")
+        )  # , distance = 5)
+        peaks2, adds2 = find_peaks(
+            -arr_s,
+            height = P.getValue("peaks_height")
+        )  # , distance = 5)
 
         # TODO: To chce nejdřív splitnout a pak spojit!
-        #print (peaks, adds)
+        # print (peaks, adds)
 
         # Merge close peaks manually
         mpeaks = mergePeaks(peaks, adds, P.getValue("peaks_merge"))
@@ -191,17 +215,27 @@ def select(
 
         # Split peaks
         if P.getValue("split_peaks"):
-            peaks = np.unique(np.sort(np.concatenate(([i - 1 for i in peaks], [i + 1 for i in peaks]), axis=0)))
+            peaks = np.unique(
+                np.sort(
+                    np.concatenate(
+                        ([i - 1 for i in peaks], [i + 1 for i in peaks]),
+                        axis = 0
+                    )
+                )
+            )
 
         # Detect parts without points
         filling = []
-        for j in range(len(peaks)-1):
-            if peaks[j+1] - peaks[j] > P.getValue("peaks_filling"):
+        for j in range(len(peaks) - 1):
+            if peaks[j + 1] - peaks[j] > P.getValue("peaks_filling"):
                 filling += list(
                     np.linspace(
                         peaks[j],
-                        peaks[j+1],
-                        int((peaks[j+1] - peaks[j]) / P.getValue("peaks_filling")) + 1,
+                        peaks[j + 1],
+                        int(
+                            (peaks[j + 1] - peaks[j])
+                            / P.getValue("peaks_filling")
+                        ) + 1,
                         endpoint = False,
                         dtype = np.int
                     )
@@ -209,25 +243,28 @@ def select(
 
         # Detect over 0 switch and add a point there
         switching = []
-        for j in range(len(peaks)-1):
-            if np.sign(arr_s[peaks[j+1]]) != np.sign(arr_s[peaks[j]]):
-                ## y-wise in-fill
+        for j in range(len(peaks) - 1):
+            if np.sign(arr_s[peaks[j + 1]]) != np.sign(arr_s[peaks[j]]):
+                # # y-wise in-fill
 
                 # Target value
-                target = arr_s[peaks[j]] + ((arr_s[peaks[j+1]] - arr_s[peaks[j]]) / 2)
+                target = arr_s[peaks[j]] + (
+                    (arr_s[peaks[j + 1]] - arr_s[peaks[j]]) / 2
+                )
 
                 # Find closest point on the line (y-wise) between the points
                 _error = 10000
                 _index = 0
-                for _p in range(peaks[j]+1, peaks[j+1]):
+                for _p in range(peaks[j] + 1, peaks[j + 1]):
                     if (target - arr_s[_p])**2 < _error:
                         _error = (target - arr_s[_p])**2
                         _index = _p
 
                 # Add the point only if too far from filling
                 for _p in filling:
-                    #if abs(_p - _index) <= int(peaks_filling/2):
-                    # Instead, check that between the peaks there is not filling
+                    # if abs(_p - _index) <= int(peaks_filling/2):
+                    # Instead, check that between the peaks
+                    # there is not filling
                     if _p in range(peaks[j] + 1, peaks[j + 1]):
                         break
                 else:
@@ -248,40 +285,46 @@ def select(
         switching = switching[switching < (len(ipoints) - overlap_size)]
         switching = switching - overlap_size
 
-        _peaks = np.unique(np.sort(np.concatenate((peaks, filling, switching), axis=0)).astype(np.int))
+        _peaks = np.unique(
+            np.sort(
+                np.concatenate((peaks, filling, switching), axis=0)
+            ).astype(np.int)
+        )
 
         all_peaks.append(_peaks)
 
-        if P.getValue("plot"):
+        if P.getValue("plot") and PLOT_AVAILABLE:
             arr_s = arr_s[overlap_size:-overlap_size]
             axs[i].title.set_text(lbl)
             axs[i].plot(arr_s, color="red")
-            #axs[i].plot(_peaks, arr_s[_peaks], "x", color="black")
+            # axs[i].plot(_peaks, arr_s[_peaks], "x", color="black")
 
             original_peaks = _peaks[np.isin(_peaks, peaks)]
-            #print ("1", original_peaks, peaks)
-            axs[i].plot(original_peaks, arr_s[original_peaks], "x", color="black")
+            # print ("1", original_peaks, peaks)
+            axs[i].plot(
+                original_peaks, arr_s[original_peaks], "x", color="black"
+            )
 
             new_peaks = _peaks[np.isin(_peaks, filling)]
-            #print ("2", new_peaks, filling)
+            # print ("2", new_peaks, filling)
             axs[i].plot(new_peaks, arr_s[new_peaks], "x", color="green")
 
             new_peaks2 = _peaks[np.isin(_peaks, switching)]
-            #print ("3", new_peaks2, switching)
+            # print ("3", new_peaks2, switching)
             axs[i].plot(new_peaks2, arr_s[new_peaks2], "x", color="blue")
 
         i += 1
 
-    if P.getValue("plot"):
+    if P.getValue("plot") and PLOT_AVAILABLE:
         figP.savefig("peaks_" + P.getValue("track_name") + ".pdf")
 
         if P.getValue("show_plot"):
             figP.show()
 
-        # Close the figure, as it is not normally closed and it stays in the memory,
-        # leading to matplotlib warning.
+        # Close the figure, as it is not normally closed and
+        # it stays in the memory, leading to matplotlib warning.
         else:
-            plt.close(figP)
+            ngplot.figureClose(figP)
 
 
     # Remove overlaps
@@ -293,61 +336,78 @@ def select(
     dx2 = removeOverlap(dx2, overlap_size)
     dy2 = removeOverlap(dy2, overlap_size)
 
-    distance = np.cumsum( np.sqrt(np.sum( np.diff(ipoints, axis=0)**2, axis=1 )) )
-    distance = np.insert(distance, 0, 0)/distance[-1]
+    distance = np.cumsum(np.sqrt(np.sum(np.diff(ipoints, axis=0)**2, axis=1)))
+    distance = np.insert(distance, 0, 0) / distance[-1]
 
 
     # Visualize turns on the track
-    if P.getValue("plot"):
-        figP, axs = plt.subplots(3,2, figsize=(15,20))
+    if P.getValue("plot") and PLOT_AVAILABLE:
+        figP, axs = ngplot.pyplot.subplots(3, 2, figsize = (15, 20))
 
         for i in range(3):
-            axs[i,0].title.set_text('Track')
-            axs[i,0].scatter(ipoints[:,0], ipoints[:,1], c=range(len(ipoints)), cmap="hsv")
+            axs[i, 0].title.set_text('Track')
+            axs[i, 0].scatter(
+                ipoints[:, 0],
+                ipoints[:, 1],
+                c = range(len(ipoints)),
+                cmap = "hsv"
+            )
 
 
     # Show peaks of the diff gradient
     peaks_on_track = []
 
-    interpolator =  interp1d(distance, ipoints, kind='quadratic', axis=0)
+    interpolator = interp1d(distance, ipoints, kind = 'quadratic', axis = 0)
 
     i = 0
-    for arr, p, lbl in zip([dx2,dy2,K], all_peaks, ["|dx2|", "|dy2|", "|K|"]):
-        lsp = np.linspace(0,1, len(arr))
-        #arr_s = np.abs(arr) #cf.smoothen(np.abs(arr), 3)
+    for arr, p, lbl in zip(
+        [dx2, dy2, K], all_peaks, ["|dx2|", "|dy2|", "|K|"]
+    ):
+        lsp = np.linspace(0, 1, len(arr))
+        # arr_s = np.abs(arr) # cf.smoothen(np.abs(arr), 3)
         arr_s = arr
 
         peaks_on_track.append(interpolator([alpha[p_] for p_ in p]))
 
-        if P.getValue("plot"):
-            axs[i,1].title.set_text(lbl)
-            axs[i,1].plot(np.linspace(0,1,len(arr)), np.abs(arr), label=lbl, color="gray")
-            axs[i,1].plot(np.linspace(0,1,len(arr)), np.abs(arr_s), color="red")
+        if P.getValue("plot") and PLOT_AVAILABLE:
+            axs[i, 1].title.set_text(lbl)
+            axs[i, 1].plot(lsp, np.abs(arr), label = lbl, color = "gray")
+            axs[i, 1].plot(lsp, np.abs(arr_s), color = "red")
 
-            axs[i,1].scatter(np.linspace(0,1,len(arr)), np.abs(arr), label=lbl, c=range(len(dx)), cmap="hsv")
+            axs[i, 1].scatter(
+                lsp, np.abs(arr), label = lbl, c = range(len(dx)), cmap = "hsv"
+            )
 
             # Draw the turns onto the track
-            axs[i,0].scatter(peaks_on_track[i][:,0], peaks_on_track[i][:,1], marker="x", color="black", s=200)
+            axs[i, 0].scatter(
+                peaks_on_track[i][:, 0],
+                peaks_on_track[i][:, 1],
+                marker = "x",
+                color = "black",
+                s = 200
+            )
 
-            axs[i,0].axis("equal")
+            axs[i, 0].axis("equal")
             i += 1
 
-    if P.getValue("plot"):
-        figP.savefig("turns_identification_" + P.getValue("track_name") + ".pdf")
+    if P.getValue("plot") and PLOT_AVAILABLE:
+        figP.savefig(
+            "turns_identification_" + P.getValue("track_name") + ".pdf"
+        )
 
         if P.getValue("show_plot"):
             figP.show()
 
-        # Close the figure, as it is not normally closed and it stays in the memory,
-        # leading to matplotlib warning.
+        # Close the figure, as it is not normally closed and
+        # it stays in the memory, leading to matplotlib warning.
         else:
-            plt.close(figP)
+            ngplot.figureClose(figP)
 
 
     # Select method for final points
     method = abs(remain)
 
     if 0 < method <= len(peaks_on_track):
-        return peaks_on_track[method-1]
+        return peaks_on_track[method - 1]
     else:
         raise ValueError("Unknown method number selected by number of groups.")

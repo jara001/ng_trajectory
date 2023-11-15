@@ -1,12 +1,12 @@
 #!/usr/bin/env python3.6
 # profiler.py
-"""Compute criterion using speed profile and lap time.
-"""
+"""Compute criterion using speed profile and lap time."""
 ######################
 # Imports & Globals
 ######################
 
-import math, numpy
+import math
+import numpy
 import csv
 
 from ng_trajectory.interpolators.utils import pointsDistance
@@ -34,9 +34,23 @@ _lr = 0.139         # distance from the center of mass to the rear axle [m]
 
 def parametersSet(**kwargs) -> None:
     """Set parameters of the profiler."""
-
     for _parameter, _value in kwargs.items():
         globals()[_parameter] = _value
+
+
+def listFlatten(ls: List[List[any]]) -> List[any]:
+    """Flatten the list of lists into a single list.
+
+    Arguments:
+    l -- list to flatten, n-list of lists
+
+    Returns:
+    f -- flattened list, m-list
+
+    Source:
+    https://stackoverflow.com/questions/952914/how-to-make-a-flat-list-out-of-list-of-lists
+    """
+    return [item for sublist in ls for item in sublist]
 
 
 ######################
@@ -44,7 +58,7 @@ def parametersSet(**kwargs) -> None:
 ######################
 
 def Fz(v: float) -> float:
-    """Computes force on z-axis.
+    """Compute force on z-axis.
 
     Arguments:
     v -- speed of the vehicle, [m.s^-1], float
@@ -58,11 +72,11 @@ def Fz(v: float) -> float:
 
     Note: Ported to Py3.6.
     """
-    return _m*_g + 0.5*(_ro*_A*_cl*v*v)
+    return _m * _g + 0.5 * (_ro * _A * _cl * v * v)
 
 
 def Fy(v: float, k: float) -> float:
-    """Computes force on y-axis (possibly lateral).
+    """Compute force on y-axis (possibly lateral).
 
     Arguments:
     v -- speed of the vehicle, [m.s^-1], float
@@ -77,11 +91,11 @@ def Fy(v: float, k: float) -> float:
 
     Note: Ported to Py3.6.
     """
-    return _m*v*v*k
+    return _m * v * v * k
 
 
 def h(k: float, v: float, d: int, i: int = -1) -> float:
-    """Computes maximum available longitudal acceleration.
+    """Compute maximum available longitudal acceleration.
 
     Arguments:
     k -- curvature of a turn, [m^-1], float
@@ -100,9 +114,8 @@ def h(k: float, v: float, d: int, i: int = -1) -> float:
     Differences:
         Removed comments.
     """
-
     fz_res = Fz(v)
-    fy_res = Fy(v,k)
+    fy_res = Fy(v, k)
 
     if (_mu * _mu * fz_res * fz_res - fy_res * fy_res) <= 0:
         return 0
@@ -123,9 +136,10 @@ def overlapCreate(points: numpy.ndarray, overlap: int):
     Returns:
     opoints -- overlapped trajectory, (n+2xoverlap)x3 numpy.ndarray
 
-    Note: Overlap means, that the `overlap` points of trajectory are copied from
-    the start to the end of the trajectory and vice versa. This helps to make
-    the transition from the end to the start of the trajectory.
+    Note: Overlap means, that the `overlap` points of trajectory are copied
+          from the start to the end of the trajectory and vice versa. This
+          helps to make the transition from the end to the start of
+          the trajectory.
     """
     return numpy.vstack((points[-overlap:, :], points[:, :], points[:overlap]))
 
@@ -140,17 +154,19 @@ def overlapRemove(points: numpy.ndarray, overlap: int):
     Returns:
     opoints -- non-overlapped trajectory, (n-2xoverlap)x3 numpy.ndarray
 
-    Note: Overlap means, that the `overlap` points of trajectory are copied from
-    the start to the end of the trajectory and vice versa. This helps to make
-    the transition from the end to the start of the trajectory.
+    Note: Overlap means, that the `overlap` points of trajectory are copied
+          from the start to the end of the trajectory and vice versa. This
+          helps to make the transition from the end to the start of
+          the trajectory.
 
     Note: This does the exact opposite of 'overlapCreate()'.
     """
     return points[overlap:-overlap, :]
 
 
-def backward_pass(points: numpy.ndarray) -> Tuple[List[float], List[float], List[float]]:
-    """Computes maximum and backward speed for a trajectory.
+def backward_pass(
+        points: numpy.ndarray) -> Tuple[List[float], List[float], List[float]]:
+    """Compute maximum and backward speed for a trajectory.
 
     Arguments:
     points -- points of a trajectory, nx3 numpy.ndarray
@@ -158,7 +174,8 @@ def backward_pass(points: numpy.ndarray) -> Tuple[List[float], List[float], List
     Returns:
     v_bwd -- speed profile of the trajectory after backward step, [m.s^-1],
              list of floats
-    v_max -- maximum speed profile (before backward step), [m.s^-1], list of floats
+    v_max -- maximum speed profile (before backward step),
+             [m.s^-1], list of floats
     cur -- curvature of the trajectory, [m^-1], list of floats
 
     Source:
@@ -170,9 +187,7 @@ def backward_pass(points: numpy.ndarray) -> Tuple[List[float], List[float], List
         Removed comments.
         Moved a_break_max to arguments.
     """
-
     k = len(points)
-    k_ax = numpy.linspace(0, k, k)
 
     cur = numpy.zeros((len(points)))
     for i, p in enumerate(points):
@@ -184,31 +199,46 @@ def backward_pass(points: numpy.ndarray) -> Tuple[List[float], List[float], List
     v_max = numpy.zeros((len(points)))
     v_max_cr = numpy.zeros((len(points)))
     alim = numpy.zeros((len(points)))
-    v_bwd[k%len(points)] = v_lim
-    v_max[k%len(points)] = v_lim
+    v_bwd[k % len(points)] = v_lim
+    v_max[k % len(points)] = v_lim
 
     while k > 0:
-        v_max_cr[k-1] = math.sqrt(_mu*_g/cur[k-1]) if cur[k-1] != 0.0 else v_lim
-        v_max[k-1] = min(v_max_cr[k-1],v_lim)
-        ds = math.sqrt(math.pow(points[k%len(points), 0] - points[k-1, 0],2)+math.pow(points[k%len(points), 1] - points[k-1, 1],2))
-        alim[k%len(points)] = (math.pow(v_max[k-1],2)-math.pow(v_bwd[k%len(points)],2))/(2*ds)
-        a[k-1] = -h(cur[k%len(points)],v_bwd[k%len(points)],-1, k)
-        a[k-1] = min(min(a[k-1],a_break_max),alim[k%len(points)])
-        v_bwd[k-1] = math.sqrt((v_bwd[k%len(points)] * v_bwd[k%len(points)]) + (2 * a[k-1] * ds))
+        v_max_cr[k - 1] = (
+            math.sqrt(_mu * _g / cur[k - 1]) if cur[k - 1] != 0.0
+            else v_lim
+        )
+        v_max[k - 1] = min(v_max_cr[k - 1], v_lim)
+        ds = math.sqrt(
+            math.pow(points[k % len(points), 0] - points[k - 1, 0], 2)
+            + math.pow(points[k % len(points), 1] - points[k - 1, 1], 2)
+        )
+        alim[k % len(points)] = (
+            math.pow(v_max[k - 1], 2) - math.pow(v_bwd[k % len(points)], 2)
+        ) / (2 * ds)
+        a[k - 1] = -h(cur[k % len(points)], v_bwd[k % len(points)], -1, k)
+        a[k - 1] = min(min(a[k - 1], a_break_max), alim[k % len(points)])
+        v_bwd[k - 1] = math.sqrt(
+            (v_bwd[k % len(points)] * v_bwd[k % len(points)])
+            + (2 * a[k - 1] * ds)
+        )
         k = k - 1
 
     return v_bwd, v_max, cur
 
 
-def forward_pass(points: numpy.ndarray, v_bwd: List[float], v_max: List[float], cur: List[float]) \
-    -> Tuple[List[float], List[float], List[float]]:
-    """Computes forward speed for a trajectory. Preceded by `backward_pass()`.
+def forward_pass(
+        points: numpy.ndarray,
+        v_bwd: List[float],
+        v_max: List[float],
+        cur: List[float]) -> Tuple[List[float], List[float], List[float]]:
+    """Compute forward speed for a trajectory. Preceded by `backward_pass()`.
 
     Arguments:
     points -- points of a trajectory, nx3 numpy.ndarray
     v_bwd -- speed profile of the trajectory after backward step, [m.s^-1],
              list of floats
-    v_max -- maximum speed profile (before backward step), [m.s^-1], list of floats
+    v_max -- maximum speed profile (before backward step),
+             [m.s^-1], list of floats
     cur -- curvature of the trajectory, [m^-1], list of floats
 
     Returns:
@@ -225,11 +255,10 @@ def forward_pass(points: numpy.ndarray, v_bwd: List[float], v_max: List[float], 
     Differences:
         Removed comments.
         Moved a_acc_max to arguments.
-        Changed the order of arguments to match the output order of 'backward_pass()'.
+        Changed the order of arguments to match the output
+        order of 'backward_pass()'.
     """
-
     k = 0
-    k_ax = numpy.linspace(0,len(points), len(points))
     t = numpy.zeros((len(points)))
     v_fwd = numpy.zeros((len(points)))
     a = numpy.zeros((len(points)))
@@ -237,18 +266,33 @@ def forward_pass(points: numpy.ndarray, v_bwd: List[float], v_max: List[float], 
     v_fwd[k] = v_0
 
     while k < len(points):
-        ds = math.sqrt(math.pow(points[k, 0] - points[(k + 1)%len(points), 0], 2) + math.pow(points[k, 1] - points[(k + 1)%len(points), 1], 2))
-        a_lim = (v_bwd[(k+1)%len(points)]*v_bwd[(k+1)%len(points)] - v_fwd[k]*v_fwd[k])/(2*ds)
-        a[k] = h(cur[k],v_fwd[k],1)
-        a[k] = min(min(a[k], a_acc_max),a_lim)
-        v_fwd[(k+1)%len(points)] = math.sqrt(v_fwd[k]*v_fwd[k] + 2*a[k]*ds)
-        t[(k+1)%len(points)] = t[k] + 2*ds/(v_fwd[(k+1)%len(points)] + v_fwd[k])
+        ds = math.sqrt(
+            math.pow(points[k, 0] - points[(k + 1) % len(points), 0], 2)
+            + math.pow(points[k, 1] - points[(k + 1) % len(points), 1], 2)
+        )
+        a_lim = (
+            v_bwd[(k + 1) % len(points)] * v_bwd[(k + 1) % len(points)]
+            - v_fwd[k] * v_fwd[k]
+        ) / (2 * ds)
+        a[k] = h(cur[k], v_fwd[k], 1)
+        a[k] = min(min(a[k], a_acc_max), a_lim)
+        v_fwd[(k + 1) % len(points)] = math.sqrt(
+            v_fwd[k] * v_fwd[k] + 2 * a[k] * ds
+        )
+        t[(k + 1) % len(points)] = (
+            t[k] + 2 * ds / (v_fwd[(k + 1) % len(points)] + v_fwd[k])
+        )
         k = k + 1
 
     return v_fwd, a, t
 
 
-def saveState(filename: str, points: numpy.ndarray, t: numpy.ndarray, v: numpy.ndarray, a: numpy.ndarray) -> bool:
+def saveState(
+        filename: str,
+        points: numpy.ndarray,
+        t: numpy.ndarray,
+        v: numpy.ndarray,
+        a: numpy.ndarray) -> bool:
     """Save the computed profile into a CSV file.
 
     Arguments:
@@ -256,7 +300,8 @@ def saveState(filename: str, points: numpy.ndarray, t: numpy.ndarray, v: numpy.n
     points -- points of a trajectory with curvature, nx3 numpy.ndarray
     v -- speed profile of the trajectory, [m.s^-1], nx1 numpy.ndarray
     a -- acceleration profile of the trajectory, [m.s^-2], nx1 numpy.ndarray
-    t -- time of reaching the points of the trajectory, [s], nx1 or (n+1)x1 numpy.ndarray
+    t -- time of reaching the points of the trajectory,
+         [s], nx1 or (n+1)x1 numpy.ndarray
 
     Returns:
     success -- True if saved, otherwise False
@@ -309,8 +354,7 @@ def saveState(filename: str, points: numpy.ndarray, t: numpy.ndarray, v: numpy.n
                     "delta_rad": math.atan((_lf + _lr)/_lr * math.tan(_beta))
                 }
             )
-    """
-
+    """  # noqa: E501
     x, y, k = points[:, :3].T
     t, v, a = t.flatten(), v.flatten(), a.flatten()
 
@@ -330,8 +374,14 @@ def saveState(filename: str, points: numpy.ndarray, t: numpy.ndarray, v: numpy.n
 
 
     with open(filename, "w", newline = "") as f:
-        writer = csv.DictWriter(f,
-            fieldnames = ["t_s", "d_m", "x_m", "y_m", "psi_rad", "k_radpm", "vx_mps", "vy_mps", "a_mps2", "omega_radps", "delta_rad"]
+        writer = csv.DictWriter(
+            f,
+            fieldnames = [
+                "t_s", "d_m", "x_m", "y_m",
+                "psi_rad", "k_radpm",
+                "vx_mps", "vy_mps", "a_mps2",
+                "omega_radps", "delta_rad"
+            ]
         )
 
         writer.writeheader()
@@ -356,7 +406,13 @@ def saveState(filename: str, points: numpy.ndarray, t: numpy.ndarray, v: numpy.n
             )
 
 
-def profileCompute(points: numpy.ndarray, overlap: int = 0, fd: TextIO = None, lap_time: bool = False, save: str = None) -> Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]:
+def profileCompute(
+        points: numpy.ndarray,
+        overlap: int = 0,
+        fd: TextIO = None,
+        lap_time: bool = False,
+        save: str = None) \
+        -> Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     """Compute the speed profile using overlap.
 
     Arguments:
@@ -368,10 +424,11 @@ def profileCompute(points: numpy.ndarray, overlap: int = 0, fd: TextIO = None, l
     Returns:
     v_fwd -- speed profile of the trajectory after forward step, [m.s^-1],
              nx1 numpy.ndarray
-    a -- final acceleration profile of the trajectory, [m.s^-2], nx1 numpy.ndarray
-    t -- time of reaching the points of the trajectory, [s], nx1 or (n+1)x1 numpy.ndarray
+    a -- final acceleration profile of the trajectory,
+         [m.s^-2], nx1 numpy.ndarray
+    t -- time of reaching the points of the trajectory,
+         [s], nx1 or (n+1)x1 numpy.ndarray
     """
-
     # Overlap points
     if overlap > 0:
         # Overlapping fails when there is not enough points.
@@ -384,8 +441,7 @@ def profileCompute(points: numpy.ndarray, overlap: int = 0, fd: TextIO = None, l
 
     # Compute speed profile
     bwd, mx, cur = backward_pass(points = _points)
-    v, a, t = forward_pass(_points,
-                bwd, mx, cur)
+    v, a, t = forward_pass(_points, bwd, mx, cur)
 
     # Convert to numpy.ndarray
     bwd = bwd[:, numpy.newaxis]
@@ -451,11 +507,19 @@ def profileCompute(points: numpy.ndarray, overlap: int = 0, fd: TextIO = None, l
         _ac = (_v[0]**2 - _v[-1]**2) / (2 * _ds)
         try:
             assert -a_break_max <= _ac <= a_acc_max, \
-               "Overlap is violating the acceleration limit (-%f <= %f <= %f), so it is not long enough to make the path velocity smooth." % (a_break_max, _ac, a_acc_max)
-        except:
-            if not math.isclose(_ac, a_acc_max) and not math.isclose(_ac, -a_break_max):
+                (
+                    "Overlap is violating the acceleration limit "
+                    "(-%f <= %f <= %f), so it is not long enough to make "
+                    "the path velocity smooth."
+                    % (a_break_max, _ac, a_acc_max)
+                )
+        except AssertionError:
+            if (
+                not math.isclose(_ac, a_acc_max)
+                and not math.isclose(_ac, -a_break_max)
+            ):
                 raise
-    elif lap_time: # no overlap; use the last time values
+    elif lap_time:  # no overlap; use the last time values
         _t = numpy.vstack((_t, _t[-1]))
         _t[0] = 0
 
@@ -463,4 +527,3 @@ def profileCompute(points: numpy.ndarray, overlap: int = 0, fd: TextIO = None, l
         saveState(save, points, _t, _v, _a)
 
     return _v, _a, _t
-

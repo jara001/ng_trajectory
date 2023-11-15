@@ -1,6 +1,9 @@
 #!/usr/bin/env python3.6
 # main.py
 """Penalize the incorrect solution by distance to the centerline.
+
+Each point is associated with a section of the track centerline
+based upon its location.
 """
 ######################
 # Imports & Globals
@@ -8,10 +11,10 @@
 
 import numpy
 
+from ng_trajectory.parameter import ParameterList
 from ng_trajectory.penalizers.utils import eInvalidPoints
-from ng_trajectory.segmentators.utils import *
 
-from typing import List, Dict
+from typing import List
 
 
 # Global variables
@@ -20,7 +23,6 @@ CENTERLINE = None
 
 
 # Parameters
-from ng_trajectory.parameter import *
 P = ParameterList()
 P.createAdd("method", "min", str, "Optimization method for final penalty -- min / max / sum / avg.", "Init.")
 P.createAdd("huber_loss", False, bool, "Whether to use Huber loss for computing the fitness.", "Init.")
@@ -50,7 +52,9 @@ METHODS = {
     "avg": {
         "function": lambda old, new: old + new,
         "initial": 0,
-        "after": lambda result, invalid_count: result / invalid_count if invalid_count > 0 else result,
+        "after": lambda result, invalid_count: (
+            result / invalid_count if invalid_count > 0 else result
+        ),
     },
 }
 
@@ -76,7 +80,8 @@ def init(start_points: numpy.ndarray, **kwargs) -> None:
     """Initialize penalizer.
 
     Arguments:
-    start_points -- initial line on the track, should be a centerline, nx2 numpy.ndarray
+    start_points -- initial line on the track, should be a centerline,
+                    nx2 numpy.ndarray
     """
     global CENTERLINE, METHOD, INITIAL, AFTER, HUBER_LOSS, HUBER_DELTA
 
@@ -101,15 +106,26 @@ def init(start_points: numpy.ndarray, **kwargs) -> None:
         print ("Penalizer: Updating the centerline.")
 
 
-def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points: numpy.ndarray, grid: float, penalty: float = 100, **overflown) -> float:
-    """Get a penalty for the candidate solution based on number of incorrectly placed points.
+def penalize(
+        points: numpy.ndarray,
+        candidate: List[numpy.ndarray],
+        valid_points: numpy.ndarray,
+        grid: float,
+        penalty: float = 100,
+        **overflown) -> float:
+    """Get a penalty for the candidate solution.
+
+    Penalty is based on the number of incorrectly placed points.
 
     Arguments:
     points -- points to be checked, nx(>=2) numpy.ndarray
-    candidate -- raw candidate (non-interpolated points), m-list of 1x2 numpy.ndarray
+    candidate -- raw candidate (non-interpolated points),
+                 m-list of 1x2 numpy.ndarray
     valid_points -- valid area of the track, px2 numpy.ndarray
-    grid -- when set, use this value as a grid size, otherwise it is computed, float
-    penalty -- constant used for increasing the penalty criterion, float, default 100
+    grid -- when set, use this value as a grid size, otherwise it is computed,
+            float
+    penalty -- constant used for increasing the penalty criterion,
+               float, default 100
     **overflown -- arguments not caught by previous parts
 
     Returns:
@@ -140,7 +156,6 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
     # Check if all interpolated points are valid
     # Note: This is required for low number of groups.
     invalid = INITIAL
-    any_invalid = False
 
     invalid_points = 0
     INVALID_POINTS.clear()
@@ -151,20 +166,35 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
         # Store invalid point
         INVALID_POINTS.append(_p)
 
-        # Note: Trying borderlines here, it works the same, just the meaning of 'invalid' is different.
-        # Note: We used to have '<' here, however that failed with invalid index 0.
-        _segment_id = len([ _plm for _plm in _points_line_mapping if _plm <= _ip ]) - 1
+        # Note: Trying borderlines here, it works the same,
+        #       just the meaning of 'invalid' is different.
+        # Note: We used to have '<' here, however that failed
+        #       with invalid index 0.
+        _segment_id = len(
+            [_plm for _plm in _points_line_mapping if _plm <= _ip]
+        ) - 1
 
         # We need to wrap around when reaching over end of the line
-        if _points_line_mapping[_segment_id] > _points_line_mapping[(_segment_id+1)%len(_points_line_mapping)]:
+        if _points_line_mapping[_segment_id] > _points_line_mapping[
+            (_segment_id + 1) % len(_points_line_mapping)
+        ]:
             _invalid = numpy.max(
                 numpy.sqrt(
                     numpy.sum(
                         numpy.power(
                             numpy.subtract(
                                 numpy.vstack((
-                                    CENTERLINE[_points_line_mapping[_segment_id]:, :2],
-                                    CENTERLINE[0:_points_line_mapping[(_segment_id+1)%len(_points_line_mapping)]+1, :2]
+                                    CENTERLINE[
+                                        _points_line_mapping[_segment_id]:,
+                                        :2
+                                    ],
+                                    CENTERLINE[
+                                        0:_points_line_mapping[
+                                            (_segment_id + 1)
+                                            % len(_points_line_mapping)
+                                        ] + 1,
+                                        :2
+                                    ]
                                 )),
                                 _p[:2]
                             ),
@@ -180,7 +210,15 @@ def penalize(points: numpy.ndarray, candidate: List[numpy.ndarray], valid_points
                     numpy.sum(
                         numpy.power(
                             numpy.subtract(
-                                CENTERLINE[_points_line_mapping[_segment_id]:_points_line_mapping[(_segment_id+1)%len(_points_line_mapping)]+1, :2],
+                                CENTERLINE[
+                                    _points_line_mapping[
+                                        _segment_id
+                                    ]:_points_line_mapping[
+                                        (_segment_id + 1)
+                                        % len(_points_line_mapping)
+                                    ] + 1,
+                                    :2
+                                ],
                                 _p[:2]
                             ),
                             2
