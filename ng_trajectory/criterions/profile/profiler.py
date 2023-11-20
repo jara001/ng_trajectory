@@ -298,13 +298,15 @@ def forward_pass(
         )
 
         if v_fwd[(k + 1) % len(points)] + v_fwd[k] > 0.0:
-            t[(k + 1) % len(points)] = (
-                t[k] + 2 * ds / (v_fwd[(k + 1) % len(points)] + v_fwd[k])
-            )
+            dt = 2 * ds / (v_fwd[(k + 1) % len(points)] + v_fwd[k])
         else:
             # TODO: It would be nice to actually stay at t[k] all the time.
             # But now all we can do is to just add some random time.
-            t[(k + 1) % len(points)] = t[k] + 1
+            dt = 100
+
+        t[(k + 1) % len(points)] = (
+            t[k] + min(dt, 100)
+        )
 
         k = k + 1
 

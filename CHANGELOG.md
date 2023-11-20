@@ -18,6 +18,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Parameter `--fonly/--friction-map-only` to skip generating map data and generate only friction map data.
     - Parameter `--friction-map-inverse` to inverse the colors in the friction map image.
 
+### Changed
+- Criterions
+    - _Profile_
+        - Time difference between points is constrained to 10s.
+
 ### Fixed
 - Segmentators
     - Catch and handle OverflowError when identifying invalid points.
