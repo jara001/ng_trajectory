@@ -24,6 +24,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Time difference between points is constrained to 10s.
 
 ### Fixed
+- Criterions
+    - _Profile_
+        - Avoid crashing when logfile is not given.
 - Segmentators
     - Catch and handle OverflowError when identifying invalid points.
 

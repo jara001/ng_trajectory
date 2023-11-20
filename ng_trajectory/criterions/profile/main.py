@@ -93,7 +93,10 @@ def init(**kwargs) -> None:
     if P.getValue("save_solution_csv") == "":
         P.update("save_solution_csv", None)
     elif P.getValue("save_solution_csv") == "$":
-        P.update("save_solution_csv", kwargs.get("logfile").name + ".csv")
+        P.update(
+            "save_solution_csv",
+            kwargs.get("logfile", sys.stdout).name + ".csv"
+        )
 
     if P.getValue("reference") is not None:
         REFERENCE = numpy.load(P.getValue("reference"))
