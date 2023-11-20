@@ -186,6 +186,8 @@ def compute(
     if overlap is None:
         overlap = P.getValue("overlap")
 
+    profiler.CENTERLINE = CENTERLINE
+
     _v, _a, _t = profiler.profileCompute(
         points,
         overlap,

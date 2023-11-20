@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Use friction for computing maximum velocity from the friction map if available.
         - Parameter 'friction_map_inverse' to invert the values in the friction map.
         - Support for zero friction (impassable area).
+        - CSV file contains progress along the centerline [m].
 - Segmentators
     - Function `getMap` to obtain current internal map used by the segmentators.
 - 'ng_generate_data'

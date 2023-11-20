@@ -9,7 +9,10 @@ import math
 import numpy
 import csv
 
-from ng_trajectory.interpolators.utils import pointsDistance
+from ng_trajectory.interpolators.utils import (
+    pointsDistance,
+    trajectoryClosestIndex,
+)
 
 from ng_trajectory.segmentators.utils import pointToMap
 
@@ -28,6 +31,7 @@ a_acc_max = 0.8     # Maximum longitudal acceleration [m.s^-2]
 a_break_max = 4.5   # Maximum longitudal decceleration [m.s^-2]
 _lf = 0.191         # distance from the center of mass to the front axle [m]
 _lr = 0.139         # distance from the center of mass to the rear axle [m]
+CENTERLINE = None
 FRICTION_MAP = None
 
 
@@ -381,6 +385,8 @@ def saveState(
                 }
             )
     """  # noqa: E501
+    global CENTERLINE
+
     x, y, k = points[:, :3].T
     t, v, a = t.flatten(), v.flatten(), a.flatten()
 
@@ -389,6 +395,12 @@ def saveState(
     _d = d[0]
     d[0] = 0.0
     d = numpy.cumsum(d)
+
+    # Centerline distance
+    if CENTERLINE is not None:
+        cd = pointsDistance(CENTERLINE)
+        cd[0] = 0.0
+        cd = numpy.cumsum(cd)
 
     # TODO: Share the information about closed path / lap time.
     if len(t) > len(x):
@@ -412,7 +424,7 @@ def saveState(
                 "psi_rad", "k_radpm",
                 "vx_mps", "vy_mps", "a_mps2",
                 "omega_radps", "delta_rad"
-            ]
+            ] + ([] if CENTERLINE is None else ["s_m"])
         )
 
         writer.writeheader()
@@ -420,8 +432,8 @@ def saveState(
         for _i in range(len(points)):
             _beta = math.atan(_lr * k[_i])
 
-            writer.writerow(
-                {
+            writer.writerow({
+                **{
                     "t_s": t[_i],
                     "d_m": d[_i],
                     "x_m": x[_i],
@@ -433,8 +445,15 @@ def saveState(
                     "a_mps2": a[_i],
                     "omega_radps": v[_i] * math.cos(_beta) * k[_i],
                     "delta_rad": math.atan((_lf + _lr) * k[_i])
-                }
-            )
+                }, **{
+                    [] if CENTERLINE is None
+                    else "s_m": cd[
+                        trajectoryClosestIndex(
+                            CENTERLINE,
+                            numpy.asarray([x[_i], y[_i]])
+                        )
+                    ]}
+            })
 
 
 def profileCompute(
