@@ -384,11 +384,16 @@ def saveState(
     x, y, k = points[:, :3].T
     t, v, a = t.flatten(), v.flatten(), a.flatten()
 
-    # Track progress (d)
+    # Line distance (d) !! NOT TRACK PROGRESS !!
     d = pointsDistance(points)
+    _d = d[0]
     d[0] = 0.0
     d = numpy.cumsum(d)
 
+    # TODO: Share the information about closed path / lap time.
+    if len(t) > len(x):
+        t[0] = t[-1]
+        d[0] = d[-1] + _d
 
     # Direction (angle from the point towards the next one)
     direction = numpy.asarray([

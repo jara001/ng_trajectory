@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Criterions
     - _Profile_
         - Time difference between points is constrained to 10s.
+        - Generated CSV file holds lap time and path length with the first trajectory point.
 
 ### Fixed
 - Criterions
