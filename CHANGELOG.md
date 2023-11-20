@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Criterions
+    - _Profile_
+        - Parameter 'friction_map' to load a friction map from '.npy' file.
+        - Use friction for computing maximum velocity from the friction map if available.
+        - Parameter 'friction_map_inverse' to invert the values in the friction map.
+- Segmentators
+    - Function `getMap` to obtain current internal map used by the segmentators.
+- 'ng_generate_data'
+    - Parameter `--friction-map` to create a friction map from an image.
+    - Parameter `--fonly/--friction-map-only` to skip generating map data and generate only friction map data.
+    - Parameter `--friction-map-inverse` to inverse the colors in the friction map image.
+
 ### Fixed
 - Segmentators
     - Catch and handle OverflowError when identifying invalid points.
