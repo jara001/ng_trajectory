@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Segmentators
+    - Function `getMap` to obtain current internal map used by the segmentators.
+
 ### Fixed
 - Segmentators
     - Catch and handle OverflowError when identifying invalid points.

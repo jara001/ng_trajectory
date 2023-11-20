@@ -100,6 +100,17 @@ def mapCreate(
     return MAP, MAP_ORIGIN, MAP_GRID
 
 
+def getMap() -> numpy.ndarray:
+    """Obtain the current map representation.
+
+    Returns:
+    MAP -- current map, numpy.ndarray
+    """
+    global MAP
+
+    return MAP
+
+
 def pointInBounds(point: list) -> bool:
     """Check whether a point is inside the map bounds.
 
