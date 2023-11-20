@@ -11,6 +11,8 @@ import csv
 
 from ng_trajectory.interpolators.utils import pointsDistance
 
+from ng_trajectory.segmentators.utils import pointToMap
+
 from typing import List, Tuple, TextIO
 
 
@@ -26,6 +28,7 @@ a_acc_max = 0.8     # Maximum longitudal acceleration [m.s^-2]
 a_break_max = 4.5   # Maximum longitudal decceleration [m.s^-2]
 _lf = 0.191         # distance from the center of mass to the front axle [m]
 _lr = 0.139         # distance from the center of mass to the rear axle [m]
+FRICTION_MAP = None
 
 
 ######################
@@ -187,6 +190,8 @@ def backward_pass(
         Removed comments.
         Moved a_break_max to arguments.
     """
+    global FRICTION_MAP
+
     k = len(points)
 
     cur = numpy.zeros((len(points)))
@@ -203,8 +208,14 @@ def backward_pass(
     v_max[k % len(points)] = v_lim
 
     while k > 0:
+        if FRICTION_MAP is not None:
+            cxy = pointToMap(points[k % len(points), :2])
+            mu = FRICTION_MAP[cxy[0], cxy[1]] / 100.0
+        else:
+            mu = _mu
+
         v_max_cr[k - 1] = (
-            math.sqrt(_mu * _g / cur[k - 1]) if cur[k - 1] != 0.0
+            math.sqrt(mu * _g / cur[k - 1]) if cur[k - 1] != 0.0
             else v_lim
         )
         v_max[k - 1] = min(v_max_cr[k - 1], v_lim)

@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
+- Criterions
+    - _Profile_
+        - Parameter 'friction_map' to load a friction map from '.npy' file.
+        - Use friction for computing maximum velocity from the friction map if available.
 - Segmentators
     - Function `getMap` to obtain current internal map used by the segmentators.
 
