@@ -163,6 +163,14 @@ PARSER.add_argument(
     type = int,
 )
 
+PARSER.add_argument(
+    "--friction-map",
+
+    dest = "friction_map",
+    help = "Input source image with friction map, %%s",
+    type = ReadableFile(),
+)
+
 
 ######################
 # Utilities
@@ -880,6 +888,61 @@ def loadImage(filename: str) -> Image:
     return im
 
 
+def createFrictionMap(im: Image, filename: str) -> None:
+    """Create friction map from the map and given friction map image.
+
+    The friction image should have the same size as the map. Only free or
+    unoccupied points in the map are observed in the friction map.
+
+    Friction is obtained as color value in the cell. Later, it should be
+    treated as 100 multiple of friction (meaning that the actual value of the
+    stored friction varies from 0.00 to 2.55).
+
+    Arguments:
+    im -- image of the map, Image
+    filename -- name of the file with the friction map, str
+    """
+    # Create numpy array
+    nd = numpy.asarray(im, dtype = int)
+
+    # Name colors (just in case)
+    try:
+        WALL, UNKN, FREE = numpy.unique(nd)
+    except ValueError:
+        WALL, FREE = numpy.unique(nd)
+
+    fim = P.open(filename)
+    fim = fim.resize(
+        (int(fim.size[0] * args.resize), int(fim.size[1] * args.resize)),
+        resample = P.BILINEAR
+    )
+    nd2 = numpy.asarray(fim, dtype=int)
+
+    friction_map = numpy.argwhere(nd == FREE)
+    friction_map = numpy.vstack(
+        (friction_map.T, nd2[friction_map[:, 0], friction_map[:, 1]][None])
+    ).T.astype(float)
+
+    # Flip y-axis
+    friction_map -= [im.size[1], 0, 0]
+    friction_map[:, 0] = numpy.abs(friction_map[:, 0])
+
+    # Convert to real units (if required)
+    if args.resolution != 1.0:  # or args.resize != 1.0:
+        friction_map[:, :2] *= args.resolution / args.resize
+
+    # Move the origin (if required)
+    if args.originx != 0.0 or args.originy != 0.0:
+        friction_map += [args.originy, args.originx, 0]
+
+    # Swap yx
+    friction_map = numpy.vstack(
+        (friction_map[:, 1], friction_map[:, 0], friction_map[:, 2])
+    ).T
+
+    numpy.save("friction_map.npy", friction_map)
+
+
 ######################
 # Main
 ######################
@@ -956,3 +1019,7 @@ if __name__ == "__main__":
     # Run the program
     im = loadImage(args.file)
     processImage(im)
+
+    # Check whether we have a friction map
+    if args.friction_map is not None:
+        createFrictionMap(im, args.friction_map)

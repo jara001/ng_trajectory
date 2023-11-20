@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Use friction for computing maximum velocity from the friction map if available.
 - Segmentators
     - Function `getMap` to obtain current internal map used by the segmentators.
+- 'ng_generate_data'
+    - Parameter `--friction-map` to create a friction map from an image.
 
 ### Fixed
 - Segmentators
