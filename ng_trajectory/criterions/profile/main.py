@@ -146,6 +146,19 @@ def init(**kwargs) -> None:
             file = kwargs.get("logfile", sys.stdout)
         )
 
+        uqs, cnt = numpy.unique(fmap[:, 2], return_counts = True)
+
+        print (
+            "\n".join([
+                "\t%.2f: %3.2f%%" % (_u, _r)
+                for _u, _r in zip(
+                    uqs / 100.0,
+                    (cnt / (float(sum(cnt)))) * 100.0
+                )
+            ]),
+            file = kwargs.get("logfile", sys.stdout)
+        )
+
 
 def compute(
         points: numpy.ndarray,
