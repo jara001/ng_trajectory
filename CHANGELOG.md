@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Fixed
+- Segmentators
+    - Catch and handle OverflowError when identifying invalid points.
+
 ## 1.10.0 - 2023-11-15
 ### Changed
 - Update all files to mitigate majority of the flake8 errors.

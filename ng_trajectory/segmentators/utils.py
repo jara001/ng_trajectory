@@ -128,6 +128,9 @@ def pointToMap(point: list) -> numpy.ndarray:
     """
     global MAP_ORIGIN, MAP_GRID
 
+    # If the point is outside, might return a value like
+    # numpy.round(...) = -1, which yields a totally insane
+    # number when converted to uint64.
     return numpy.round(
         numpy.subtract(numpy.asarray(point)[:2], MAP_ORIGIN) / MAP_GRID
     ).astype(numpy.uint64)

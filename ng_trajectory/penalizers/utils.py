@@ -86,4 +86,9 @@ def eInvalidPoints(points: numpy.ndarray) -> List[Tuple[int, List[float]]]:
             if not validCheck(pointToMap(_p)):
                 yield _i, _p
         except IndexError:
+            # Index is outside of the map.
+            yield _i, _p
+        except OverflowError:
+            # OverflowError: Python int too large to convert to C long
+            # Happens when we try to convert negative values to uint64.
             yield _i, _p
