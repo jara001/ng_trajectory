@@ -907,6 +907,8 @@ def createFrictionMap(im: Image, filename: str) -> None:
     treated as 100 multiple of friction (meaning that the actual value of the
     stored friction varies from 0.00 to 2.55).
 
+    Note that black color is 0.00 friction = impassable area.
+
     Arguments:
     im -- image of the map, Image
     filename -- name of the file with the friction map, str
