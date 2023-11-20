@@ -71,6 +71,7 @@ P.createAdd("plot_timelines_width", 0.6, float, "Linewidth of the timelines. 0 =
 P.createAdd("plot_overtaking", True, bool, "Whether to plot places where an overtaking occurs. (Has to be supported by optimizer.)", "init (viz.)")
 P.createAdd("favor_overtaking", 0, float, "Penalty value to add to the lap time when overtaking does not occur.", "init")
 P.createAdd("friction_map", None, str, "Name of the file to load (x, y, mu*100) with friction map.", "init")
+P.createAdd("friction_map_inverse", False, bool, "When True, invert the values in the friction map.", "init")
 
 
 ######################
@@ -124,6 +125,9 @@ def init(**kwargs) -> None:
 
     if P.getValue("friction_map") is not None:
         fmap = numpy.load(P.getValue("friction_map"))
+
+        if P.getValue("friction_map_inverse"):
+            fmap[:, 2] = 255 - fmap[:, 2]
 
         FRICTION_MAP = getMap().copy()
 
