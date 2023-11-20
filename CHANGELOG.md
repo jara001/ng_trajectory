@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - 'ng_generate_data'
     - Parameter `--friction-map` to create a friction map from an image.
     - Parameter `--fonly/--friction-map-only` to skip generating map data and generate only friction map data.
+    - Parameter `--friction-map-inverse` to inverse the colors in the friction map image.
 
 ### Fixed
 - Segmentators

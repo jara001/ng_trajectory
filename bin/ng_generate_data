@@ -180,6 +180,14 @@ PARSER.add_argument(
     action = "store_true",
 )
 
+PARSER.add_argument(
+    "--friction-map-inverse",
+
+    dest = "friction_map_inverse",
+    help = "Invert the color values in the friction map.",
+    action = "store_false",
+)
+
 
 ######################
 # Utilities
@@ -933,6 +941,10 @@ def createFrictionMap(im: Image, filename: str) -> None:
     friction_map = numpy.vstack(
         (friction_map.T, nd2[friction_map[:, 0], friction_map[:, 1]][None])
     ).T.astype(float)
+
+    # Invert colors
+    if args.friction_map_inverse:
+        friction_map[:, 2] = 255.0 - friction_map[:, 2]
 
     # Flip y-axis
     friction_map -= [im.size[1], 0, 0]
