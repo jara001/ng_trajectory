@@ -228,10 +228,16 @@ def backward_pass(
         ) / (2 * ds)
         a[k - 1] = -h(cur[k % len(points)], v_bwd[k % len(points)], -1, k)
         a[k - 1] = min(min(a[k - 1], a_break_max), alim[k % len(points)])
-        v_bwd[k - 1] = math.sqrt(
-            (v_bwd[k % len(points)] * v_bwd[k % len(points)])
-            + (2 * a[k - 1] * ds)
-        )
+
+        try:
+            v_bwd[k - 1] = math.sqrt(
+                (v_bwd[k % len(points)] * v_bwd[k % len(points)])
+                + (2 * a[k - 1] * ds)
+            )
+        except ValueError:
+            # Math domain error, requested deceleration is too large
+            v_bwd[k - 1] = 0.0
+
         k = k - 1
 
     return v_bwd, v_max, cur
@@ -290,9 +296,16 @@ def forward_pass(
         v_fwd[(k + 1) % len(points)] = math.sqrt(
             v_fwd[k] * v_fwd[k] + 2 * a[k] * ds
         )
-        t[(k + 1) % len(points)] = (
-            t[k] + 2 * ds / (v_fwd[(k + 1) % len(points)] + v_fwd[k])
-        )
+
+        if v_fwd[(k + 1) % len(points)] + v_fwd[k] > 0.0:
+            t[(k + 1) % len(points)] = (
+                t[k] + 2 * ds / (v_fwd[(k + 1) % len(points)] + v_fwd[k])
+            )
+        else:
+            # TODO: It would be nice to actually stay at t[k] all the time.
+            # But now all we can do is to just add some random time.
+            t[(k + 1) % len(points)] = t[k] + 1
+
         k = k + 1
 
     return v_fwd, a, t
