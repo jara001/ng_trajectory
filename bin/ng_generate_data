@@ -171,6 +171,15 @@ PARSER.add_argument(
     type = ReadableFile(),
 )
 
+PARSER.add_argument(
+    "--fonly",
+    "--friction-map-only",
+
+    dest = "friction_map_only",
+    help = "Generate only friction data, not map data.",
+    action = "store_true",
+)
+
 
 ######################
 # Utilities
@@ -1018,7 +1027,8 @@ if __name__ == "__main__":
 
     # Run the program
     im = loadImage(args.file)
-    processImage(im)
+    if not args.friction_map_only:
+        processImage(im)
 
     # Check whether we have a friction map
     if args.friction_map is not None:

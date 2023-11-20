@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Function `getMap` to obtain current internal map used by the segmentators.
 - 'ng_generate_data'
     - Parameter `--friction-map` to create a friction map from an image.
+    - Parameter `--fonly/--friction-map-only` to skip generating map data and generate only friction map data.
 
 ### Fixed
 - Segmentators
