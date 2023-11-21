@@ -494,7 +494,7 @@ def cascadeRun(
             **{"penalizer": pen}
         }
     )
-
+    logfileFlush()
 
     # # Optimization # #
     _fitness, _rcandidate, _tcandidate, _result = opt.optimize()

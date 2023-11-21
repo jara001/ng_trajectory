@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Fixed
 - Plot documentation should display properly now.
+- Some lines that should be printed out only once are no longer repeated in the logfile.
 
 ## 1.11.0 - 2023-11-21
 ### Added
