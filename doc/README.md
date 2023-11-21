@@ -270,6 +270,8 @@ reference_rotate (int) = 0 [Number of points to rotate the reference trajectory.
 reference_laptime (float) = 0 [Lap time of the given reference. 0 = estimated from data]
 save_solution_csv (str) = $ [When non-empty, save final trajectory to this file as CSV. Use '$' to use log name instead.]
 favor_overtaking (float) = 0 [Penalty value to add to the lap time when overtaking does not occur.]
+friction_map (str) = None [Name of the file to load (x, y, mu*100) with friction map.]
+friction_map_inverse (bool) = False [When True, invert the values in the friction map.]
 
 Init (viz.) parameters:
 plot (bool) = False [Whether a graphical representation should be created.]
@@ -516,6 +518,8 @@ reference_rotate (int) = 0 [Number of points to rotate the reference trajectory.
 reference_laptime (float) = 0 [Lap time of the given reference. 0 = estimated from data]
 save_solution_csv (str) = $ [When non-empty, save final trajectory to this file as CSV. Use '$' to use log name instead.]
 favor_overtaking (float) = 0 [Penalty value to add to the lap time when overtaking does not occur.]
+friction_map (str) = None [Name of the file to load (x, y, mu*100) with friction map.]
+friction_map_inverse (bool) = False [When True, invert the values in the friction map.]
 sampling_distance (float) = 1.0 [[m] Distance of super-sampling before the interpolation, skipped when 0.]
 distance (float) = 0 [[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.]
 fixed_points (list) = [] [Points to be used in the selection upon calling 'select'.]

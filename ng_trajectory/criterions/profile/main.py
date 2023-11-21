@@ -21,6 +21,11 @@ from ng_trajectory.interpolators.utils import (
     trajectoryClosestIndex
 )
 
+from ng_trajectory.segmentators.utils import (
+    pointsToMap,
+    getMap
+)
+
 import ng_trajectory.plot as ngplot
 
 from ng_trajectory.parameter import ParameterList
@@ -65,6 +70,8 @@ P.createAdd("plot_timelines_size", 1, float, "Size of the points of the timeline
 P.createAdd("plot_timelines_width", 0.6, float, "Linewidth of the timelines. 0 = disabled", "init (viz.)")
 P.createAdd("plot_overtaking", True, bool, "Whether to plot places where an overtaking occurs. (Has to be supported by optimizer.)", "init (viz.)")
 P.createAdd("favor_overtaking", 0, float, "Penalty value to add to the lap time when overtaking does not occur.", "init")
+P.createAdd("friction_map", None, str, "Name of the file to load (x, y, mu*100) with friction map.", "init")
+P.createAdd("friction_map_inverse", False, bool, "When True, invert the values in the friction map.", "init")
 
 
 ######################
@@ -86,7 +93,10 @@ def init(**kwargs) -> None:
     if P.getValue("save_solution_csv") == "":
         P.update("save_solution_csv", None)
     elif P.getValue("save_solution_csv") == "$":
-        P.update("save_solution_csv", kwargs.get("logfile").name + ".csv")
+        P.update(
+            "save_solution_csv",
+            kwargs.get("logfile", sys.stdout).name + ".csv"
+        )
 
     if P.getValue("reference") is not None:
         REFERENCE = numpy.load(P.getValue("reference"))
@@ -116,6 +126,42 @@ def init(**kwargs) -> None:
     else:
         REFERENCE = None
 
+    if P.getValue("friction_map") is not None:
+        fmap = numpy.load(P.getValue("friction_map"))
+
+        if P.getValue("friction_map_inverse"):
+            fmap[:, 2] = 255 - fmap[:, 2]
+
+        FRICTION_MAP = getMap().copy()
+
+        # Set default value to the _mu parameter.
+        FRICTION_MAP[:] = profiler._mu * 100
+
+        # Set all obtained values.
+        cxy = pointsToMap(fmap[:, :2])
+        FRICTION_MAP[cxy[:, 0], cxy[:, 1]] = fmap[:, 2]
+
+        profiler.FRICTION_MAP = FRICTION_MAP
+
+        print (
+            "Loaded friction map from '%s'."
+            % P.getValue("friction_map"),
+            file = kwargs.get("logfile", sys.stdout)
+        )
+
+        uqs, cnt = numpy.unique(fmap[:, 2], return_counts = True)
+
+        print (
+            "\n".join([
+                "\t%.2f: %3.2f%%" % (_u, _r)
+                for _u, _r in zip(
+                    uqs / 100.0,
+                    (cnt / (float(sum(cnt)))) * 100.0
+                )
+            ]),
+            file = kwargs.get("logfile", sys.stdout)
+        )
+
 
 def compute(
         points: numpy.ndarray,
@@ -139,6 +185,8 @@ def compute(
 
     if overlap is None:
         overlap = P.getValue("overlap")
+
+    profiler.CENTERLINE = CENTERLINE
 
     _v, _a, _t = profiler.profileCompute(
         points,

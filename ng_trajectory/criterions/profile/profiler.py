@@ -9,7 +9,12 @@ import math
 import numpy
 import csv
 
-from ng_trajectory.interpolators.utils import pointsDistance
+from ng_trajectory.interpolators.utils import (
+    pointsDistance,
+    trajectoryClosestIndex,
+)
+
+from ng_trajectory.segmentators.utils import pointToMap
 
 from typing import List, Tuple, TextIO
 
@@ -26,6 +31,8 @@ a_acc_max = 0.8     # Maximum longitudal acceleration [m.s^-2]
 a_break_max = 4.5   # Maximum longitudal decceleration [m.s^-2]
 _lf = 0.191         # distance from the center of mass to the front axle [m]
 _lr = 0.139         # distance from the center of mass to the rear axle [m]
+CENTERLINE = None
+FRICTION_MAP = None
 
 
 ######################
@@ -187,6 +194,8 @@ def backward_pass(
         Removed comments.
         Moved a_break_max to arguments.
     """
+    global FRICTION_MAP
+
     k = len(points)
 
     cur = numpy.zeros((len(points)))
@@ -203,8 +212,14 @@ def backward_pass(
     v_max[k % len(points)] = v_lim
 
     while k > 0:
+        if FRICTION_MAP is not None:
+            cxy = pointToMap(points[k % len(points), :2])
+            mu = FRICTION_MAP[cxy[0], cxy[1]] / 100.0
+        else:
+            mu = _mu
+
         v_max_cr[k - 1] = (
-            math.sqrt(_mu * _g / cur[k - 1]) if cur[k - 1] != 0.0
+            math.sqrt(mu * _g / cur[k - 1]) if cur[k - 1] != 0.0
             else v_lim
         )
         v_max[k - 1] = min(v_max_cr[k - 1], v_lim)
@@ -217,10 +232,16 @@ def backward_pass(
         ) / (2 * ds)
         a[k - 1] = -h(cur[k % len(points)], v_bwd[k % len(points)], -1, k)
         a[k - 1] = min(min(a[k - 1], a_break_max), alim[k % len(points)])
-        v_bwd[k - 1] = math.sqrt(
-            (v_bwd[k % len(points)] * v_bwd[k % len(points)])
-            + (2 * a[k - 1] * ds)
-        )
+
+        try:
+            v_bwd[k - 1] = math.sqrt(
+                (v_bwd[k % len(points)] * v_bwd[k % len(points)])
+                + (2 * a[k - 1] * ds)
+            )
+        except ValueError:
+            # Math domain error, requested deceleration is too large
+            v_bwd[k - 1] = 0.0
+
         k = k - 1
 
     return v_bwd, v_max, cur
@@ -279,9 +300,18 @@ def forward_pass(
         v_fwd[(k + 1) % len(points)] = math.sqrt(
             v_fwd[k] * v_fwd[k] + 2 * a[k] * ds
         )
+
+        if v_fwd[(k + 1) % len(points)] + v_fwd[k] > 0.0:
+            dt = 2 * ds / (v_fwd[(k + 1) % len(points)] + v_fwd[k])
+        else:
+            # TODO: It would be nice to actually stay at t[k] all the time.
+            # But now all we can do is to just add some random time.
+            dt = 100
+
         t[(k + 1) % len(points)] = (
-            t[k] + 2 * ds / (v_fwd[(k + 1) % len(points)] + v_fwd[k])
+            t[k] + min(dt, 100)
         )
+
         k = k + 1
 
     return v_fwd, a, t
@@ -355,14 +385,27 @@ def saveState(
                 }
             )
     """  # noqa: E501
+    global CENTERLINE
+
     x, y, k = points[:, :3].T
     t, v, a = t.flatten(), v.flatten(), a.flatten()
 
-    # Track progress (d)
+    # Line distance (d) !! NOT TRACK PROGRESS !!
     d = pointsDistance(points)
+    _d = d[0]
     d[0] = 0.0
     d = numpy.cumsum(d)
 
+    # Centerline distance
+    if CENTERLINE is not None:
+        cd = pointsDistance(CENTERLINE)
+        cd[0] = 0.0
+        cd = numpy.cumsum(cd)
+
+    # TODO: Share the information about closed path / lap time.
+    if len(t) > len(x):
+        t[0] = t[-1]
+        d[0] = d[-1] + _d
 
     # Direction (angle from the point towards the next one)
     direction = numpy.asarray([
@@ -381,7 +424,7 @@ def saveState(
                 "psi_rad", "k_radpm",
                 "vx_mps", "vy_mps", "a_mps2",
                 "omega_radps", "delta_rad"
-            ]
+            ] + ([] if CENTERLINE is None else ["s_m"])
         )
 
         writer.writeheader()
@@ -389,8 +432,8 @@ def saveState(
         for _i in range(len(points)):
             _beta = math.atan(_lr * k[_i])
 
-            writer.writerow(
-                {
+            writer.writerow({
+                **{
                     "t_s": t[_i],
                     "d_m": d[_i],
                     "x_m": x[_i],
@@ -402,8 +445,15 @@ def saveState(
                     "a_mps2": a[_i],
                     "omega_radps": v[_i] * math.cos(_beta) * k[_i],
                     "delta_rad": math.atan((_lf + _lr) * k[_i])
-                }
-            )
+                }, **{
+                    [] if CENTERLINE is None
+                    else "s_m": cd[
+                        trajectoryClosestIndex(
+                            CENTERLINE,
+                            numpy.asarray([x[_i], y[_i]])
+                        )
+                    ]}
+            })
 
 
 def profileCompute(
