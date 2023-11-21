@@ -14,6 +14,7 @@ import sys
 
 # PointDistance
 from ng_trajectory.interpolators.utils import pointDistance
+from ng_trajectory.log import print0, printv
 from ng_trajectory.parameter import ParameterList
 from ng_trajectory.segmentators.utils import (
     mapCreate,
@@ -110,17 +111,17 @@ def segmentDistance(p: List[float], a: List[float], b: List[float]) -> float:
     elif angle_bp > 90.0:
         return pointDistance(b, p)
 
-    print ("segmentDistance: Unexpected situation.")
-    print ("segmentDistance: point = %s, a = %s, b = %s" % (p, a, b))
-    print (
+    print0("segmentDistance: Unexpected situation.")
+    print0("segmentDistance: point = %s, a = %s, b = %s" % (p, a, b))
+    print0(
         "segmentDistance: angle_ap = %f, angle_bp = %f"
         % (angle_ap, angle_bp)
     )
-    print (
+    print0(
         "segmentDistance: d_to_seg = %f, d_ap = %f, d_bp = %f"
         % (distance_to_seg, pointDistance(a, p), pointDistance(b, p))
     )
-    print (
+    print0(
         "segmentDistance: V_ap = %s, V_ab = %s, V_ap*V_ab = %s"
         % (unit_ap, unit_ab, numpy.dot(unit_ap, unit_ab))
     )
@@ -175,7 +176,7 @@ def segmentate(
             _map[_cx, _cy] = _i
 
     else:  # if reserve_width
-        print ("Computing reserved zones...")
+        printv("Computing reserved zones...")
 
         # Use enlarged map (required for walls)
         _map = numpy.zeros(
@@ -219,11 +220,11 @@ def segmentate(
             walls = numpy.where(_map == 0)
 
         # TODO: Ensure that we have only two walls. Otherwise merge them.
-        print ("\tDetected walls: %d" % (color - 200))
+        printv("\tDetected walls: %d" % (color - 200))
 
 
         for _i, _c in enumerate(pointsToMap(group_centers)):
-            print ("\tSegment %d/%d:" % (_i, len(group_centers)))
+            printv("\tSegment %d/%d:" % (_i, len(group_centers)))
             _map[_c[0], _c[1]] = _i
 
             if (

@@ -15,6 +15,12 @@ from ng_trajectory.segmentators.utils import (
 
 from ng_trajectory.parameter import ParameterList
 
+from ng_trajectory.log import (
+    print0,
+    logv, logvv, logvvv,
+    logfileName, logfileFlush
+)
+
 from . import transform
 
 import nevergrad
@@ -48,7 +54,6 @@ SELECTOR_ARGS = None
 PENALIZER = None
 PENALIZER_INIT = None
 PENALIZER_ARGS = None
-LOGFILE = None
 VERBOSITY = 3
 FILELOCK = Lock()
 HOLDMAP = None
@@ -114,7 +119,6 @@ def init(
         penalizer: types.ModuleType = None,
         penalizer_init: Dict[str, any] = {},
         penalizer_args: Dict[str, any] = {},
-        logfile: TextIO = sys.stdout,
         logging_verbosity: int = 2,
         hold_matryoshka: bool = False,
         plot: bool = False,
@@ -153,7 +157,6 @@ def init(
                  default None
     penalizer_init -- arguments for the init part of the penalizer function, dict, default {}
     penalizer_args -- arguments for the penalizer function, dict, default {}
-    logfile -- file descriptor for logging, TextIO, default sys.stdout
     logging_verbosity -- index for verbosity of logger, int, default 2
     hold_matryoshka -- whether the Matryoshka should be created only once, bool, default False
     plot -- whether a graphical representation should be created, bool, default False
@@ -161,7 +164,7 @@ def init(
     figure -- target figure for plotting, matplotlib.figure.Figure, default None (get current)
     **kwargs -- arguments not caught by previous parts
     """  # noqa: E501
-    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY
+    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, VERBOSITY
     global HOLDMAP, GRID, PENALTY, FIGURE, PLOT
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS
     global SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER
@@ -180,7 +183,6 @@ def init(
     PENALIZER = penalizer
     PENALIZER_INIT = penalizer_init
     PENALIZER_ARGS = {**penalizer_args, **{"optimization": True}}
-    LOGFILE = logfile
     VERBOSITY = logging_verbosity
     _holdmatryoshka = hold_matryoshka
     PENALTY = penalty
@@ -211,18 +213,18 @@ def init(
                 GROUP_LAYERS = _data.get("group_layers")
                 GROUP_CENTERS = _data.get("group_centers")
 
-                print (
+                print0(
                     "Matryoshka mapping loaded from '%s'."
                     % P.getValue("load_matryoshka")
                 )
 
                 if not _holdmatryoshka:
-                    print (
+                    print0(
                         "Warning: 'hold_matryoshka' is not set, "
                         "so mapping won't be probably used."
                     )
         except Exception as e:
-            print (
+            print0(
                 "Failed to load Matryoshka from '%s': %s"
                 % (P.getValue("load_matryoshka"), e)
             )
@@ -331,7 +333,7 @@ def init(
                     s = 0.1
                 )
 
-        print ("Matryoshka mapping constructed.")
+        print0("Matryoshka mapping constructed.")
 
         if GRID is None:
             if len(grid) == 2:
@@ -348,12 +350,12 @@ def init(
                     group_layers = GROUP_LAYERS,
                     group_centers = GROUP_CENTERS
                 )
-                print (
+                print0(
                     "Matryoshka mapping saved to '%s'."
                     % P.getValue("save_matryoshka")
                 )
             except Exception as e:
-                print (
+                print0(
                     "Failed to save Matryoshka to '%s': %s"
                     % (P.getValue("save_matryoshka"), e)
                 )
@@ -363,7 +365,7 @@ def init(
     if len(P.getValue("fixed_segments")) > 0:
         for _fs in P.getValue("fixed_segments"):
             if not validCheck(pointToMap(_fs)):
-                print (
+                print0(
                     "Warning: Skipped segment fixed by '%s' as "
                     "it is outside of the valid area."
                     % _fs,
@@ -459,7 +461,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     trajectory -- trajectory of the best solution in real coordinates,
               mx2 numpy.ndarray
     """
-    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR
+    global OPTIMIZER, MATRYOSHKA, FILELOCK, VERBOSITY, INTERPOLATOR
     global INTERPOLATOR_ARGS, FIGURE, PLOT
     global PENALIZER, PENALIZER_ARGS, CRITERION_ARGS
 
@@ -491,7 +493,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
 
     # # Plot overtaking points # #
     if len(overtaking) > 0:
-        with open(LOGFILE.name + ".overtaking", "w") as f:
+        with open(logfileName() + ".overtaking", "w") as f:
             f.write(str(numpy.asarray(overtaking).tolist()))
 
         ngplot.pointsScatter(
@@ -528,17 +530,16 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     ##
 
     with FILELOCK:
-        if VERBOSITY > 0:
-            print (
-                "solution:%s"
-                % str(numpy.asarray(points).tolist()),
-                file=LOGFILE
-            )
-            print (
-                "final:%f"
-                % final,
-                file=LOGFILE
-            )
+        logv (
+            "solution:%s"
+            % str(numpy.asarray(points).tolist()),
+            level = VERBOSITY
+        )
+        logv (
+            "final:%f"
+            % final,
+            level = VERBOSITY
+        )
 
     return (
         final,
@@ -576,7 +577,7 @@ def _opt(points: numpy.ndarray) -> float:
     """
     global VALID_POINTS, CRITERION, CRITERION_ARGS
     global INTERPOLATOR, INTERPOLATOR_ARGS, PENALIZER, PENALIZER_ARGS
-    global MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
+    global MATRYOSHKA, FILELOCK, VERBOSITY, GRID, PENALTY
 
     # Transform points
     points = [
@@ -611,12 +612,10 @@ def _opt(points: numpy.ndarray) -> float:
 
     if penalty != 0:
         with FILELOCK:
-            if VERBOSITY > 2:
-                print ("pointsA:%s" % str(points), file=LOGFILE)
-                print ("pointsT:%s" % str(_points.tolist()), file=LOGFILE)
-            if VERBOSITY > 1:
-                print ("penalty:%f" % penalty, file=LOGFILE)
-            LOGFILE.flush()
+            logvvv ("pointsA:%s" % str(points), level = VERBOSITY)
+            logvvv ("pointsT:%s" % str(_points.tolist()), level = VERBOSITY)
+            logvv ("penalty:%f" % penalty, level = VERBOSITY)
+            logfileFlush()
         return penalty
 
     _c = CRITERION.compute(
@@ -629,11 +628,9 @@ def _opt(points: numpy.ndarray) -> float:
         }
     )
     with FILELOCK:
-        if VERBOSITY > 2:
-            print ("pointsA:%s" % str(points), file=LOGFILE)
-            print ("pointsT:%s" % str(_points.tolist()), file=LOGFILE)
-        if VERBOSITY > 1:
-            print ("correct:%f" % _c, file=LOGFILE)
-        LOGFILE.flush()
+        logvvv ("pointsA:%s" % str(points), level = VERBOSITY)
+        logvvv ("pointsT:%s" % str(_points.tolist()), level = VERBOSITY)
+        logvv ("correct:%f" % _c, level = VERBOSITY)
+        logfileFlush()
 
     return _c

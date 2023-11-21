@@ -16,6 +16,8 @@ from typing import List, Tuple, Callable
 from ng_trajectory.interpolators.utils import trajectoryReduce, pointDistance
 from .interpolate import pointsInterpolate
 
+from ng_trajectory.log import print0
+
 
 ######################
 # Utilities (Perpendiculars)
@@ -97,7 +99,7 @@ def trajectoryPerpendicular(
         magnitude = - dipoints[index, 0] / dipoints[index, 1]
     except ZeroDivisionError:
         # Horizontala
-        print (
+        print0(
             "trajectoryPerpendicular(%s at index %d) is horizontal"
             % (str(point.tolist()), index),
             file=sys.stderr

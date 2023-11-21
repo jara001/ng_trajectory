@@ -11,6 +11,12 @@ from ng_trajectory.segmentators.utils import gridCompute
 
 from ng_trajectory.parameter import ParameterList
 
+from ng_trajectory.log import (
+    print0,
+    logv, logvv, logvvv,
+    logfileFlush
+)
+
 from . import transform
 
 import nevergrad
@@ -44,7 +50,6 @@ SELECTOR_ARGS = None
 PENALIZER = None
 PENALIZER_INIT = None
 PENALIZER_ARGS = None
-LOGFILE = None
 VERBOSITY = 3
 FILELOCK = Lock()
 HOLDMAP = None
@@ -105,7 +110,6 @@ def init(
         penalizer: types.ModuleType = None,
         penalizer_init: Dict[str, any] = {},
         penalizer_args: Dict[str, any] = {},
-        logfile: TextIO = sys.stdout,
         logging_verbosity: int = 2,
         hold_transform: bool = False,
         plot: bool = False,
@@ -148,7 +152,6 @@ def init(
                  default None
     penalizer_init -- arguments for the init part of the penalizer function, dict, default {}
     penalizer_args -- arguments for the penalizer function, dict, default {}
-    logfile -- file descriptor for logging, TextIO, default sys.stdout
     logging_verbosity -- index for verbosity of logger, int, default 2
     hold_transform -- whether the transformation should be created only once, bool, default False
     plot -- whether a graphical representation should be created, bool, default False
@@ -161,7 +164,7 @@ def init(
     figure -- target figure for plotting, matplotlib.figure.Figure, default None (get current)
     **kwargs -- arguments not caught by previous parts
     """  # noqa: E501
-    global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY, GRID
+    global OPTIMIZER, CUTS, VALID_POINTS, VERBOSITY, GRID
     global PENALTY, FIGURE
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS
     global SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER
@@ -179,7 +182,6 @@ def init(
     PENALIZER = penalizer
     PENALIZER_INIT = penalizer_init
     PENALIZER_ARGS = {**penalizer_args, **{"optimization": True}}
-    LOGFILE = logfile
     VERBOSITY = logging_verbosity
     _holdtransform = hold_transform
     PENALTY = penalty
@@ -259,7 +261,7 @@ def init(
                 )
                 ngplot.pointsPlot(numpy.asarray(i), figure=figure)
 
-        print ("Braghin's transformation constructed.")
+        print0("Braghin's transformation constructed.")
 
         if GRID is None:
             if len(grid) == 2:
@@ -292,7 +294,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     trajectory -- trajectory of the best solution in real coordinates,
               mx2 numpy.ndarray
     """
-    global OPTIMIZER, CUTS, LOGFILE, FILELOCK, VERBOSITY
+    global OPTIMIZER, CUTS, FILELOCK, VERBOSITY
     global INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT
     global PENALIZER, PENALIZER_ARGS, CRITERION_ARGS
 
@@ -356,13 +358,12 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     ##
 
     with FILELOCK:
-        if VERBOSITY > 0:
-            print (
-                "solution:%s"
-                % str(numpy.asarray(points).tolist()),
-                file=LOGFILE
-            )
-            print ("final:%f" % final, file=LOGFILE)
+        logv (
+            "solution:%s"
+            % str(numpy.asarray(points).tolist()),
+            level = VERBOSITY
+        )
+        logv ("final:%f" % final, level = VERBOSITY)
 
     return (
         final,
@@ -398,7 +399,7 @@ def _opt(points: numpy.ndarray) -> float:
     """
     global VALID_POINTS, CRITERION, CRITERION_ARGS
     global INTERPOLATOR, INTERPOLATOR_ARGS, PENALIZER, PENALIZER_ARGS
-    global CUTS, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
+    global CUTS, FILELOCK, VERBOSITY, GRID, PENALTY
 
     # Transform points
     points = transform.transform(points, CUTS)
@@ -430,12 +431,10 @@ def _opt(points: numpy.ndarray) -> float:
 
     if penalty != 0:
         with FILELOCK:
-            if VERBOSITY > 2:
-                print ("pointsA:%s" % str(points), file=LOGFILE)
-                print ("pointsT:%s" % str(_points.tolist()), file=LOGFILE)
-            if VERBOSITY > 1:
-                print ("penalty:%f" % penalty, file=LOGFILE)
-            LOGFILE.flush()
+            logvvv ("pointsA:%s" % str(points), level = VERBOSITY)
+            logvvv ("pointsT:%s" % str(_points.tolist()), level = VERBOSITY)
+            logvv ("penalty:%f" % penalty, level = VERBOSITY)
+            logfileFlush()
         return penalty
 
     _c = CRITERION.compute(
@@ -445,11 +444,9 @@ def _opt(points: numpy.ndarray) -> float:
         }
     )
     with FILELOCK:
-        if VERBOSITY > 2:
-            print ("pointsA:%s" % str(points), file=LOGFILE)
-            print ("pointsT:%s" % str(_points.tolist()), file=LOGFILE)
-        if VERBOSITY > 1:
-            print ("correct:%f" % _c, file=LOGFILE)
-        LOGFILE.flush()
+        logvvv ("pointsA:%s" % str(points), level = VERBOSITY)
+        logvvv ("pointsT:%s" % str(_points.tolist()), level = VERBOSITY)
+        logvv ("correct:%f" % _c, level = VERBOSITY)
+        logfileFlush()
 
     return _c

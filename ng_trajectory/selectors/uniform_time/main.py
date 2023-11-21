@@ -29,6 +29,9 @@ from ng_trajectory.criterions.profile import profiler
 # ParameterList
 from ng_trajectory.parameter import ParameterList
 
+# Log
+from ng_trajectory.log import print0
+
 # Typing
 from typing import List
 
@@ -135,7 +138,7 @@ def select(points: numpy.ndarray, remain: int, **overflown) -> numpy.ndarray:
 
     if P.getValue("overlap") <= 0:
         # This is not a hard error, but it affects the result a lot.
-        print (
+        print0(
             "Warning: Consider setting 'overlap' parameter, as otherwise, "
             "the initial conditions affect the results.",
             file = sys.stderr

@@ -27,6 +27,8 @@ from ng_trajectory.interpolators.utils import (
 
 from ng_trajectory.parameter import ParameterList
 
+from ng_trajectory.log import print0
+
 # Resampling for rotation required GCD
 import fractions
 
@@ -262,7 +264,7 @@ def init(**kwargs) -> None:
             type(kwargs.get("rotate")) is not list
             and not (0 <= kwargs.get("rotate") < 1)
         ):
-            print (
+            print0(
                 "Expected 'rotate' to be 0<=rotate<1, but it is %f. Omitting."
                 % kwargs.get("rotate"),
                 file=sys.stderr
@@ -275,7 +277,7 @@ def init(**kwargs) -> None:
                 kwargs.get("fixed_points", [])
             )
         ):
-            print (
+            print0(
                 "Expected 'rotate' length to match number of fixed points "
                 "(%d), but it is %d. Using only %f."
                 % (

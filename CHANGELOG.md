@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Global logging utility to maintain printing/logging from one place.
+
+### Changed
+- Tweaked logging verbosity at various places.
+
 ### Fixed
 - Plot documentation should display properly now.
 
