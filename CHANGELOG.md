@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Fixed
+- Plot documentation should display properly now.
+
 ## 1.11.0 - 2023-11-21
 ### Added
 - Criterions
