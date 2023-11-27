@@ -18,7 +18,7 @@ from ng_trajectory.parameter import ParameterList
 from ng_trajectory.log import (
     print0,
     logv, logvv, logvvv,
-    logfileName, logfileFlush
+    logfileGet, logfileName, logfileFlush
 )
 
 from . import transform
@@ -28,6 +28,7 @@ import nevergrad
 import sys
 import os
 import numpy
+import tqdm
 
 # Parallel computing of genetic algorithm
 from concurrent import futures
@@ -63,6 +64,7 @@ FIGURE = None
 PLOT = None
 GROUP_CENTERS = None
 GROUP_LAYERS = None
+PROGRESS_BAR = None
 
 
 # Parameters
@@ -93,6 +95,51 @@ P.createAdd("plot_group_indices", True, bool, "Whether group indices should be s
 P.createAdd("plot_group_borders", True, bool, "Whether group borders should be shown on the track.", "init (viz.)")
 P.createAdd("fixed_segments", [], list, "Points to be used instead their corresponding segment.", "init")
 P.createAdd("_experimental_mm_max", -1, int, "(Experimental) Limit MM to cover only first n segments.", "init")
+
+
+######################
+# Concurrent Pool-tqdm
+######################
+
+class PPETQDM(futures.ProcessPoolExecutor):
+    """ProcessPoolExecutor object that supports tqdm progress bar.
+
+    Progress is updated on every 'submit()' to the pool.
+    """
+
+    def __init__(self, *args, progress_bar, **kwargs):
+        """Initialize a new PPETQDM instance.
+
+        Arguments:
+        progress_bar -- instance of tqdm object
+        """
+        super(PPETQDM, self).__init__(*args, **kwargs)
+
+        self.progress_bar = progress_bar
+
+
+    def submit(self, *args, **kwargs):
+        """Submit a callable to be executed with given arguments.
+
+        In addition, it increments the progress on the progress bar.
+
+        Returns:
+        f -- future representing the given call
+        """
+        self.progress_bar.update()
+        return super(PPETQDM, self).submit(*args, **kwargs)
+
+
+    def __enter__(self, *args, **kwargs):
+        """Enter the with statement and clear the progress bar."""
+        self.progress_bar.reset()
+        return super(PPETQDM, self).__enter__(*args, **kwargs)
+
+
+    def __exit__(self, *args, **kwargs):
+        """Exit the with statement and fill the progress bar."""
+        self.progress_bar.close()
+        return super(PPETQDM, self).__exit__(*args, **kwargs)
 
 
 ######################
@@ -170,6 +217,7 @@ def init(
     global SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER
     global PENALIZER_INIT, PENALIZER_ARGS
     global GROUP_CENTERS, GROUP_LAYERS
+    global PROGRESS_BAR
 
     # Local to global variables
     CRITERION = criterion
@@ -447,6 +495,10 @@ def init(
         budget = budget,
         num_workers = workers
     )
+    PROGRESS_BAR = tqdm.tqdm(
+        total = budget,
+        disable = logfileGet() == sys.stdout
+    )
 
 
 def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
@@ -467,8 +519,9 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
 
     overtaking = []
 
-    with futures.ProcessPoolExecutor(
-            max_workers=OPTIMIZER.num_workers
+    with PPETQDM(
+            max_workers = OPTIMIZER.num_workers,
+            progress_bar = PROGRESS_BAR,
     ) as executor:
         recommendation = OPTIMIZER.minimize(
             _opt,
