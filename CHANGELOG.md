@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Changed
 - Tweaked logging verbosity at various places.
+- 'ng_generate_data': Use inflated map for the creation of friction map.
 
 ### Fixed
 - Plot documentation should display properly now.
