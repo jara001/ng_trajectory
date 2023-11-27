@@ -5,6 +5,8 @@
 
 .PHONY: build develop install uninstall reinstall
 
+STASHABLE := $(shell git stash create)
+
 help: ## Show this help message.
 	@echo "Usage: make [target] ..."
 	@echo
@@ -38,7 +40,11 @@ stash:
 	@# --include-untracked or even --all should be here, but:
 	@#  a) I am using that for more stuff, so I have GBs of data here
 	@#  b) version.py kinda breaks that, so I it needs to be deleted right after?
-	git stash save --quiet "Prebuild stash"
+	@if test $(STASHABLE); then \
+		git stash save --quiet "Prebuild stash"; \
+	fi
 
 unstash:
-	git stash pop --quiet
+	@if test $(STASHABLE); then \
+		git stash pop --quiet; \
+	fi
