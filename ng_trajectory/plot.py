@@ -69,6 +69,7 @@ that the variable is not available, an exception is raised.
 
 
 ### Available functions
+
 Following functions are available for plotting, however only the first three
 are usually used:
 
@@ -85,6 +86,7 @@ are usually used:
 
 
 ### Available variables
+
 Following variables are available for plotting (by setting the value to `@` + name
 of the variable):
 
@@ -98,6 +100,7 @@ of the variable):
 
 
 ### Matplotlib wrapper
+
 In addition, it is possible to call literally any function related to `pyplot` or
 `figure` from the matplotlib. To do this, call function `_pyplot`/`_figure`
 with argument `function` with the name of the required function.

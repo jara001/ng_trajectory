@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.12.0 - 2023-11-27
+### Added
+- Global logging utility to maintain printing/logging from one place.
+- Git changes are stashed before building a wheel to avoid packing untested content.
+- Display progress bar when running the optimization while logging into a file.
+
+### Changed
+- Tweaked logging verbosity at various places.
+- 'ng_generate_data': Use inflated map for the creation of friction map.
+
+### Fixed
+- Plot documentation should display properly now.
+- Some lines that should be printed out only once are no longer repeated in the logfile.
+
 ## 1.11.0 - 2023-11-21
 ### Added
 - Criterions

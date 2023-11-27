@@ -26,6 +26,12 @@ from ng_trajectory.segmentators.utils import (
     getMap
 )
 
+from ng_trajectory.log import (
+    logfileName,
+    log,
+    print0
+)
+
 import ng_trajectory.plot as ngplot
 
 from ng_trajectory.parameter import ParameterList
@@ -95,7 +101,7 @@ def init(**kwargs) -> None:
     elif P.getValue("save_solution_csv") == "$":
         P.update(
             "save_solution_csv",
-            kwargs.get("logfile", sys.stdout).name + ".csv"
+            logfileName() + ".csv"
         )
 
     if P.getValue("reference") is not None:
@@ -118,10 +124,9 @@ def init(**kwargs) -> None:
         )
         REFERENCE[:, 2] = REFERENCE[:, 2] - REFERENCE[0, 2]
         REFERENCE[REFERENCE[:, 2] < 0, 2] += lap_time
-        print (
+        log (
             "Loaded reference with '%d' points, lap time %fs."
-            % (len(REFERENCE), lap_time),
-            file = kwargs.get("logfile", sys.stdout)
+            % (len(REFERENCE), lap_time)
         )
     else:
         REFERENCE = None
@@ -143,23 +148,21 @@ def init(**kwargs) -> None:
 
         profiler.FRICTION_MAP = FRICTION_MAP
 
-        print (
+        log (
             "Loaded friction map from '%s'."
-            % P.getValue("friction_map"),
-            file = kwargs.get("logfile", sys.stdout)
+            % P.getValue("friction_map")
         )
 
         uqs, cnt = numpy.unique(fmap[:, 2], return_counts = True)
 
-        print (
+        log (
             "\n".join([
                 "\t%.2f: %3.2f%%" % (_u, _r)
                 for _u, _r in zip(
                     uqs / 100.0,
                     (cnt / (float(sum(cnt)))) * 100.0
                 )
-            ]),
-            file = kwargs.get("logfile", sys.stdout)
+            ])
         )
 
 
@@ -389,11 +392,11 @@ def compute(
             # This should apply only for non-closed paths.
             if pd - prev_pd > 50:
                 if overlap > 0:
-                    print (
+                    print0 (
                         "WARNING: Detected jump in the trajectory "
                         "track progress."
                     )
-                    print (
+                    print0 (
                         f"rx: {rx}\try: {ry}\trt: {_}\n"
                         f"rd: {rd}\tpd: {pd}\n"
                         f"prev_rd: {prev_rd}\tprev_pd: {prev_pd}"

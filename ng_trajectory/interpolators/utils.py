@@ -12,6 +12,8 @@ by other algorithms.
 import math
 import numpy
 
+from ng_trajectory.log import print0
+
 
 ######################
 # Utilities (Point)
@@ -144,11 +146,11 @@ def trajectorySort(
             # TODO: Investigate whether this can happen.
             # FIXME: Raise an Exception?
             if len(_outliers) == 1:
-                print ("trajectorySort: Only one large jump "
+                print0("trajectorySort: Only one large jump "
                        "in the trajectory found.")
-                print ("trajectorySort: points = %s" % spoints.tolist())
-                print ("trajectorySort: dists = %s" % _dists.tolist())
-                print ("trajectorySort: Continuing without "
+                print0("trajectorySort: points = %s" % spoints.tolist())
+                print0("trajectorySort: dists = %s" % _dists.tolist())
+                print0("trajectorySort: Continuing without "
                        "dealing with outliers.")
                 break
 

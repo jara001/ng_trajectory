@@ -921,6 +921,9 @@ def createFrictionMap(im: Image, filename: str) -> None:
     im -- image of the map, Image
     filename -- name of the file with the friction map, str
     """
+    if args.inflate > 0:
+        im = inflateWalls(im)
+
     # Create numpy array
     nd = numpy.asarray(im, dtype = int)
 

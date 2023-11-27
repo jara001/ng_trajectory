@@ -14,6 +14,8 @@ import sys
 # Support for rotating the trajectory
 from ng_trajectory.interpolators.utils import trajectoryRotate
 
+from ng_trajectory.log import print0
+
 from ng_trajectory.parameter import ParameterList
 
 # Global variables
@@ -43,7 +45,7 @@ def init(
     if 0 <= rotate < 1:
         ROTATE = rotate
     else:
-        print (
+        print0(
             "Expected 'rotate' to be 0<=rotate<1, but it is %f. Omitting."
             % rotate,
             file=sys.stderr

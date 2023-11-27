@@ -85,6 +85,13 @@ import ng_trajectory.segmentators as segmentators
 import ng_trajectory.selectors as selectors
 import ng_trajectory.penalizers as penalizers
 
+from ng_trajectory.log import (
+    verbositySet,
+    logfileSet, logfileReset, logfileFlush,
+    log,
+    print0, printvv
+)
+
 import ng_trajectory.plot as plot
 
 from ng_trajectory.parameter import ParameterList
@@ -212,8 +219,9 @@ def configurationLoad(filename: str) -> bool:
         print (e)
         return False
 
-    if conf.get("logging_verbosity", 1) > 1:
-        print (CONFIGURATION)
+    verbositySet(conf.get("logging_verbosity", 1))
+
+    printvv (CONFIGURATION)
 
     return True
 
@@ -231,8 +239,9 @@ def configurationAppend(conf: Dict[str, any]) -> bool:
 
     CONFIGURATION = {**CONFIGURATION, **conf}
 
-    if CONFIGURATION.get("logging_verbosity", 1) > 1:
-        print (CONFIGURATION)
+    verbositySet(CONFIGURATION.get("logging_verbosity", 1))
+
+    printvv (CONFIGURATION)
 
     return True
 
@@ -273,8 +282,9 @@ def configurationMerge(conf: Dict[str, any]) -> bool:
 
     CONFIGURATION = dict(mergedicts(CONFIGURATION, conf))
 
-    if CONFIGURATION.get("logging_verbosity", 1) > 1:
-        print (CONFIGURATION)
+    verbositySet(CONFIGURATION.get("logging_verbosity", 1))
+
+    printvv (CONFIGURATION)
 
     return True
 
@@ -374,16 +384,17 @@ def cascadeRun(
             fileformat % (loop_i[0] + 1) + "-%s.log" % _alg.get("algorithm"),
             "w"
         )
-        print (_alg, file=LOGFILE)
-        print (
+        logfileSet(LOGFILE)
+
+        log (_alg)
+        log (
             "Running %s version %s"
             % (
                 ng_trajectory.__name__,
                 ng_trajectory.__version__
-            ),
-            file=LOGFILE
+            )
         )
-        LOGFILE.flush()
+        logfileFlush()
     else:
         LOGFILE = sys.stdout
 
@@ -405,7 +416,7 @@ def cascadeRun(
     pen = obtain(penalizers, "penalizer")
 
     # Show up current progress
-    print (
+    log (
         notification % (loop_i[0] + 1) + " "
         "%s with %s criterion (penalized by %s), int. by %s"
         % (
@@ -413,10 +424,9 @@ def cascadeRun(
             _alg.get("criterion", ""),
             _alg.get("penalizer", ""),
             _alg.get("interpolator", "")
-        ),
-        file=LOGFILE
+        )
     )
-    LOGFILE.flush()
+    logfileFlush()
 
     # Prepare plot
     if _alg.get("plot", False):
@@ -443,30 +453,26 @@ def cascadeRun(
     sel.init(
         **{
             **_alg,
-            **_alg.get("selector_init", {}),
-            **{"logfile": LOGFILE}
+            **_alg.get("selector_init", {})
         }
     )
     itp.init(
         **{
             **_alg,
-            **_alg.get("interpolator_init", {}),
-            **{"logfile": LOGFILE}
+            **_alg.get("interpolator_init", {})
         }
     )
     seg.init(
         track,
         **{
             **_alg,
-            **_alg.get("segmentator_init", {}),
-            **{"logfile": LOGFILE}
+            **_alg.get("segmentator_init", {})
         }
     )
     cri.init(
         **{
             **_alg,
-            **_alg.get("criterion_init", {}),
-            **{"logfile": LOGFILE}
+            **_alg.get("criterion_init", {})
         }
     )
 
@@ -485,11 +491,10 @@ def cascadeRun(
             **{"interpolator": itp},
             **{"segmentator": seg},
             **{"selector": sel},
-            **{"penalizer": pen},
-            **{"logfile": LOGFILE}
+            **{"penalizer": pen}
         }
     )
-
+    logfileFlush()
 
     # # Optimization # #
     _fitness, _rcandidate, _tcandidate, _result = opt.optimize()
@@ -524,17 +529,18 @@ def cascadeRun(
     # # End parts # #
     if fileformat:
         # Show all results of optimize function (log only)
-        print ("#fitness:%.14f" % _fitness, file=LOGFILE)
-        print ("#rcandidate:%s" % _rcandidate.tolist(), file=LOGFILE)
-        print ("#tcandidate:%s" % _tcandidate.tolist(), file=LOGFILE)
-        print ("#trajectory:%s" % _result.tolist(), file=LOGFILE)
+        log ("#fitness:%.14f" % _fitness)
+        log ("#rcandidate:%s" % _rcandidate.tolist())
+        log ("#tcandidate:%s" % _tcandidate.tolist())
+        log ("#trajectory:%s" % _result.tolist())
     # Show up time elapsed
-    print ("time:%f" % (time.time() - step_time), file=LOGFILE)
-    print ("==============", file=LOGFILE)
+    log ("time:%f" % (time.time() - step_time))
+    log ("==============")
 
     # Close file if opened
     if fileformat:
         LOGFILE.close()
+        logfileReset()
 
     # Store only better solution for next steps of the cascade
     if _fitness < fitness:
@@ -599,9 +605,9 @@ def loopCascadeRun(
 
     if fileformat:
         with open(fileformat % (loop_i + 1) + ".log", "w") as logfile:
-            print ("timeA:%f" % (time.time() - cascade_time), file=logfile)
+            log ("timeA:%f" % (time.time() - cascade_time), logfile=logfile)
     else:
-        print ("timeA:%f" % (time.time() - cascade_time), file=sys.stdout)
+        log ("timeA:%f" % (time.time() - cascade_time))
 
     if loop_output is None or cascade_output[0] < loop_output[0]:
         return cascade_output
@@ -656,7 +662,7 @@ def variateRun(
     )
 
 
-    print (
+    print0(
         "Variating %s %s finished in %fs."
         % (_param, _value, time.time() - variate_time)
     )
@@ -779,6 +785,6 @@ def execute(
             **CONFIGURATION
         )
 
-    print ("Optimization finished in %fs." % (time.time() - overall_time))
+    print0("Optimization finished in %fs." % (time.time() - overall_time))
 
     return solution

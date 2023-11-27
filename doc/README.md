@@ -780,7 +780,9 @@ Since it is not possible to have a dictionary with repeating keys, you can use a
 To pass a variable to the function, write its name prefixed with `@`. In case that the variable is not available, an exception is raised.
 
 
-### Available functions Following functions are available for plotting, however only the first three are usually used:
+### Available functions
+
+Following functions are available for plotting, however only the first three are usually used:
 
 - trackPlot
 - pointsScatter
@@ -794,7 +796,9 @@ To pass a variable to the function, write its name prefixed with `@`. In case th
 - labelText
 
 
-### Available variables Following variables are available for plotting (by setting the value to `@` + name of the variable):
+### Available variables
+
+Following variables are available for plotting (by setting the value to `@` + name of the variable):
 
 - track -- All valid points of the track.
 - fitness -- Fitness value of the best solution.
@@ -805,7 +809,9 @@ To pass a variable to the function, write its name prefixed with `@`. In case th
 - \+ any variable defined in the current loop from the configuration file.
 
 
-### Matplotlib wrapper In addition, it is possible to call literally any function related to `pyplot` or
+### Matplotlib wrapper
+
+In addition, it is possible to call literally any function related to `pyplot` or
 `figure` from the matplotlib. To do this, call function `_pyplot`/`_figure` with argument `function` with the name of the required function.
 
 For example, to make the axis equal, one can use this:

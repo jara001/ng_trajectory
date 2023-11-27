@@ -10,6 +10,8 @@ Functions used in the segmentator algorithms.
 
 import numpy
 
+from ng_trajectory.log import printv
+
 # Global variables
 MAP = None
 MAP_ORIGIN = None
@@ -42,17 +44,17 @@ def mapCreate(
     """
     global MAP, MAP_ORIGIN, MAP_GRID, MAP_BOUNDS
 
-    print ("Creating map...")
+    printv("Creating map...")
 
     # Obtain grid size if not set
     _grid = grid if grid else gridCompute(points)
 
-    print ("\tGrid:", _grid)
+    printv("\tGrid:", _grid)
 
     # Obtain origin if not set
     _origin = origin if origin else numpy.min(points, axis = 0)
 
-    print ("\tOrigin:", _origin)
+    printv("\tOrigin:", _origin)
 
     # Obtain size if not set
     _size = size if size else numpy.abs(
@@ -63,18 +65,18 @@ def mapCreate(
     )
 
     _min = numpy.min(points, axis = 0)
-    print ("\tMin:", _min)
+    printv("\tMin:", _min)
     _max = numpy.max(points, axis = 0)
-    print ("\tMax:", _max)
+    printv("\tMax:", _max)
     MAP_BOUNDS = [(_min[0], _max[0]), (_min[1], _max[1])]
 
-    print ("\tDist:", numpy.subtract(
+    printv("\tDist:", numpy.subtract(
         numpy.max(points, axis = 0),
         _origin
     ))
-    print ("\tSize:", _size)
+    printv("\tSize:", _size)
 
-    print (
+    printv(
         "\tCell size:",
         (_size / _grid) + 1, ((_size / _grid) + 1).astype(numpy.uint64)
     )
@@ -95,7 +97,7 @@ def mapCreate(
     MAP_ORIGIN = _origin
     MAP_GRID = _grid
 
-    print ("Map created.")
+    printv("Map created.")
 
     return MAP, MAP_ORIGIN, MAP_GRID
 

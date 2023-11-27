@@ -19,6 +19,7 @@ from ng_trajectory.interpolators.utils import (
     trajectoryClosestIndex,
     trajectoryFarthest,
 )
+from ng_trajectory.log import print0
 from ng_trajectory.parameter import ParameterList
 from ng_trajectory.penalizers.utils import eInvalidPoints
 from ng_trajectory.segmentators.utils import (
@@ -115,13 +116,13 @@ def init(
         utils.METHOD = utils.METHODS[P.getValue("method")]["function"]
         utils.INITIAL = utils.METHODS[P.getValue("method")]["initial"]
         utils.AFTER = utils.METHODS[P.getValue("method")]["after"]
-        print ("Penalizer: Using method '%s'." % P.getValue("method"))
+        print0("Penalizer: Using method '%s'." % P.getValue("method"))
 
 
     utils.HUBER_LOSS = P.getValue("huber_loss")
     utils.HUBER_DELTA = P.getValue("huber_delta")
     if utils.HUBER_LOSS:
-        print ("Penalizer: Huber loss on with %f delta." % utils.HUBER_DELTA)
+        print0("Penalizer: Huber loss on with %f delta." % utils.HUBER_DELTA)
 
 
     # Debug is used for showing extra content
@@ -130,7 +131,7 @@ def init(
 
     if CENTERLINE is None:
         CENTERLINE = start_points
-        print ("Penalizer: Updating the centerline.")
+        print0("Penalizer: Updating the centerline.")
 
 
 def penalize(
