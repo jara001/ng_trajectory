@@ -61,6 +61,11 @@ def logfileFlush() -> None:
     LOGFILE.flush()
 
 
+def logfileGet() -> TextIO:
+    """Get the logfile object."""
+    return LOGFILE
+
+
 def logfileName() -> str:
     """Get the name of the current logfile."""
     return LOGFILE.name
