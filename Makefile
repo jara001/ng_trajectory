@@ -35,9 +35,9 @@ reinstall: ##@Install Reinstall the package
 reinstall: uninstall install
 
 stash:
-	# --include-untracked or even --all should be here, but:
-	#  a) I am using that for more stuff, so I have GBs of data here
-	#  b) version.py kinda breaks that, so I it needs to be deleted right after?
+	@# --include-untracked or even --all should be here, but:
+	@#  a) I am using that for more stuff, so I have GBs of data here
+	@#  b) version.py kinda breaks that, so I it needs to be deleted right after?
 	git stash save --quiet "Prebuild stash"
 
 unstash:
