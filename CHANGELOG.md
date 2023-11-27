@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ## Unreleased
 ### Added
 - Global logging utility to maintain printing/logging from one place.
+- Git changes are stashed before building a wheel to avoid packing untested content.
 
 ### Changed
 - Tweaked logging verbosity at various places.
