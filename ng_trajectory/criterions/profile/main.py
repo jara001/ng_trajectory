@@ -23,6 +23,7 @@ from ng_trajectory.interpolators.utils import (
 
 from ng_trajectory.segmentators.utils import (
     pointsToMap,
+    pointsToWorld,
     getMap
 )
 
@@ -79,6 +80,7 @@ P.createAdd("favor_overtaking", 0, float, "Penalty value to add to the lap time 
 P.createAdd("friction_map", None, str, "Name of the file to load (x, y, mu*100) with friction map.", "init")
 P.createAdd("friction_map_inverse", False, bool, "When True, invert the values in the friction map.", "init")
 P.createAdd("friction_map_expand", False, bool, "When True, values from the friction map are expanded over the whole map using flood fill.", "init")
+P.createAdd("friction_map_save", False, bool, "When True, friction map is saved alongside the log files.", "init")
 
 
 ######################
@@ -203,6 +205,49 @@ def init(**kwargs) -> None:
             FRICTION_MAP = fmap_expand(FRICTION_MAP, fmap)
 
         profiler.FRICTION_MAP = FRICTION_MAP
+
+        # Plot the map
+        if P.getValue("friction_map_save"):
+            fig = ngplot.figureCreate()
+            ngplot.axisEqual(figure = fig)
+
+            if False:
+                # Plot everything
+                _sc = ngplot.pointsScatter(
+                    pointsToWorld(
+                        numpy.asarray(list(numpy.ndindex(FRICTION_MAP.shape)))
+                    ),
+                    s = 0.5,
+                    c = FRICTION_MAP.flatten() / 100.0,
+                    cmap = "gray_r",
+                    vmin = 0.0,
+                    figure = fig
+                )
+
+            # Points to plot
+            _ptp = numpy.asarray(numpy.where(getMap() == 100)).T
+
+            _sc = ngplot.pointsScatter(
+                pointsToWorld(_ptp),
+                s = 0.5,
+                c = FRICTION_MAP[_ptp[:, 0], _ptp[:, 1]] / 100.0,
+                cmap = "gray_r",
+                vmin = 0.0,
+                figure = fig
+            )
+
+            ngplot._pyplot(
+                _sc,
+                function = "colorbar",
+                figure = fig
+            )
+
+            ngplot.figureSave(
+                filename = logfileName() + ".fmap.png",
+                figure = fig
+            )
+
+            ngplot.figureClose(figure = fig)
 
         log (
             "Loaded friction map from '%s'."
