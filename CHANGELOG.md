@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.12.0 - 2023-11-27
 ### Added
 - Global logging utility to maintain printing/logging from one place.
 - Git changes are stashed before building a wheel to avoid packing untested content.
