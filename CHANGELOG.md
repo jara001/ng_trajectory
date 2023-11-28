@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - _Profile_
         - Parameter 'friction_map_expand' to fill the map with given friction map.
         - Parameter 'friction_map_plot' to plot the used friction map.
+- File `.flake8` that describes flake8 error ignored in the repository.
 
 ## 1.12.0 - 2023-11-27
 ### Added
