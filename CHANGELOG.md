@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Criterions
+    - _Profile_
+        - Parameter 'friction_map_expand' to fill the map with given friction map.
+
 ## 1.12.0 - 2023-11-27
 ### Added
 - Global logging utility to maintain printing/logging from one place.

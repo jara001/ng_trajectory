@@ -78,6 +78,58 @@ P.createAdd("plot_overtaking", True, bool, "Whether to plot places where an over
 P.createAdd("favor_overtaking", 0, float, "Penalty value to add to the lap time when overtaking does not occur.", "init")
 P.createAdd("friction_map", None, str, "Name of the file to load (x, y, mu*100) with friction map.", "init")
 P.createAdd("friction_map_inverse", False, bool, "When True, invert the values in the friction map.", "init")
+P.createAdd("friction_map_expand", False, bool, "When True, values from the friction map are expanded over the whole map using flood fill.", "init")
+
+
+######################
+# Utilities
+######################
+
+def fmap_expand(friction_map, known_values):
+    """Expand the known values over the whole friction map.
+
+    Arguments:
+    friction_map -- map of the environment with friction, numpy.ndarray
+    known_values -- known values of the friction, used for expansion,
+                    nx3 numpy.ndarray
+
+    Returns:
+    updated friction_map
+    """
+    cxy = pointsToMap(known_values[:, :2])
+    help_map = numpy.ones_like(friction_map, dtype = bool)
+
+    help_map[cxy[:, 0], cxy[:, 1]] = False
+
+
+    queue = cxy.tolist()
+
+    while len(queue) > 0:
+        cell_x, cell_y = queue.pop(0)
+
+        for _a, _b in [(-1, -1), (-1, 0), (-1, 1),
+                       (+0, -1),          (+0, 1),   # noqa: E241
+                       (+1, -1), (+1, 0), (+1, 1)]:
+
+            # Try does catch larger values but not negative
+            if cell_x + _a < 0 or cell_y + _b < 0:
+                continue
+
+            try:
+                _cell = help_map[cell_x + _a, cell_y + _b]
+                _cx = cell_x + _a
+                _cy = cell_y + _b
+            except IndexError:
+                continue
+
+            # Expand the value if not yet done
+            if _cell:
+                friction_map[_cx, _cy] = friction_map[cell_x, cell_y]
+                help_map[_cx, _cy] = False
+
+                queue.append((_cx, _cy))
+
+    return friction_map
 
 
 ######################
@@ -145,6 +197,10 @@ def init(**kwargs) -> None:
         # Set all obtained values.
         cxy = pointsToMap(fmap[:, :2])
         FRICTION_MAP[cxy[:, 0], cxy[:, 1]] = fmap[:, 2]
+
+        # Expand the fmap is required
+        if P.getValue("friction_map_expand"):
+            FRICTION_MAP = fmap_expand(FRICTION_MAP, fmap)
 
         profiler.FRICTION_MAP = FRICTION_MAP
 
