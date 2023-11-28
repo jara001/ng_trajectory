@@ -23,6 +23,7 @@ from ng_trajectory.interpolators.utils import (
 
 from ng_trajectory.segmentators.utils import (
     pointsToMap,
+    pointsToWorld,
     getMap
 )
 
@@ -78,6 +79,59 @@ P.createAdd("plot_overtaking", True, bool, "Whether to plot places where an over
 P.createAdd("favor_overtaking", 0, float, "Penalty value to add to the lap time when overtaking does not occur.", "init")
 P.createAdd("friction_map", None, str, "Name of the file to load (x, y, mu*100) with friction map.", "init")
 P.createAdd("friction_map_inverse", False, bool, "When True, invert the values in the friction map.", "init")
+P.createAdd("friction_map_expand", False, bool, "When True, values from the friction map are expanded over the whole map using flood fill.", "init")
+P.createAdd("friction_map_save", False, bool, "When True, friction map is saved alongside the log files.", "init")
+
+
+######################
+# Utilities
+######################
+
+def fmap_expand(friction_map, known_values):
+    """Expand the known values over the whole friction map.
+
+    Arguments:
+    friction_map -- map of the environment with friction, numpy.ndarray
+    known_values -- known values of the friction, used for expansion,
+                    nx3 numpy.ndarray
+
+    Returns:
+    updated friction_map
+    """
+    cxy = pointsToMap(known_values[:, :2])
+    help_map = numpy.ones_like(friction_map, dtype = bool)
+
+    help_map[cxy[:, 0], cxy[:, 1]] = False
+
+
+    queue = cxy.tolist()
+
+    while len(queue) > 0:
+        cell_x, cell_y = queue.pop(0)
+
+        for _a, _b in [(-1, -1), (-1, 0), (-1, 1),
+                       (+0, -1),          (+0, 1),   # noqa: E241
+                       (+1, -1), (+1, 0), (+1, 1)]:
+
+            # Try does catch larger values but not negative
+            if cell_x + _a < 0 or cell_y + _b < 0:
+                continue
+
+            try:
+                _cell = help_map[cell_x + _a, cell_y + _b]
+                _cx = cell_x + _a
+                _cy = cell_y + _b
+            except IndexError:
+                continue
+
+            # Expand the value if not yet done
+            if _cell:
+                friction_map[_cx, _cy] = friction_map[cell_x, cell_y]
+                help_map[_cx, _cy] = False
+
+                queue.append((_cx, _cy))
+
+    return friction_map
 
 
 ######################
@@ -146,7 +200,54 @@ def init(**kwargs) -> None:
         cxy = pointsToMap(fmap[:, :2])
         FRICTION_MAP[cxy[:, 0], cxy[:, 1]] = fmap[:, 2]
 
+        # Expand the fmap is required
+        if P.getValue("friction_map_expand"):
+            FRICTION_MAP = fmap_expand(FRICTION_MAP, fmap)
+
         profiler.FRICTION_MAP = FRICTION_MAP
+
+        # Plot the map
+        if P.getValue("friction_map_save"):
+            fig = ngplot.figureCreate()
+            ngplot.axisEqual(figure = fig)
+
+            if False:
+                # Plot everything
+                _sc = ngplot.pointsScatter(
+                    pointsToWorld(
+                        numpy.asarray(list(numpy.ndindex(FRICTION_MAP.shape)))
+                    ),
+                    s = 0.5,
+                    c = FRICTION_MAP.flatten() / 100.0,
+                    cmap = "gray_r",
+                    vmin = 0.0,
+                    figure = fig
+                )
+
+            # Points to plot
+            _ptp = numpy.asarray(numpy.where(getMap() == 100)).T
+
+            _sc = ngplot.pointsScatter(
+                pointsToWorld(_ptp),
+                s = 0.5,
+                c = FRICTION_MAP[_ptp[:, 0], _ptp[:, 1]] / 100.0,
+                cmap = "gray_r",
+                vmin = 0.0,
+                figure = fig
+            )
+
+            ngplot._pyplot(
+                _sc,
+                function = "colorbar",
+                figure = fig
+            )
+
+            ngplot.figureSave(
+                filename = logfileName() + ".fmap.png",
+                figure = fig
+            )
+
+            ngplot.figureClose(figure = fig)
 
         log (
             "Loaded friction map from '%s'."

@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.12.1 - 2023-11-28
+### Added
+- Criterions
+    - _Profile_
+        - Parameter 'friction_map_expand' to fill the map with given friction map.
+        - Parameter 'friction_map_plot' to plot the used friction map.
+- File `.flake8` that describes flake8 error ignored in the repository.
+
 ## 1.12.0 - 2023-11-27
 ### Added
 - Global logging utility to maintain printing/logging from one place.
