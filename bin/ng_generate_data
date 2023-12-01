@@ -192,6 +192,7 @@ PARSER.add_argument(
     "--clean",
 
     dest = "clean",
+    help = "Remove track points that are outside of the track.",
     action = "store_true",
 )
 
