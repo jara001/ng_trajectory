@@ -519,8 +519,21 @@ def processImage(im: Image) -> None:
     # Name colors (just in case)
     try:
         WALL, UNKN, FREE = numpy.unique(nd)
+        printv (
+            "Using colors:"
+            "\n\tWALL = %d"
+            "\n\tUNKN = %d"
+            "\n\tFREE = %d"
+            % (WALL, UNKN, FREE)
+        )
     except ValueError:
         WALL, FREE = numpy.unique(nd)
+        printv (
+            "Using colors:"
+            "\n\tWALL = %d"
+            "\n\tFREE = %d"
+            % (WALL, FREE)
+        )
 
 
     # # Inflate walls # #

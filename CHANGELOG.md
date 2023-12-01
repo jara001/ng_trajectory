@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- 'ng_generate_data': When using verbose logging, colors identified as wall/unkn/free and shown.
+
 ### Fixed
 - 'ng_generate_data': Copy the map to avoid read-only errors.
 
