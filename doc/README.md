@@ -272,6 +272,8 @@ save_solution_csv (str) = $ [When non-empty, save final trajectory to this file 
 favor_overtaking (float) = 0 [Penalty value to add to the lap time when overtaking does not occur.]
 friction_map (str) = None [Name of the file to load (x, y, mu*100) with friction map.]
 friction_map_inverse (bool) = False [When True, invert the values in the friction map.]
+friction_map_expand (bool) = False [When True, values from the friction map are expanded over the whole map using flood fill.]
+friction_map_save (bool) = False [When True, friction map is saved alongside the log files.]
 
 Init (viz.) parameters:
 plot (bool) = False [Whether a graphical representation should be created.]
@@ -520,6 +522,8 @@ save_solution_csv (str) = $ [When non-empty, save final trajectory to this file 
 favor_overtaking (float) = 0 [Penalty value to add to the lap time when overtaking does not occur.]
 friction_map (str) = None [Name of the file to load (x, y, mu*100) with friction map.]
 friction_map_inverse (bool) = False [When True, invert the values in the friction map.]
+friction_map_expand (bool) = False [When True, values from the friction map are expanded over the whole map using flood fill.]
+friction_map_save (bool) = False [When True, friction map is saved alongside the log files.]
 sampling_distance (float) = 1.0 [[m] Distance of super-sampling before the interpolation, skipped when 0.]
 distance (float) = 0 [[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.]
 fixed_points (list) = [] [Points to be used in the selection upon calling 'select'.]
