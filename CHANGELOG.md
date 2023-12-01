@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
+- Criterions
+    - _Profile_
+        - Parameter 'friction_map_yaml' to specify the configuration of the original map.
+        - When 'friction_map_yaml' is passed, a friction map is also saved in the ROS-compatible (map_server) format.
 - Segmentators
     - Functions `getMapOrigin` and `getMapGrid` to obtain parameters of the current internal map.
 - 'ng_generate_data': When using verbose logging, colors identified as wall/unkn/free and shown.
