@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 ### Added
+- Segmentators
+    - Functions `getMapOrigin` and `getMapGrid` to obtain parameters of the current internal map.
 - 'ng_generate_data': When using verbose logging, colors identified as wall/unkn/free and shown.
 - 'ng_generate_data': Parameter '--clean' that throws away track points that are outside of the track.
 

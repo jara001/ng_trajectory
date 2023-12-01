@@ -113,6 +113,28 @@ def getMap() -> numpy.ndarray:
     return MAP
 
 
+def getMapOrigin() -> numpy.ndarray:
+    """Obtain the current map origin.
+
+    Returns:
+    MAP_ORIGIN -- map origin, 1x2 numpy.ndarray
+    """
+    global MAP_ORIGIN
+
+    return MAP_ORIGIN
+
+
+def getMapGrid() -> float:
+    """Obtain the current map grid size.
+
+    Returns:
+    MAP_GRID -- map grid size, float
+    """
+    global MAP_GRID
+
+    return MAP_GRID
+
+
 def pointInBounds(point: list) -> bool:
     """Check whether a point is inside the map bounds.
 
