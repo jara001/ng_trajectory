@@ -419,11 +419,11 @@ def inflateWalls(im: Image) -> Image:
     Returns:
     _im -- inflated image
     """
-    # Duplicate image
-    _im = im.copy()
-
-    # Create numpy array
-    nd = numpy.asarray(_im, dtype = numpy.uint8)
+    # Create numpy array (also duplicates the image)
+    # TODO: Find out, when this was implemented.
+    #  it is not required with Python 3.6, Pillow 8.4.0 and numpy 1.19.5
+    #  but it is required with Python 3.11, Pillow 9.4.0 and numpy 1.23.5
+    nd = numpy.array(im, dtype = numpy.uint8)
 
     # Name colors (just in case)
     try:
@@ -694,7 +694,7 @@ def processImage(im: Image) -> None:
     # # Create and save image of the situation # #
     sys.stdout.write("\rSaving the data...")
 
-    nnd = numpy.asarray(im.convert("RGB"))
+    nnd = numpy.array(im.convert("RGB"))
     try:
         nnd[border[:, 0], border[:, 1]] = [0, 255, 0]
         for x, y in filtered_border:
