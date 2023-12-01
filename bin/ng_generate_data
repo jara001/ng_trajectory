@@ -188,6 +188,13 @@ PARSER.add_argument(
     action = "store_false",
 )
 
+PARSER.add_argument(
+    "--clean",
+
+    dest = "clean",
+    action = "store_true",
+)
+
 
 ######################
 # Utilities
@@ -704,10 +711,64 @@ def processImage(im: Image) -> None:
     sorted_points = numpy.asarray(sorted_points)
 
 
+    # # Clean the image # #
+    if args.clean:
+        sys.stdout.write("\rCleaning the map...")
+
+        # Start with the original image
+        ndclean = numpy.array(im, dtype = int)
+
+        # Helper array, keep track of points used in the flood fill
+        invalid = numpy.ones_like(ndclean, dtype = bool)
+
+        # Start from the centerline points
+        invalid[sorted_points[:, 0], sorted_points[:, 1]] = False
+        queue = sorted_points.tolist()
+
+        while len(queue) > 0:
+            cell_x, cell_y = queue.pop(0)
+
+            for _a, _b in HOOD8:
+
+                # Try does catch larger values but not negative
+                if cell_x + _a < 0 or cell_y + _b < 0:
+                    continue
+
+                try:
+                    _cell = ndclean[cell_x + _a, cell_y + _b]
+                except IndexError:
+                    continue
+
+                # Fill if free and not used yet.
+                if _cell == FREE and invalid[cell_x + _a, cell_y + _b]:
+                    invalid[cell_x + _a, cell_y + _b] = False
+                    queue.append((cell_x + _a, cell_y + _b))
+
+
+        # Remove points that are not valid
+        nnd = numpy.array(im)
+        nnd[(nnd == FREE) & (invalid)] = UNKN
+        nnd = numpy.array(P.fromarray(nnd).convert("RGB"))
+
+        print (" - DONE")
+        printv (
+            "Reduced track points from %d to %d points."
+            % (
+                numpy.count_nonzero(numpy.asarray(im) == FREE),
+                numpy.count_nonzero(nnd[:, :, 0] == FREE)
+            )
+        )
+    else:
+        invalid = False
+        nnd = numpy.array(im.convert("RGB"))
+
+
     # # Create and save image of the situation # #
     sys.stdout.write("\rSaving the data...")
 
-    nnd = numpy.array(im.convert("RGB"))
+    # Show the centerline
+    #  - RED = Final centerline
+    #  - GREEN = Filtered points
     try:
         nnd[border[:, 0], border[:, 1]] = [0, 255, 0]
         for x, y in filtered_border:
@@ -741,7 +802,9 @@ def processImage(im: Image) -> None:
     numpy.save("start_points.npy", start_points)
 
     valid_points = numpy.asarray(im, dtype = int)
-    valid_points = numpy.argwhere(valid_points == FREE).astype(float)
+    valid_points = numpy.argwhere(
+        (valid_points == FREE) & (~invalid)
+    ).astype(float)
 
     # Flip y-axis
     valid_points -= [im.size[1], 0]
