@@ -10,7 +10,7 @@ import argparse
 import ng_trajectory.interpolators.cubic_spline as cspline
 import ng_trajectory.criterions.profile.main as profile
 import ng_trajectory.criterions.profile.profiler as profiler
-from ng_trajectory.segmentators.utils import mapCreate
+from ng_trajectory.segmentators.utils import mapCreate, getMap, pointsToWorld
 import ng_trajectory.plot as ngplot
 import matplotlib.pyplot
 import matplotlib.colors
@@ -188,6 +188,20 @@ def figureGenerate(solution, args):
     f = ngplot.figureCreate()
 
     ngplot.trackPlot(VALID_POINTS)
+
+    if args.velocity and args.friction_map_plot:
+        _ptp = numpy.asarray(numpy.where(getMap() == 100)).T
+
+        _sc = ngplot.pointsScatter(
+            pointsToWorld(_ptp),
+            s = 0.5,
+            c = profiler.FRICTION_MAP[_ptp[:, 0], _ptp[:, 1]] / 100.0,
+            cmap = "gray_r",
+            vmin = 0.0,
+            vmax = 1.0,
+        )
+        f.colorbar(_sc)
+
     ngplot.axisEqual()
 
     line = numpy.asarray(solution)

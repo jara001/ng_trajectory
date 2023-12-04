@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - 'ng_generate_data': Parameter '--clean' that throws away track points that are outside of the track.
 - 'ng_plot': Parameters '--vmin' and '--vmax' to set the bounds of the velocity colormap.
 - 'ng_plot': Allow reversed colormaps.
+- 'ng_plot': Plotting of the friction map when 'friction_map_plot' is True.
 
 ### Changed
 - Criterions
