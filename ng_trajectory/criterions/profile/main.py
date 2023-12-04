@@ -423,6 +423,7 @@ def init(**kwargs) -> None:
                 c = FRICTION_MAP[_ptp[:, 0], _ptp[:, 1]] / 100.0,
                 cmap = "gray_r",
                 vmin = 0.0,
+                vmax = 1.0,
                 figure = fig
             )
 
