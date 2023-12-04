@@ -206,7 +206,9 @@ def figureGenerate(solution, args):
             s = 1,
             c = _v,
             cmap = args.cmap,
-            norm = matplotlib.colors.Normalize(vmin = args.vmin, vmax = args.vmax)
+            norm = matplotlib.colors.Normalize(
+                vmin = args.vmin, vmax = args.vmax
+            )
         )
         f.colorbar(_sc)
 
