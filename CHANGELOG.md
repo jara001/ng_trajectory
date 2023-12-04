@@ -22,6 +22,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Saved friction map plot has fixed colormap range.
 
 ### Fixed
+- Criterions
+    - _Profile_
+        - Obtain friction from the map using correct index.
 - 'ng_generate_data': Copy the map to avoid read-only errors.
 - 'ng_plot': Generate segmentator map to support friction map for the profiler.
 
