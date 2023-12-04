@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - Functions `getMapOrigin` and `getMapGrid` to obtain parameters of the current internal map.
 - 'ng_generate_data': When using verbose logging, colors identified as wall/unkn/free and shown.
 - 'ng_generate_data': Parameter '--clean' that throws away track points that are outside of the track.
+- 'ng_plot': Parameters '--vmin' and '--vmax' to set the bounds of the velocity colormap.
 
 ### Changed
 - Criterions

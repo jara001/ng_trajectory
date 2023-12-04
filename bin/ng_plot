@@ -116,6 +116,24 @@ PARSER.add_argument(
     metavar = "CMAP",
 )
 
+PARSER.add_argument(
+    "--vmin",
+
+    dest = "vmin",
+    help = "Minimum velocity recognized by the colormap.",
+    default = 0.0,
+    type = float,
+)
+
+PARSER.add_argument(
+    "--vmax",
+
+    dest = "vmax",
+    help = "Maximum velocity recognized by the colormap.",
+    default = None,
+    type = float,
+)
+
 # Dynamicaly build up the parameters for profiler
 _PROFILE_SETTINGS = {
     "overlap": 100,
@@ -185,7 +203,7 @@ def figureGenerate(solution, args):
             s = 1,
             c = _v,
             cmap = args.cmap,
-            norm = matplotlib.colors.Normalize(vmin = 0.0)
+            norm = matplotlib.colors.Normalize(vmin = args.vmin, vmax = args.vmax)
         )
         f.colorbar(_sc)
 
