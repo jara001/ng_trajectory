@@ -81,6 +81,7 @@ P.createAdd("favor_overtaking", 0, float, "Penalty value to add to the lap time 
 P.createAdd("friction_map", None, str, "Name of the file to load (x, y, mu*100) with friction map.", "init")
 P.createAdd("friction_map_inverse", False, bool, "When True, invert the values in the friction map.", "init")
 P.createAdd("friction_map_expand", False, bool, "When True, values from the friction map are expanded over the whole map using flood fill.", "init")
+P.createAdd("friction_map_plot", False, bool, "When True, friction map is plotted.", "init")
 P.createAdd("friction_map_save", False, bool, "When True, friction map is saved alongside the log files.", "init")
 P.createAdd("friction_map_yaml", None, str, "(Requires pyyaml) Name of the yaml configuration of the original map that was used to create '.npy' files. Map file specified in the configuration has to exist.")
 
@@ -398,6 +399,7 @@ def init(**kwargs) -> None:
 
             saveMap(logfileName() + ".fmap", FRICTION_MAP)
 
+        if P.getValue("friction_map_save") and P.getValue("friction_map_plot"):
             fig = ngplot.figureCreate()
             ngplot.axisEqual(figure = fig)
 
