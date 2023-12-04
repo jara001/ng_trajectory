@@ -10,6 +10,7 @@ import argparse
 import ng_trajectory.interpolators.cubic_spline as cspline
 import ng_trajectory.criterions.profile.main as profile
 import ng_trajectory.criterions.profile.profiler as profiler
+from ng_trajectory.segmentators.utils import mapCreate
 import ng_trajectory.plot as ngplot
 import matplotlib.pyplot
 import matplotlib.colors
@@ -224,6 +225,7 @@ if __name__ == "__main__":
 
     # Obtain map from the file
     VALID_POINTS = numpy.load(args.map_file[0])
+    mapCreate(VALID_POINTS)
 
 
     # Obtain solutions from logs

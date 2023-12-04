@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Fixed
 - 'ng_generate_data': Copy the map to avoid read-only errors.
+- 'ng_plot': Generate segmentator map to support friction map for the profiler.
 
 ## 1.12.1 - 2023-11-28
 ### Added
