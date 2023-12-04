@@ -103,7 +103,10 @@ PARSER.add_argument(
     "--cmap",
 
     nargs = "?",
-    choices = list(matplotlib._cm.datad),
+    choices = (
+        list(matplotlib._cm.datad)
+        + ["%s_r" % d for d in list(matplotlib._cm.datad)]
+    ),
     dest = "cmap",
     help = (
         "Colormap used for displaying the velocity. "
