@@ -313,6 +313,8 @@ def saveMap(filename: str, map_data: numpy.ndarray):
 
     # Save the YAML
     conf["image"] = filename + ".pgm"
+    conf["negate"] = 1
+    conf["mode"] = "raw"
 
     try:
         with open(filename + ".yaml", "w") as f:
