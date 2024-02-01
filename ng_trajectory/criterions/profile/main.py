@@ -117,6 +117,7 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
     _v, _a, _t = profiler.profileCompute(points, overlap, lap_time = True,
         save = P.getValue("save_solution_csv") if not overflown.get("optimization", True) and P.getValue("save_solution_csv") is not None else None
     )
+    criterion = _t[-1]  # default criterion of the optimization is a lap time
 
     invalid_points = []
     closest_indices = []
@@ -224,14 +225,12 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
                 ngplot.pointsScatter(numpy.asarray(invalid_points), color="blue", marker="x", s = 1)
 
 
-    if len(invalid_points) > 0:
-        return float(penalty)
-
 
     # Locate points where overtaking occurs
-    # Centerline is used to obtain track progression.
+    # Centerline is used to obtain track progression.  2 x 910
     # Do not do this when not optimizing; just to avoid having duplicate marker(s).
-    if P.getValue("plot_overtaking") and REFERENCE is not None and CENTERLINE is not None and overflown.get("optimization", True):
+    crashed = False
+    if P.getValue("plot_overtaking") and REFERENCE is not None and CENTERLINE is not None:
         # It does not actually plot, just sends the data via Queue to the parent process.
         # That said, plotting has to be handled by the optimizer.
         if REFERENCE_PROGRESS is None:
@@ -243,8 +242,17 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
         overtaken = False
         prev_rd = REFERENCE_PROGRESS[0]
         prev_pd = trajectoryClosestIndex(CENTERLINE, points[closest_indices[0], :2])
+        additional_criterium = 0.0
         #reference_end = trajectoryClosestIndex(CENTERLINE, points[-1, :2])
+
+        CEMTRELINE_PROGRESS_METERS = numpy.sqrt(numpy.sum(numpy.square(CENTERLINE[:-1, :] - CENTERLINE[1:, :]), axis=1))
+        REFERENCE_PROGRESS_METERS = numpy.sqrt(numpy.sum(numpy.square(REFERENCE[:-1, :] - REFERENCE[1:, :]), axis=1))
+
+        _closest = numpy.abs(numpy.subtract(REFERENCE[:, 2], _t[-1])).argmin() 
         for _i, (rx, ry, _) in enumerate(REFERENCE):
+            if _i > _closest:
+                break
+
             rd = REFERENCE_PROGRESS[_i]                    # nejblizsi i ve stejnem case
             pd = trajectoryClosestIndex(CENTERLINE, points[closest_indices[_i], :2])
 
@@ -270,15 +278,46 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
             #if rd > 50 and pd > rd and not overtaken:
             if pd > rd and not overtaken:
                 overtaken = True
-                OVERTAKING_POINTS.put(points[closest_indices[_i], :2])
-            #elif pd < rd and overtaken:
-            #    overtaken = False
+                if overflown.get("optimization", True):
+                    OVERTAKING_POINTS.put(points[closest_indices[_i], :2])
+            elif pd < rd and overtaken:  # I think we need this -->> viz. examples
+                if not crashed:
+                    overtaken = False
+
+            # pd, rd are just indexes, not progression in meters 
+            #pd_meters = numpy.sum(CEMTRELINE_PROGRESS_METERS[:pd])
+            #rd_meters = numpy.sum(CEMTRELINE_PROGRESS_METERS[:rd])
+
+            rd_meters = numpy.sum(REFERENCE_PROGRESS_METERS[:_i])
+
+            # -->> wtf ?? idx = trajectoryClosestIndex(reference=REFERENCE[:, :2], points=points[closest_indices[_i], :2].reshape((1, 2)))  # How does thia work then??
+            idx = numpy.argmin(numpy.sum(numpy.square(REFERENCE[:, :2] - points[closest_indices[_i], :2].reshape((1, 2))), axis=1))  # minimum point from point -> reference
+            pd_meters = numpy.sum(REFERENCE_PROGRESS_METERS[:idx])
+            if abs(rd_meters - pd_meters) > numpy.sum(REFERENCE_PROGRESS_METERS) / 2.0:
+                pd_meters -= numpy.sum(REFERENCE_PROGRESS_METERS)
+
+            # TODO check if idx is correnctly in sequence -> mainly in the beggining
+            dist_front_crash = 0.25
+            if is_colision[_i] and pd_meters - rd_meters < dist_front_crash:
+                return float(penalty)
+            elif (is_colision[_i] and pd_meters - rd_meters > dist_front_crash):
+
+                if not overflown.get("optimization", True) and P.getValue("plot"):
+                    ngplot.pointsPlot(numpy.vstack((REFERENCE[idx, :2], points[closest_indices[_i], :2])), color = "blue", linewidth = P.getValue("plot_timelines_width"))
+                    ngplot.pointsPlot(numpy.vstack((REFERENCE[_i, :2], points[closest_indices[_i], :2])), color = "green", linewidth = P.getValue("plot_timelines_width"))
+
+                crash = True
+                return float(_t[-1] - P.getValue("favor_overtaking") * 2.0)
 
             prev_rd = rd
             prev_pd = pd
 
-        if not overtaken:
-            _t[-1] += P.getValue("favor_overtaking")
+            additional_criterium = rd_meters - pd_meters
 
-    return float(_t[-1])
+
+        criterion = _t[-1] * 1.0 + additional_criterium
+        if overtaken:
+           criterion -= P.getValue("favor_overtaking")
+
+    return float(criterion)
 
