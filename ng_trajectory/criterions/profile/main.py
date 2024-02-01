@@ -56,6 +56,9 @@ P.createAdd("plot_timelines_width", 0.6, float, "Linewidth of the timelines. 0 =
 P.createAdd("plot_overtaking", True, bool, "Whether to plot places where an overtaking occurs. (Has to be supported by optimizer.)", "init (viz.)")
 P.createAdd("favor_overtaking", 0, float, "Penalty value to add to the lap time when overtaking does not occur.", "init")
 
+# Temporary constants - if it works we can add them later to the config file
+
+
 
 ######################
 # Functions
@@ -111,9 +114,12 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
     """
     global REFERENCE, CENTERLINE, REFERENCE_PROGRESS, OVERTAKING_POINTS
 
+    # Get overlap parameter
     if overlap is None:
         overlap = P.getValue("overlap")
 
+    # ---------------[Create trajectory from path]---------------
+    # points (x, y) --> trajectory (_v, _a, _t), _v -> speed, _a -> acceleration, _t -> time
     _v, _a, _t = profiler.profileCompute(points, overlap, lap_time = True,
         save = P.getValue("save_solution_csv") if not overflown.get("optimization", True) and P.getValue("save_solution_csv") is not None else None
     )
@@ -221,6 +227,7 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
                 if P.getValue("plot_solution"):
                     ngplot.pointsPlot(points[:_closest_p, :2], color="orange", linewidth = P.getValue("plot_reference_width"))
 
+            # print invalid points (colision points)
             if len(invalid_points) > 0:
                 ngplot.pointsScatter(numpy.asarray(invalid_points), color="blue", marker="x", s = 1)
 
