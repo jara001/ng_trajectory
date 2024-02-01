@@ -339,6 +339,35 @@ def pointsPlot(points: numpy.ndarray, figure: matplotlib.figure.Figure = None, *
 
 
 @plot_only
+def circlePlot(centre: numpy.ndarray, radius: numpy.double, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+    """
+    """
+    if figure is None:
+        figure = pyplot.gcf()
+    
+    circle = pyplot.Circle((centre[0], centre[1]), radius, **kwargs)
+   
+    figure.axes[0].add_patch(circle)
+
+
+@plot_only
+def rectanglePlot(centre: numpy.ndarray, width: numpy.double, height: numpy.double, angle: numpy.double, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+    """
+    :      +------------------+
+    :      |                  |
+    :    height    (xy)       |
+    :      |                  |
+    :      +------ width -----+
+    """
+    if figure is None:
+        figure = pyplot.gcf()
+    
+    rectangle = pyplot.Rectangle((centre[0] - width/2, centre[1] - height/2), width, height, angle/3.14*180.0, rotation_point='center', **kwargs)
+   
+    figure.axes[0].add_patch(rectangle)
+
+
+@plot_only
 def groupsScatter(groups: numpy.ndarray, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
     """Scatter points inside groups.
 
