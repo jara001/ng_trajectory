@@ -472,6 +472,9 @@ def saveState(
                     ]}
             })
 
+    arr_to_save = numpy.vstack([x[:len(points)], y[:len(points)], t[:len(points)]]).T
+    #data = numpy.save("optimal_trajectory.npy", arr_to_save)
+
 
 def profileCompute(
         points: numpy.ndarray,
