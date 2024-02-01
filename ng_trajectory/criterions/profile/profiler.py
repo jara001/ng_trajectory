@@ -26,7 +26,7 @@ a_acc_max = 0.8     # Maximum longitudal acceleration [m.s^-2]
 a_break_max = 4.5   # Maximum longitudal decceleration [m.s^-2]
 _lf = 0.191         # distance from the center of mass to the front axle [m]
 _lr = 0.139         # distance from the center of mass to the rear axle [m]
-
+closed_loop = True
 
 ######################
 # Utilities
@@ -241,8 +241,9 @@ def forward_pass(points: numpy.ndarray, v_bwd: List[float], v_max: List[float], 
         a_lim = (v_bwd[(k+1)%len(points)]*v_bwd[(k+1)%len(points)] - v_fwd[k]*v_fwd[k])/(2*ds)
         a[k] = h(cur[k],v_fwd[k],1)
         a[k] = min(min(a[k], a_acc_max),a_lim)
-        v_fwd[(k+1)%len(points)] = math.sqrt(v_fwd[k]*v_fwd[k] + 2*a[k]*ds)
-        t[(k+1)%len(points)] = t[k] + 2*ds/(v_fwd[(k+1)%len(points)] + v_fwd[k])
+        if closed_loop or (not closed_loop and k+1 < len(points)):
+            v_fwd[(k+1)%len(points)] = math.sqrt(v_fwd[k]*v_fwd[k] + 2*a[k]*ds)
+            t[(k+1)%len(points)] = t[k] + 2*ds/(v_fwd[(k+1)%len(points)] + v_fwd[k])
         k = k + 1
 
     return v_fwd, a, t
