@@ -324,6 +324,9 @@ def saveMap(filename: str, map_data: numpy.ndarray):
         perr (str(e))
         return
 
+# Temporary constants - if it works we can add them later to the config file
+
+
 
 ######################
 # Functions
@@ -490,11 +493,14 @@ def compute(
     """
     global REFERENCE, CENTERLINE, REFERENCE_PROGRESS, OVERTAKING_POINTS
 
+    # Get overlap parameter
     if overlap is None:
         overlap = P.getValue("overlap")
 
     profiler.CENTERLINE = CENTERLINE
 
+    # ---------------[Create trajectory from path]---------------
+    # points (x, y) --> trajectory (_v, _a, _t), _v -> speed, _a -> acceleration, _t -> time
     _v, _a, _t = profiler.profileCompute(
         points,
         overlap,
@@ -637,6 +643,7 @@ def compute(
                         linewidth = P.getValue("plot_reference_width")
                     )
 
+            # print invalid points (colision points)
             if len(invalid_points) > 0:
                 ngplot.pointsScatter(
                     numpy.asarray(invalid_points),
