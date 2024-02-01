@@ -64,6 +64,70 @@ P.createAdd("favor_overtaking", 0, float, "Penalty value to add to the lap time 
 # Functions
 ######################
 
+def do_polygons_intersect(a: numpy.array, b: numpy.array) -> bool:
+    """
+    * Helper function to determine whether there is an intersection between the two polygons described
+    * by the lists of vertices. Uses the Separating Axis Theorem
+    *
+    * @param a an ndarray of connected points [[x_1, y_1], [x_2, y_2],...] that form a closed polygon
+    * @param b an ndarray of connected points [[x_1, y_1], [x_2, y_2],...] that form a closed polygon
+    * @return true if there is any intersection between the 2 polygons, false otherwise
+
+    Source: https://stackoverflow.com/questions/10962379/how-to-check-intersection-between-2-rotated-rectangles
+    https://research.ncl.ac.uk/game/mastersdegree/gametechnologies/previousinformation/physics4collisiondetection/2017%20Tutorial%204%20-%20Collision%20Detection.pdf
+    """
+
+    polygons = [a, b]
+
+    for i in range(len(polygons)):
+
+        # for each polygon, look at each edge of the polygon, and determine if it separates
+        # the two shapes
+        polygon = polygons[i]
+        for i1 in range(len(polygon)):
+
+            # grab 2 vertices to create an edge
+            i2 = (i1 + 1) % len(polygon)
+            p1 = polygon[i1]
+            p2 = polygon[i2]
+
+            # find the line perpendicular to this edge
+            normal = p2 - p1
+
+            # for each vertex in the first shape, project it onto the line perpendicular to the edge
+            # and keep track of the min and max of these values
+            projected = normal @ a.T
+            minA = numpy.min(projected)
+            maxA = numpy.max(projected)
+
+            # for each vertex in the second shape, project it onto the line perpendicular to the edge
+            # and keep track of the min and max of these values
+            projected = normal @ b.T
+            minB = numpy.min(projected)
+            maxB = numpy.max(projected)
+
+            # if there is no overlap between the projects, the edge we are looking at separates the two
+            # polygons, and we know there is no overlap
+            if (maxA < minB) or (maxB < minA):
+                return False
+    return True
+
+def get_rect_points(center: numpy.ndarray, dims: numpy.ndarray, angle: float) -> numpy.array:
+        """
+        returns four corners of the rectangle.
+        bottom left is the first conrner, from there it goes
+        counter clockwise.
+        """
+        center = numpy.asarray(center)
+        length, breadth = dims
+        corners = numpy.array([[-length/2, -breadth/2],
+                            [length/2, -breadth/2],
+                            [length/2, breadth/2],
+                            [-length/2, breadth/2]])
+        rot = numpy.array([[numpy.cos(-angle), numpy.sin(-angle)], [-numpy.sin(-angle), numpy.cos(-angle)]])
+        corners = rot.dot(corners.T) + center[:, None]
+        return corners.T  # n x 2
+
 def init(**kwargs) -> None:
     """Initialize criterion."""
     global REFERENCE, CENTERLINE, OVERTAKING_POINTS
@@ -89,9 +153,9 @@ def init(**kwargs) -> None:
 
         if lap_time == 0.0:
             # Lap time estimate
-            lap_time = REFERENCE[-1, 2] + numpy.mean([REFERENCE[-1, 2]-REFERENCE[-2, 2], REFERENCE[1, 2]-REFERENCE[0, 2]])
+            lap_time = REFERENCE[-1, 2] + numpy.mean([REFERENCE[-1, 2] - REFERENCE[-2, 2], REFERENCE[1, 2] - REFERENCE[0, 2]])
 
-        REFERENCE = numpy.roll(REFERENCE, -P.getValue("reference_rotate"), axis=0)
+        REFERENCE = numpy.roll(REFERENCE, - P.getValue("reference_rotate"), axis=0)
         REFERENCE[:, 2] = REFERENCE[:, 2] - REFERENCE[0, 2]
         REFERENCE[REFERENCE[:, 2] < 0, 2] += lap_time
         print ("Loaded reference with '%d' points, lap time %fs." % (len(REFERENCE), lap_time), file = kwargs.get("logfile", sys.stdout))
@@ -126,45 +190,99 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
     criterion = _t[-1]  # default criterion of the optimization is a lap time
 
     invalid_points = []
-    closest_indices = []
-
     if REFERENCE is not None:
-        _d = P.getValue("reference_dist")
+        is_collision = numpy.zeros((len(REFERENCE), ), dtype=bool)
+        closest_indices = numpy.zeros((len(REFERENCE), ), dtype=int)
+        ego_headings = numpy.zeros((len(REFERENCE), ), dtype=numpy.double)
+        opponent_headings = numpy.zeros((len(REFERENCE), ), dtype=numpy.double)
 
-        for rx, ry, rt in REFERENCE:
+    collision_model = 1  # 0 - round cars, 1 - square cars
+
+    if REFERENCE is not None:  # Do this only if we want to compute overtaking
+        _closest = numpy.abs(numpy.subtract(REFERENCE[:, 2], _t[-1])).argmin() 
+        # ---------------[ Get indexes closest in time ]---------------
+        _d = P.getValue("reference_dist")
+        for _i, (rx, ry, rt, v) in enumerate(REFERENCE):
+            if _i > _closest:
+                break
 
             # Closest index
-            _ci = 0
-            __t = 0
+            _ci = (abs(_t[:-1] - rt)).argmin()
 
-            # Selected last
-            selected_last = False
 
-            while True:
-                # Find closest point in time domain
-                _ci = (abs(_t[:-1] + __t - rt)).argmin()
+            # Use this commented part only if optimizing closed path
+            #_ci = 0
+            #__t = 0
+            ## Selected last
+            #selected_last = False
+            #
+            #while True:
+            #    # Find closest point in time domain
+            #    _ci = (abs(_t[:-1] + __t - rt)).argmin()
+            #
+            #    # In case that we select the last point
+            #    # Do it again for next repetition of the trajectory
+            #    if _ci == len(_t) - 2:
+            #        if selected_last:
+            #            # Extra condition for non-closed paths.
+            #            break
+            #        __t += _t[-1]
+            #        selected_last = True
+            #    else:
+            #        break
 
-                # In case that we select the last point
-                # Do it again for next repetition of the trajectory
-                if _ci == len(_t) - 2:
-                    if selected_last:
-                        # Extra condition for non-closed paths.
-                        break
-                    __t += _t[-1]
-                    selected_last = True
-                else:
-                    break
+            closest_indices[_i] = _ci
 
-            closest_indices.append(_ci)
+            # Calculate heading of the ego vehicle
+            ego_pos = points[_ci, :]
+            if len(points) <= _ci + 1:  # n -> n x 3
+                ego_vector = [ego_pos[0] - points[_ci - 1 , 0], ego_pos[1] - points[_ci - 1 , 1]]
+            else:
+                ego_vector = [points[_ci + 1, 0] - points[_ci, 0], points[_ci + 1, 1] - points[_ci, 1]]
+            ego_headings[_ci] = numpy.arctan2(ego_vector[1], ego_vector[0])
 
-            # If the points are too close to each other, return penalty
-            if pointDistance([rx, ry], points[_ci, :]) < _d:
-                if overflown.get("optimization", True):
-                    return float(penalty)
-                else:
-                    invalid_points.append([rx, ry])
+            # Calculate heading of the opponent vehicle
+            opponent_pos = [rx, ry]
+            if len(REFERENCE) <= _i + 1:
+                opponent_vector = [opponent_pos[0] - REFERENCE[_i - 1, 0], opponent_pos[1] - REFERENCE[_i - 1, 1]]
+            else:
+                opponent_vector = [REFERENCE[_i + 1, 0] - rx, REFERENCE[_i + 1, 1] - ry]
+            opponent_headings[_i] = numpy.arctan2(opponent_vector[1], opponent_vector[0])
 
-        # Visualization
+            # Collision detection
+            if collision_model == 0: # round cars
+                if pointDistance([rx, ry], points[_ci, :]) < _d:
+                    is_collision[_i] = True
+                    if not overflown.get("optimization", True):  # just for the plot
+                        invalid_points.append([rx, ry])
+
+            elif collision_model == 1:  # square cars
+
+                # Calculate all vertices of the ego vehicle (rectangle representation)
+                corners_ego = get_rect_points(points[_ci, :2], 
+                                              (
+                                                    0.55, 
+                                                    0.3
+                                               ), 
+                                              ego_headings[_ci])
+
+                # Calculate all vertices of the opponent vehicle (rectangle representation)
+                corners_opponent = get_rect_points(REFERENCE[_i , :2], 
+                                              (
+                                                    0.55, 
+                                                    0.3
+                                               ), 
+                                              opponent_headings[_i])
+
+                if do_polygons_intersect(corners_ego, corners_opponent):
+                    if not overflown.get("optimization", True):
+                        invalid_points.append([rx, ry])  # only to print invalid points. Equivalent to this should be: invalid_points ===  REFERENCE[is_collision, :2]. So we probably do not even need to create this
+                    is_collision[_i] = True
+
+        #if not overflown.get("optimization", True) and P.getValue("plot"):
+        #    print("-------------------------------------------------------------")
+
+        # ---------------[ Visualization ]---------------
         if not overflown.get("optimization", True) and P.getValue("plot"):
 
             # Last time sample
@@ -191,7 +309,7 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
                             fontsize = 6
                         )
 
-                    _closest_p = numpy.abs(numpy.subtract(_t[:-1], ts)).argmin()
+                    _closest_p = closest_indices[_closest] # numpy.abs(numpy.subtract(_t[:-1], ts)).argmin()
 
                     ngplot.pointsScatter(
                         points[_closest_p, None, :2],
@@ -207,9 +325,28 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
                             color = "red",
                         )
 
+                    if collision_model == 0:  # round cars
+                        # plot EGO car as a round obstacle
+                        ngplot.circlePlot(points[_closest_p , :2], P.getValue("reference_dist") / 2.0, color="blue")
+                        # plot opponent car as a round obstacle
+                        ngplot.circlePlot(REFERENCE[_closest , :2], P.getValue("reference_dist") / 2.0, color="red")
+                    elif collision_model == 1:  # rectangle cars
+                        # plot EGO car as a round obstacle
+                        ngplot.rectanglePlot(points[_closest_p , :2], 
+                                         0.55, 
+                                         0.3,
+                                         angle=ego_headings[_closest_p],
+                                         color="blue")
+                        # plot opponent car as a round obstacle
+                        ngplot.rectanglePlot(REFERENCE[_closest , :2],  
+                                            0.55, 
+                                            0.3,
+                                            angle=opponent_headings[_closest],
+                                            color="red")
+
                     ngplot.pointsPlot(
                         numpy.vstack((points[_closest_p , :2], REFERENCE[_closest , :2])),
-                        color = "red",
+                        color = "green",
                         linewidth = P.getValue("plot_timelines_width"),
                         linestyle = (
                             "--" if pointDistance(points[_closest_p , :2], REFERENCE[_closest , :2]) < 5.0 else " "
@@ -256,7 +393,7 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
         REFERENCE_PROGRESS_METERS = numpy.sqrt(numpy.sum(numpy.square(REFERENCE[:-1, :] - REFERENCE[1:, :]), axis=1))
 
         _closest = numpy.abs(numpy.subtract(REFERENCE[:, 2], _t[-1])).argmin() 
-        for _i, (rx, ry, _) in enumerate(REFERENCE):
+        for _i, (rx, ry, _, _) in enumerate(REFERENCE):
             if _i > _closest:
                 break
 
@@ -305,26 +442,29 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
 
             # TODO check if idx is correnctly in sequence -> mainly in the beggining
             dist_front_crash = 0.25
-            if is_colision[_i] and pd_meters - rd_meters < dist_front_crash:
-                return float(penalty)
-            elif (is_colision[_i] and pd_meters - rd_meters > dist_front_crash):
+            if not crashed:
+                if is_collision[_i] and pd_meters - rd_meters < dist_front_crash:
+                    return float(penalty)
+                elif (is_collision[_i] and pd_meters - rd_meters > dist_front_crash):
 
-                if not overflown.get("optimization", True) and P.getValue("plot"):
-                    ngplot.pointsPlot(numpy.vstack((REFERENCE[idx, :2], points[closest_indices[_i], :2])), color = "blue", linewidth = P.getValue("plot_timelines_width"))
-                    ngplot.pointsPlot(numpy.vstack((REFERENCE[_i, :2], points[closest_indices[_i], :2])), color = "green", linewidth = P.getValue("plot_timelines_width"))
+                    if not overflown.get("optimization", True) and P.getValue("plot"):
+                        ngplot.pointsPlot(numpy.vstack((REFERENCE[idx, :2], points[closest_indices[_i], :2])), color = "blue", linewidth = P.getValue("plot_timelines_width"))
+                        ngplot.pointsPlot(numpy.vstack((REFERENCE[_i, :2], points[closest_indices[_i], :2])), color = "green", linewidth = P.getValue("plot_timelines_width"))
 
-                crash = True
-                return float(_t[-1] - P.getValue("favor_overtaking") * 2.0)
+                    crashed = True
+                    # return float(_t[-1] - P.getValue("favor_overtaking") * 2.0)
 
             prev_rd = rd
             prev_pd = pd
 
             additional_criterium = rd_meters - pd_meters
 
-
-        criterion = _t[-1] * 1.0 + additional_criterium
-        if overtaken:
-           criterion -= P.getValue("favor_overtaking")
+        if not crashed:
+            criterion = _t[-1] * 1.0 + additional_criterium
+            if overtaken:
+                criterion -= P.getValue("favor_overtaking")
+        else:
+            criterion = _t[-1] - P.getValue("favor_overtaking") * 2.0
 
     return float(criterion)
 
