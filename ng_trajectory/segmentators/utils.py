@@ -312,6 +312,16 @@ def hood8Obtain(cpoint: numpy.ndarray) -> numpy.ndarray:
         & (_hood[:, 1] < MAP.shape[1])
     ].astype(numpy.int)
 
+def validChecks(cpoints: numpy.ndarray) -> numpy.ndarray:
+    """Check whether map points are within the map borders.
+
+    Arguments:
+    cpoint -- cell coordinates of the point, nx2 numpy.ndarray
+
+    Returns:
+    valid -- True when valid point, else False, bool
+    """
+    return MAP[cpoints[:, 0], cpoints[:, 1]] != 0
 
 def validCheck(cpoint: numpy.ndarray) -> bool:
     """Check whether the map point is on border.
