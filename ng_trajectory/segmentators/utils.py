@@ -113,6 +113,15 @@ def pointToMap(point: list) -> numpy.ndarray:
     return numpy.round( numpy.subtract(numpy.asarray(point)[:2], MAP_ORIGIN) / MAP_GRID).astype(numpy.uint64)
 
 
+def mapToPoint(point: numpy.ndarray) -> numpy.ndarray:
+    """
+    """
+    global MAP_ORIGIN, MAP_GRID
+
+    # return numpy.round( numpy.subtract(numpy.asarray(point)[:2], MAP_ORIGIN) / MAP_GRID).astype(numpy.uint64)
+    return point[:2] * MAP_GRID + MAP_ORIGIN
+
+
 def pointsToMap(points: numpy.ndarray) -> numpy.ndarray:
     """Converts real coordinates of the points to cell coordinates.
 
