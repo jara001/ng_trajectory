@@ -120,6 +120,8 @@ from ng_trajectory import PLOT_AVAILABLE
 
 from typing import List, Dict
 
+from ng_trajectory.segmentators.utils import mapToPoint
+
 
 # Global variables
 CANVAS = None
@@ -336,6 +338,21 @@ def pointsPlot(points: numpy.ndarray, figure: matplotlib.figure.Figure = None, *
         figure = pyplot.gcf()
 
     return figure.axes[0].plot(points[:, 0], points[:, 1], **kwargs)
+
+
+@plot_only
+def imgPlotMetric(image: numpy.ndarray, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+    """
+    """
+    print(f"Image shape: {numpy.shape(image)}")
+    if figure is None:
+        figure = pyplot.gcf()
+    points = []
+    for w in range(numpy.shape(image)[0]):
+        for h in range(numpy.shape(image)[1]):
+            if image[w, h] == 0:
+                points.append(mapToPoint(numpy.array([w, h])))
+    pointsScatter(numpy.array(points), **kwargs)
 
 
 @plot_only
