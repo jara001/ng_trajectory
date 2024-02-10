@@ -24,9 +24,11 @@ from ng_trajectory.interpolators.utils import (
 
 from ng_trajectory.segmentators.utils import (
     filterPoints,
+    pointInBounds,
     pointsToMap,
     pointsToWorld,
-    getMap, getMapOrigin, getMapGrid
+    getMap, getMapOrigin, getMapGrid,
+    validCheck
 )
 
 from ng_trajectory.log import (
@@ -49,6 +51,8 @@ CENTERLINE = None
 REFERENCE_PROGRESS = None
 OVERTAKING_POINTS = Queue()
 
+MAP_INSIDE = None
+MAP_OUTSIDE = None
 
 # Parameters
 P = ParameterList()
@@ -400,7 +404,7 @@ def get_rect_points(center: numpy.ndarray, dims: numpy.ndarray, angle: float) ->
 
 def init(**kwargs) -> None:
     """Initialize criterion."""
-    global REFERENCE, CENTERLINE, OVERTAKING_POINTS
+    global REFERENCE, CENTERLINE, OVERTAKING_POINTS, MAP_OUTSIDE, MAP_INSIDE
 
     profiler.parametersSet(**kwargs)
 
@@ -438,6 +442,113 @@ def init(**kwargs) -> None:
         )
         REFERENCE[:, 2] = REFERENCE[:, 2] - REFERENCE[0, 2]
         REFERENCE[REFERENCE[:, 2] < 0, 2] += lap_time
+
+
+        # TODO use REFERENCE (x, y, t, v) and VALID_POINTS (n x 2) - valid points to create other track representations
+        # compte trajectory normals
+        vec_ = REFERENCE[1:, :2] - REFERENCE[:-1, :2]
+        trajectory_norms = numpy.array([-vec_[:, 1], vec_[:, 0]]).T / numpy.linalg.norm(vec_, axis=1)[:, numpy.newaxis]
+
+        print("INFO")
+
+        from ng_trajectory.segmentators.utils import MAP_GRID, MAP
+        from scipy.ndimage import morphology
+        from skimage.segmentation import flood_fill
+        import copy
+
+        # create a new map
+        map_ = copy.copy(MAP)
+
+        # create proper borders on the map
+        map_[0:, 0] = 0
+        map_[0, 0:] = 0
+        map_[0:, -1] = 0
+        map_[-1, 0:] = 0
+        # default map is created 
+
+        # calc robot mask
+        car_width = 0.5  # with safety region
+        robot_radius_grid = int(numpy.round(car_width / MAP_GRID))
+        y, x = numpy.ogrid[-robot_radius_grid:robot_radius_grid + 1, -robot_radius_grid:robot_radius_grid + 1]
+        mask = x ** 2 + y ** 2 <= robot_radius_grid ** 2
+
+        # ----- MAP INNER -----
+        # use floodfill on outer wall to delete it
+        MAP_INSIDE = copy.copy(map_)
+        MAP_INSIDE = flood_fill(MAP_INSIDE, (0, 0), 100)
+
+        # find inner wall and save some pixel position
+        inner_wall_pos = numpy.where(MAP_INSIDE == 0)
+        inner_wall_pos = (inner_wall_pos[0][0], inner_wall_pos[1][0])
+
+        # inflate inner wall
+        MAP_INSIDE = 100 - morphology.grey_dilation(100 - MAP_INSIDE, footprint=mask)
+
+        # ----- MAP OUTER -----
+        # use floodfill on inner wall to delete it
+        MAP_OUTSIDE = copy.copy(map_)
+        MAP_OUTSIDE = flood_fill(MAP_OUTSIDE, inner_wall_pos, 100)
+
+        # inflate outer wall
+        MAP_OUTSIDE = 100 - morphology.grey_dilation(100 - MAP_OUTSIDE, footprint=mask)
+
+        # import matplotlib.pyplot as plt
+        # plt.figure(figsize=(5,5))
+        # plt.imshow(MAP_INSIDE.T, vmin=0, vmax=255)
+        # plt.show()
+        # plt.figure(figsize=(5,5))
+        # plt.imshow(MAP_OUTSIDE.T, vmin=0, vmax=255)
+        # plt.show()
+
+        # ref_ = copy.copy(REFERENCE)
+        # points = numpy.zeros((len(trajectory_norms), 2))
+        # for i in range(len(trajectory_norms)):
+        #     point = ref_[i, :2]
+        #     while True:
+        #         point += trajectory_norms[i] * MAP_GRID
+        #         if not pointInBounds(point):
+        #             points[i] = point
+        #             break
+        #         point_map = pointToMap(point)
+        #         if not validCheck(point_map):
+        #             points[i] = point
+        #             break
+
+        # ref_ = copy.copy(REFERENCE)
+        # points2 = numpy.zeros((len(trajectory_norms), 2))
+        # for i in range(len(trajectory_norms)):
+        #     point = ref_[i, :2]
+        #     while True:
+        #         point -= trajectory_norms[i] * MAP_GRID
+        #         if not pointInBounds(point):
+        #             points2[i] = point
+        #             break
+        #         point_map = pointToMap(point)
+        #         if not validCheck(point_map):
+        #             points2[i] = point
+        #             break
+
+        # vec_2 = points[1:, :2] - points[:-1, :2]
+        # trajectory_norms2 = numpy.array([-vec_2[:, 1], vec_2[:, 0]]).T / numpy.linalg.norm(vec_2, axis=1)[:, numpy.newaxis]
+
+        # points3 = points[0:180, :] - trajectory_norms2[0:180] * 0.8
+
+
+
+        # plt.figure(figsize=(5,5))
+        # plt.imshow(map_.T, vmin=0, vmax=255)
+        # plt.show()
+
+        # plt.plot(REFERENCE[:, 0], REFERENCE[:, 1], 'b')
+        # plt.plot(trajectory_norms[:, 0] + REFERENCE[:-1, 0], trajectory_norms[:, 1] + REFERENCE[:-1, 1], 'r.')
+        # plt.plot(points[:, 0], points[:, 1], 'r.')
+        # plt.plot(points2[:, 0], points2[:, 1], 'g.')
+        # plt.plot(points3[:, 0], points3[:, 1], 'b.')
+
+        # plt.fill(numpy.hstack((points[0:180, 0], numpy.flip(points3[:, 0]))), 
+        #          numpy.hstack((points[0:180, 1], numpy.flip(points3[:, 1]))), facecolor='r', edgecolor='b')
+        # plt.show()
+
         log (
             "Loaded reference with '%d' points, lap time %fs."
             % (len(REFERENCE), lap_time)
@@ -557,7 +668,7 @@ def compute(
     t -- time of reaching the last point of the trajectory, [s], float
          minimization criterion
     """
-    global REFERENCE, CENTERLINE, REFERENCE_PROGRESS, OVERTAKING_POINTS
+    global REFERENCE, CENTERLINE, REFERENCE_PROGRESS, OVERTAKING_POINTS, MAP_OUTSIDE, MAP_INSIDE
 
     # Get overlap parameter
     if overlap is None:
@@ -670,9 +781,6 @@ def compute(
                     if not overflown.get("optimization", True):
                         invalid_points.append([rx, ry])  # only to print invalid points. Equivalent to this should be: invalid_points ===  REFERENCE[is_collision, :2]. So we probably do not even need to create this
                     is_collision[_i] = True
-
-        #if not overflown.get("optimization", True) and P.getValue("plot"):
-        #    print("-------------------------------------------------------------")
 
         # ---------------[ Visualization ]---------------
         if not overflown.get("optimization", True) and P.getValue("plot"):
@@ -806,6 +914,9 @@ def compute(
     # Do not do this when not optimizing; just to avoid
     # having duplicate marker(s).
     crashed = False
+    crash_time = None
+    crash_side = 0  # 0 -> none, 1 -> left, 2 -> right
+
     if (P.getValue("plot_overtaking")
             and REFERENCE is not None
             and CENTERLINE is not None
@@ -883,9 +994,6 @@ def compute(
                     overtaken = False
 
             # pd, rd are just indexes, not progression in meters
-            #pd_meters = numpy.sum(CEMTRELINE_PROGRESS_METERS[:pd])
-            #rd_meters = numpy.sum(CEMTRELINE_PROGRESS_METERS[:rd])
-
             rd_meters = numpy.sum(REFERENCE_PROGRESS_METERS[:_i])
 
             # -->> wtf ?? idx = trajectoryClosestIndex(reference=REFERENCE[:, :2], points=points[closest_indices[_i], :2].reshape((1, 2)))  # How does thia work then??
@@ -895,7 +1003,7 @@ def compute(
                 pd_meters -= numpy.sum(REFERENCE_PROGRESS_METERS)
 
             # TODO check if idx is correnctly in sequence -> mainly in the beggining
-            dist_front_crash = 0.25
+            dist_front_crash = 0.1
             if not crashed:
                 if is_collision[_i] and pd_meters - rd_meters < dist_front_crash:
                     return float(penalty)
@@ -904,13 +1012,54 @@ def compute(
                     if not overflown.get("optimization", True) and P.getValue("plot"):
                         ngplot.pointsPlot(numpy.vstack((REFERENCE[idx, :2], points[closest_indices[_i], :2])), color = "blue", linewidth = P.getValue("plot_timelines_width"))
                         ngplot.pointsPlot(numpy.vstack((REFERENCE[_i, :2], points[closest_indices[_i], :2])), color = "green", linewidth = P.getValue("plot_timelines_width"))
-
                     crashed = True
-                    # return float(_t[-1] - P.getValue("favor_overtaking") * 2.0)
+
+                    # Calculate on which side is the opponent
+                    ego_vector = points[closest_indices[_i], :2] - points[closest_indices[_i-1], :2]
+                    opponent_vector = REFERENCE[_i, :2] - points[closest_indices[_i-1], :2]
+                    # 0 -> none, 1 -> left, 2 -> right 
+                    crash_side = numpy.sign(ego_vector[0] * opponent_vector[1] - ego_vector[1] * opponent_vector[1])
+
+                    # TODO start using inflated part of the map. remember the start time and which side to use
+                    crash_time = REFERENCE[_i, 2]
+
+                    if not overflown.get("optimization", True) and P.getValue("plot"):
+                        # plot inflated map
+                        if crash_side == 1:  # left MAP_OUTSIDE
+                            ngplot.imgPlotMetric(MAP_OUTSIDE, color="red", s=1, marker='.', alpha=0.1)
+                        elif crash_side == 2:  # right MAP_INSIDE
+                            ngplot.imgPlotMetric(MAP_INSIDE, color="red", s=1, marker='.', alpha=0.1)
+
+
+                        ngplot.pointsPlot(numpy.vstack((points[closest_indices[_i-1], :2], points[closest_indices[_i], :2])), color = "red", linewidth = P.getValue("plot_timelines_width"))
+                        ngplot.pointsPlot(REFERENCE[_i, :2].reshape((1, 2)), marker='.', color = "red", linewidth = P.getValue("plot_timelines_width"))
+
+            # Check current trajectory point is inside the protected area
+            if crashed:
+                point = points[closest_indices[_i]]
+                if not overflown.get("optimization", True) and P.getValue("plot"):
+                    print(f"Iteration: {_i}")
+                if not pointInBounds(point):
+                    if overflown.get("optimization", True) and P.getValue("plot"):
+                        return float(penalty)
+                    else:
+                        print("OOB")
+                point_map = pointToMap(point)
+                if crash_side == 2 and not MAP_INSIDE[point_map[0], point_map[1]] != 0:
+                    if overflown.get("optimization", True) and P.getValue("plot"):
+                        return float(penalty)
+                    else:
+                        print("C2")
+                if crash_side == 1 and not MAP_OUTSIDE[point_map[0], point_map[1]] != 0:
+                    if overflown.get("optimization", True) and P.getValue("plot"):
+                        return float(penalty)
+                    else:
+                        print("C1")
 
             prev_rd = rd
             prev_pd = pd
 
+            # Additional criterion to push ego car in front of the opponent 
             additional_criterium = rd_meters - pd_meters
 
         if not crashed:
