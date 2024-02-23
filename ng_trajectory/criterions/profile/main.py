@@ -875,14 +875,16 @@ def compute(
                 _closest_p = numpy.abs(numpy.subtract(_t[:-1], ts)).argmin()
 
                 ngplot.pointsPlot(
-                    REFERENCE[:_closest, :2],
+                    # PR note: Used to be REFERENCE[:_closest, :2]
+                    REFERENCE[:, :2],
                     color = "black",
                     linewidth = P.getValue("plot_reference_width")
                 )
 
                 if P.getValue("plot_solution"):
                     ngplot.pointsPlot(
-                        points[:_closest_p, :2],
+                        # PR note: Used to be points[:_closest_p, :2]
+                        points[:, :2],
                         color="orange",
                         linewidth = P.getValue("plot_reference_width")
                     )
