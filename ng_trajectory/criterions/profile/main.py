@@ -942,8 +942,6 @@ def compute(
         # PR note: From now on, reference has 4 parts.
         # TODO: Document this!
         for _i, (rx, ry, _, _) in enumerate(REFERENCE):
-            if _i > _closest:
-                break
 
             rd = REFERENCE_PROGRESS[_i]  # Closest reference in the same time
             pd = trajectoryClosestIndex(
@@ -1010,8 +1008,8 @@ def compute(
                     crashed = True
 
                     # Calculate on which side is the opponent
-                    ego_vector = points[closest_indices[_i], :2] - points[closest_indices[_i-1], :2]
-                    opponent_vector = REFERENCE[_i, :2] - points[closest_indices[_i-1], :2]
+                    ego_vector = points[closest_indices[_i], :2] - points[closest_indices[_i] - 1, :2]
+                    opponent_vector = REFERENCE[_i, :2] - points[closest_indices[_i] - 1, :2]
                     # 0 -> none, 1 -> left, 2 -> right 
                     crash_side = numpy.sign(ego_vector[0] * opponent_vector[1] - ego_vector[1] * opponent_vector[1])
 
@@ -1024,32 +1022,33 @@ def compute(
                             ngplot.imgPlotMetric(MAP_OUTSIDE, color="red", s=1, marker='.', alpha=0.1)
                         elif crash_side == 2:  # right MAP_INSIDE
                             ngplot.imgPlotMetric(MAP_INSIDE, color="red", s=1, marker='.', alpha=0.1)
+                        print(f"Crashed {crash_side}")
 
-
-                        ngplot.pointsPlot(numpy.vstack((points[closest_indices[_i-1], :2], points[closest_indices[_i], :2])), color = "red", linewidth = P.getValue("plot_timelines_width"))
-                        ngplot.pointsPlot(REFERENCE[_i, :2].reshape((1, 2)), marker='.', color = "red", linewidth = P.getValue("plot_timelines_width"))
+                        ngplot.pointsPlot(numpy.vstack((points[closest_indices[_i-1], :2], points[closest_indices[_i], :2])), color = "green", linewidth = P.getValue("plot_timelines_width"))
+                        ngplot.pointsPlot(REFERENCE[_i, :2].reshape((1, 2)), marker='.', color="green", linewidth=P.getValue("plot_timelines_width"))
 
             # Check current trajectory point is inside the protected area
             if crashed:
                 point = points[closest_indices[_i]]
-                if not overflown.get("optimization", True) and P.getValue("plot"):
-                    print(f"Iteration: {_i}")
-                if not pointInBounds(point):
-                    if overflown.get("optimization", True) and P.getValue("plot"):
-                        return float(penalty)
-                    else:
-                        print("OOB")
-                point_map = pointToMap(point)
-                if crash_side == 2 and not MAP_INSIDE[point_map[0], point_map[1]] != 0:
-                    if overflown.get("optimization", True) and P.getValue("plot"):
-                        return float(penalty)
-                    else:
-                        print("C2")
-                if crash_side == 1 and not MAP_OUTSIDE[point_map[0], point_map[1]] != 0:
-                    if overflown.get("optimization", True) and P.getValue("plot"):
-                        return float(penalty)
-                    else:
-                        print("C1")
+                # if not overflown.get("optimization", True) and P.getValue("plot"):
+                #     print(f"Iteration: {_i}")
+                if crash_time + 10.0 > REFERENCE[_i, 2]:
+                    if not pointInBounds(point):
+                        if overflown.get("optimization", True) and P.getValue("plot"):
+                            return float(penalty)
+                        else:
+                            print("OOB")
+                    point_map = pointToMap(point)
+                    if crash_side == 2 and not MAP_INSIDE[point_map[0], point_map[1]] != 0:
+                        if overflown.get("optimization", True) and P.getValue("plot"):
+                            return float(penalty)
+                        else:
+                            print("C2")
+                    if crash_side == 1 and not MAP_OUTSIDE[point_map[0], point_map[1]] != 0:
+                        if overflown.get("optimization", True) and P.getValue("plot"):
+                            return float(penalty)
+                        else:
+                            print("C1")
 
             prev_rd = rd
             prev_pd = pd
@@ -1060,8 +1059,8 @@ def compute(
         if not crashed:
             criterion = _t[-1] * 1.0 + additional_criterium
             if overtaken:
-                criterion -= P.getValue("favor_overtaking")
+                criterion -= P.getValue("favor_overtaking") * 2.0
         else:
-            criterion = _t[-1] - P.getValue("favor_overtaking") * 2.0
+            criterion = _t[-1] - P.getValue("favor_overtaking")
 
     return float(criterion)
