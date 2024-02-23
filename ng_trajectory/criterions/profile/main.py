@@ -308,37 +308,30 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
     collision_model = 1  # 0 - round cars, 1 - square cars
 
     if REFERENCE is not None:  # Do this only if we want to compute overtaking
-        _closest = numpy.abs(numpy.subtract(REFERENCE[:, 2], _t[-1])).argmin() 
         # ---------------[ Get indexes closest in time ]---------------
         _d = P.getValue("reference_dist")
         for _i, (rx, ry, rt, v) in enumerate(REFERENCE):
-            if _i > _closest:
-                break
-
-            # Closest index
-            _ci = (abs(_t[:-1] - rt)).argmin()
-
 
             # Use this commented part only if optimizing closed path
-            #_ci = 0
-            #__t = 0
-            ## Selected last
-            #selected_last = False
-            #
-            #while True:
-            #    # Find closest point in time domain
-            #    _ci = (abs(_t[:-1] + __t - rt)).argmin()
-            #
-            #    # In case that we select the last point
-            #    # Do it again for next repetition of the trajectory
-            #    if _ci == len(_t) - 2:
-            #        if selected_last:
-            #            # Extra condition for non-closed paths.
-            #            break
-            #        __t += _t[-1]
-            #        selected_last = True
-            #    else:
-            #        break
+            _ci = 0
+            __t = 0
+            # Selected last
+            selected_last = False
+
+            while True:
+               # Find closest point in time domain
+               _ci = (abs(_t[:-1] + __t - rt)).argmin()
+
+               # In case that we select the last point
+               # Do it again for next repetition of the trajectory
+               if _ci == len(_t) - 2:
+                   if selected_last:
+                       # Extra condition for non-closed paths.
+                       break
+                   __t += _t[-1]
+                   selected_last = True
+               else:
+                   break
 
             closest_indices[_i] = _ci
 
