@@ -250,6 +250,7 @@ Note: The parameters shown below are not synced with the algorithm itself. There
 ```html
 Parameters:
 overlap (int) = 0 [Size of the trajectory overlap. 0 disables this.]
+friction_map_yaml (str) = None [(Requires pyyaml) Name of the yaml configuration of the original map that was used to create '.npy' files. Map file specified in the configuration has to exist.]
 
 Init parameters:
 _mu (float) = 0.2 [Friction coeficient]
@@ -273,6 +274,7 @@ favor_overtaking (float) = 0 [Penalty value to add to the lap time when overtaki
 friction_map (str) = None [Name of the file to load (x, y, mu*100) with friction map.]
 friction_map_inverse (bool) = False [When True, invert the values in the friction map.]
 friction_map_expand (bool) = False [When True, values from the friction map are expanded over the whole map using flood fill.]
+friction_map_plot (bool) = False [When True, friction map is plotted.]
 friction_map_save (bool) = False [When True, friction map is saved alongside the log files.]
 
 Init (viz.) parameters:
@@ -499,6 +501,7 @@ Following algorithms are used:
 ```html
 Parameters:
 overlap (int) = 0 [Size of the trajectory overlap. 0 disables this.]
+friction_map_yaml (str) = None [(Requires pyyaml) Name of the yaml configuration of the original map that was used to create '.npy' files. Map file specified in the configuration has to exist.]
 
 Init parameters:
 rotate (float) = 0 [Parameter for rotating the input path. 0 is not rotated. <0, 1)]
@@ -523,6 +526,7 @@ favor_overtaking (float) = 0 [Penalty value to add to the lap time when overtaki
 friction_map (str) = None [Name of the file to load (x, y, mu*100) with friction map.]
 friction_map_inverse (bool) = False [When True, invert the values in the friction map.]
 friction_map_expand (bool) = False [When True, values from the friction map are expanded over the whole map using flood fill.]
+friction_map_plot (bool) = False [When True, friction map is plotted.]
 friction_map_save (bool) = False [When True, friction map is saved alongside the log files.]
 sampling_distance (float) = 1.0 [[m] Distance of super-sampling before the interpolation, skipped when 0.]
 distance (float) = 0 [[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.]
