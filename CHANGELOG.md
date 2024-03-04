@@ -22,6 +22,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Criterions
     - _Profile_
         - Saved friction map plot has fixed colormap range.
+- Optimizers
+    - "solution" and "final" values are logged with lower verbosity level.
 
 ### Fixed
 - Criterions

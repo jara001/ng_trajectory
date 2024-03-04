@@ -13,7 +13,7 @@ from ng_trajectory.parameter import ParameterList
 
 from ng_trajectory.log import (
     print0,
-    logv, logvv, logvvv,
+    log, logv, logvv, logvvv,
     logfileFlush
 )
 
@@ -358,12 +358,11 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     ##
 
     with FILELOCK:
-        logv (
+        log (
             "solution:%s"
             % str(numpy.asarray(points).tolist()),
-            level = VERBOSITY
         )
-        logv ("final:%f" % final, level = VERBOSITY)
+        log ("final:%f" % final)
 
     return (
         final,
