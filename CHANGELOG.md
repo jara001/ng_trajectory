@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.13.0 - 2024-03-04
+### Added
+- Criterions
+    - _Profile_
+        - Parameter 'friction_map_yaml' to specify the configuration of the original map.
+        - When 'friction_map_yaml' is passed, a friction map is also saved in the ROS-compatible (map_server) format.
+        - Parameter 'friction_map_plot' to plot the friction map (currently, both this and 'friction_map_save' have to be set).
+- Segmentators
+    - Functions `getMapOrigin` and `getMapGrid` to obtain parameters of the current internal map.
+- 'ng_generate_data': When using verbose logging, colors identified as wall/unkn/free and shown.
+- 'ng_generate_data': Parameter '--clean' that throws away track points that are outside of the track.
+- 'ng_plot': Parameters '--vmin' and '--vmax' to set the bounds of the velocity colormap.
+- 'ng_plot': Allow reversed colormaps.
+- 'ng_plot': Plotting of the friction map when 'friction_map_plot' is True.
+
+### Changed
+- Criterions
+    - _Profile_
+        - Saved friction map plot has fixed colormap range.
+- Optimizers
+    - "solution" and "final" values are logged with lower verbosity level.
+
+### Fixed
+- Criterions
+    - _Profile_
+        - Obtain friction from the map using correct index.
+- 'ng_generate_data': Copy the map to avoid read-only errors.
+- 'ng_plot': Generate segmentator map to support friction map for the profiler.
+
 ## 1.12.1 - 2023-11-28
 ### Added
 - Criterions

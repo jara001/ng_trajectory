@@ -76,7 +76,8 @@ setup(
     ],
     python_requires='>=3.6',
     extras_require={
-        "plot_support": "matplotlib"
+        "plot_support": "matplotlib",
+        "friction_map": "pyyaml",
     },
     scripts=[
         'bin/ng_run',

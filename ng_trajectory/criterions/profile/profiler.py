@@ -213,7 +213,7 @@ def backward_pass(
 
     while k > 0:
         if FRICTION_MAP is not None:
-            cxy = pointToMap(points[k % len(points), :2])
+            cxy = pointToMap(points[k - 1, :2])
             mu = FRICTION_MAP[cxy[0], cxy[1]] / 100.0
         else:
             mu = _mu

@@ -10,6 +10,7 @@ import argparse
 import ng_trajectory.interpolators.cubic_spline as cspline
 import ng_trajectory.criterions.profile.main as profile
 import ng_trajectory.criterions.profile.profiler as profiler
+from ng_trajectory.segmentators.utils import mapCreate, getMap, pointsToWorld
 import ng_trajectory.plot as ngplot
 import matplotlib.pyplot
 import matplotlib.colors
@@ -102,7 +103,10 @@ PARSER.add_argument(
     "--cmap",
 
     nargs = "?",
-    choices = list(matplotlib._cm.datad),
+    choices = (
+        list(matplotlib._cm.datad)
+        + ["%s_r" % d for d in list(matplotlib._cm.datad)]
+    ),
     dest = "cmap",
     help = (
         "Colormap used for displaying the velocity. "
@@ -113,6 +117,24 @@ PARSER.add_argument(
     type = str,
     # https://stackoverflow.com/questions/17728109/python-dont-display-choices-with-argparse
     metavar = "CMAP",
+)
+
+PARSER.add_argument(
+    "--vmin",
+
+    dest = "vmin",
+    help = "Minimum velocity recognized by the colormap.",
+    default = 0.0,
+    type = float,
+)
+
+PARSER.add_argument(
+    "--vmax",
+
+    dest = "vmax",
+    help = "Maximum velocity recognized by the colormap.",
+    default = None,
+    type = float,
 )
 
 # Dynamicaly build up the parameters for profiler
@@ -166,6 +188,20 @@ def figureGenerate(solution, args):
     f = ngplot.figureCreate()
 
     ngplot.trackPlot(VALID_POINTS)
+
+    if args.velocity and args.friction_map_plot:
+        _ptp = numpy.asarray(numpy.where(getMap() == 100)).T
+
+        _sc = ngplot.pointsScatter(
+            pointsToWorld(_ptp),
+            s = 0.5,
+            c = profiler.FRICTION_MAP[_ptp[:, 0], _ptp[:, 1]] / 100.0,
+            cmap = "gray_r",
+            vmin = 0.0,
+            vmax = 1.0,
+        )
+        f.colorbar(_sc)
+
     ngplot.axisEqual()
 
     line = numpy.asarray(solution)
@@ -184,7 +220,9 @@ def figureGenerate(solution, args):
             s = 1,
             c = _v,
             cmap = args.cmap,
-            norm = matplotlib.colors.Normalize(vmin = 0.0)
+            norm = matplotlib.colors.Normalize(
+                vmin = args.vmin, vmax = args.vmax
+            )
         )
         f.colorbar(_sc)
 
@@ -224,6 +262,7 @@ if __name__ == "__main__":
 
     # Obtain map from the file
     VALID_POINTS = numpy.load(args.map_file[0])
+    mapCreate(VALID_POINTS)
 
 
     # Obtain solutions from logs

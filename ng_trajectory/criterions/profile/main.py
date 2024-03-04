@@ -12,6 +12,7 @@ p. 091005, Sep. 2016, doi: 10.1115/1.4033311.
 ######################
 
 import sys
+import os
 import numpy
 
 from . import profiler
@@ -24,12 +25,12 @@ from ng_trajectory.interpolators.utils import (
 from ng_trajectory.segmentators.utils import (
     pointsToMap,
     pointsToWorld,
-    getMap
+    getMap, getMapOrigin, getMapGrid
 )
 
 from ng_trajectory.log import (
     logfileName,
-    log,
+    log, logvv,
     print0
 )
 
@@ -80,7 +81,9 @@ P.createAdd("favor_overtaking", 0, float, "Penalty value to add to the lap time 
 P.createAdd("friction_map", None, str, "Name of the file to load (x, y, mu*100) with friction map.", "init")
 P.createAdd("friction_map_inverse", False, bool, "When True, invert the values in the friction map.", "init")
 P.createAdd("friction_map_expand", False, bool, "When True, values from the friction map are expanded over the whole map using flood fill.", "init")
+P.createAdd("friction_map_plot", False, bool, "When True, friction map is plotted.", "init")
 P.createAdd("friction_map_save", False, bool, "When True, friction map is saved alongside the log files.", "init")
+P.createAdd("friction_map_yaml", None, str, "(Requires pyyaml) Name of the yaml configuration of the original map that was used to create '.npy' files. Map file specified in the configuration has to exist.")
 
 
 ######################
@@ -132,6 +135,193 @@ def fmap_expand(friction_map, known_values):
                 queue.append((_cx, _cy))
 
     return friction_map
+
+
+def saveMap(filename: str, map_data: numpy.ndarray):
+    """Save the map into a file as npy.
+
+    Arguments:
+    filename -- name of the file to save map into (no extension), str
+    map_data -- map to save, nx(>=2) numpy.ndarray
+
+    Note: We expect that the map is a derivation of segmentator internal map,
+          and their parameters are the same.
+
+    Note: Requires pyyaml.
+
+    Raises:
+    ImportError -- when pyyaml is not available
+
+    Source:
+    https://stackoverflow.com/questions/49720605/pixel-coordinates-vs-drawing-coordinates
+    """
+    param_name = "friction_map_yaml"
+    yaml_filename = P.getValue(param_name)
+
+    def perr(*args, **kwargs):
+        """Print an error message."""
+        print0 (
+            "profile: Unable to save friction_map:",
+            *args, file = sys.stderr, **kwargs
+        )
+
+    # Try to import pyyaml
+    try:
+        from yaml import safe_load, dump
+    except ImportError as e:
+        perr (str(e))
+        return
+
+    # Check that we have the configuration file
+    if yaml_filename is None:
+        perr ("parameter '%s' is empty" % param_name)
+        return
+
+    if not os.access(yaml_filename, os.R_OK):
+        perr (
+            "%s '%s'" % (
+                "permission denied"
+                if os.access(yaml_filename, os.F_OK)
+                else "no such file",
+                filename
+            )
+        )
+        return
+
+    # Open the configuration
+    try:
+        with open(yaml_filename, "r") as f:
+            conf = safe_load(f)
+            logvv (
+                "Loaded map configuration '%s': %s"
+                % (yaml_filename, conf)
+            )
+    except Exception as e:
+        perr ("configuration loading: %s" % str(e))
+        return
+
+
+    # Check fields in the configuration
+    REQUIRED = {"image": str, "origin": list}
+
+    for field, field_type in REQUIRED.items():
+        if field not in conf:
+            perr ("field '%s' is not in the configuration" % field)
+            return
+
+        if not isinstance(conf[field], field_type):
+            perr (
+                "field '%s' is type %s but should be %s"
+                % (field, type(conf[field]), field_type)
+            )
+            return
+
+
+    # Check that image exists
+    if not os.access(conf["image"], os.R_OK):
+        perr (
+            "%s '%s'" % (
+                "permission denied"
+                if os.access(conf["image"], os.F_OK)
+                else "no such file",
+                conf["image"]
+            )
+        )
+        return
+
+
+    # # Process the map # #
+    from PIL import Image
+
+    # Load the original image in 'xy' format
+    """
+               X
+        +------------>
+        |
+        |  0,0   1,0
+      Y |
+        |  0,1   1,1
+        |
+        v
+    """
+    im = Image.open(conf["image"])
+
+    # Convert it into 'yx' numpy ndarray
+    """
+               Y
+        +------------>
+        |
+        |  0,0   0,1
+      X |
+        |  1,0   1,1
+        |
+        v
+    """
+    nd = numpy.array(im)
+    # Clear the map -- we just need the size.
+    # Which is transposed now; im.size = nd.shape.T
+    nd[:] = 0
+    height = nd.shape[0]
+
+
+    # Compute origin difference
+    """
+    The real map has origin in the left bottom corner.
+    In addition, as we shrink the map (data) during creation,
+    we have no idea, where is the real origin.
+
+    That information is extracted from the yaml file, so we
+    just have to compute the translation.
+
+        ^           ^
+     Y  |           |
+     (  |  0,4      |  0,1   1,1
+     o  |         Y |
+     r  |  0,3      |  0,0   1,0
+     i  |           |
+     g  |  0,2      +----------->
+     i  |                 X
+     n  |  0,1   1,1
+     a  |
+     l  |  0,0   1,0   2,0   3,0
+     )  |
+        +----------------------->
+               X(original)
+    """
+    trans = ((getMapOrigin() - conf["origin"][:2]) / getMapGrid()).astype(int)
+
+
+    # Color the map; use inverted colors to represent the friction
+    for (cx, cy), value in numpy.ndenumerate(map_data):
+        # Shift the coordinates
+        cxo, cyo = [cx, cy] + trans
+
+        # Now we perform multiple steps at once to properly create the map;
+        #   - to workaround 'xy' -> 'yx' we reverse the coordinates
+        #     (x, y) = (y, x)
+        #   - to get around the origin placement, we say that
+        #     (y, x) = (0, 0) = (height, 0)
+        nd[height - cyo, cxo] = 255 - value
+
+
+    # Save the image
+    try:
+        Image.fromarray(nd).save(filename + ".pgm")
+    except Exception as e:
+        perr (str(e))
+        return
+
+    # Save the YAML
+    conf["image"] = filename + ".pgm"
+    conf["negate"] = 1
+    conf["mode"] = "raw"
+
+    try:
+        with open(filename + ".yaml", "w") as f:
+            dump(conf, f)
+    except Exception as e:
+        perr (str(e))
+        return
 
 
 ######################
@@ -206,8 +396,12 @@ def init(**kwargs) -> None:
 
         profiler.FRICTION_MAP = FRICTION_MAP
 
-        # Plot the map
+        # Save and plot the map
         if P.getValue("friction_map_save"):
+
+            saveMap(logfileName() + ".fmap", FRICTION_MAP)
+
+        if P.getValue("friction_map_save") and P.getValue("friction_map_plot"):
             fig = ngplot.figureCreate()
             ngplot.axisEqual(figure = fig)
 
@@ -233,6 +427,7 @@ def init(**kwargs) -> None:
                 c = FRICTION_MAP[_ptp[:, 0], _ptp[:, 1]] / 100.0,
                 cmap = "gray_r",
                 vmin = 0.0,
+                vmax = 1.0,
                 figure = fig
             )
 
