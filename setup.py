@@ -68,6 +68,7 @@ setup(
     ],
     install_requires=[
         'nevergrad==0.3.0',
+        'pandas<2.1',
         "scipy>=0.18.0",
         "numpy>=1.12.0,<1.24",
         "Pillow>=4.2.0",

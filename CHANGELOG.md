@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Fixed
+- Install only `pandas<2.1` as newer ones are not compatible with older `numpy`.
+
 ## 1.13.0 - 2024-03-04
 ### Added
 - Criterions
