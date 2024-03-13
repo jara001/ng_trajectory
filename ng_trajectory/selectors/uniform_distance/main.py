@@ -200,7 +200,12 @@ def trajectoryResample(points, remain):
 
             # Create fpoints with a set factor to allow concatenating
             _fpoints = INTERPOLATOR.interpolate(
-                _points[:, :2], 10 * len(_rpoints)
+                # TODO: Set this automatically. When the fixed points are
+                #       too close to each other, they match the same point
+                #       in this array, leading to "eating" them. On the other
+                #       hand, with larger number, it is possible to do this,
+                #       but the number of segments grows.
+                _points[:, :2], 100 * len(_rpoints)
             )
 
             fixed_points.append(_fpoints[0])

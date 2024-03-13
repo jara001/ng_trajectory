@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.13.2 - 2024-03-13
+### Changed
+- Selectors
+    - _Uniform distance_
+        - `trajectoryResample()`: Increase the number of points when concatenating parts of the trajectory.
+
+### Fixed
+- Interpolators
+    - Resolve zero divison and index overflow problems in `trajectoryClosestIndex()`.
+
 ## 1.13.1 - 2024-03-04
 ### Fixed
 - Install only `pandas<2.1` as newer ones are not compatible with older `numpy`.
