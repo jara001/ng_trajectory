@@ -280,12 +280,16 @@ def trajectoryClosestIndex(
             _distances[index, 0],
             _distances[index, 1]
         )
+
+        if d1 == 0.0:
+            return index
+
         d2 = numpy.hypot(
-            _distances[index + 1, 0],
-            _distances[index + 1, 1]
+            _distances[(index + 1) % len(points), 0],
+            _distances[(index + 1) % len(points), 1]
         )
         ds = pointDistance(
-            points[index, :2], points[index + 1, :2]
+            points[index, :2], points[(index + 1) % len(points), :2]
         )
 
         return (
