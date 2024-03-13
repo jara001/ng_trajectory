@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Changed
+- Selectors
+    - _Uniform distance_
+        - `trajectoryResample()`: Increase the number of points when concatenating parts of the trajectory.
+
 ### Fixed
 - Interpolators
     - Resolve zero divison and index overflow problems in `trajectoryClosestIndex()`.
