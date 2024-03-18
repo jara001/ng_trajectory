@@ -205,7 +205,8 @@ def trajectoryResample(points, remain):
                 #       in this array, leading to "eating" them. On the other
                 #       hand, with larger number, it is possible to do this,
                 #       but the number of segments grows.
-                _points[:, :2], 100 * len(_rpoints)
+                # PR note: Used to be 100.
+                _points[:, :2], 1000 * len(_rpoints)
             )
 
             fixed_points.append(_fpoints[0])
