@@ -233,8 +233,13 @@ def trajectoryClosestIndex(points: numpy.ndarray, reference: numpy.ndarray, *, f
         Note: Isn't it easier to use just dA and dC?
         """
         d1 = numpy.hypot(_distances[index, 0], _distances[index, 1])
-        d2 = numpy.hypot(_distances[index+1, 0], _distances[index+1, 1])
-        ds = pointDistance(points[index, :2], points[index+1, :2])
+
+        if d1 == 0.0:
+            return index
+
+        corrected_index = (index + 1) % len(points)
+        d2 = numpy.hypot(_distances[corrected_index, 0], _distances[corrected_index, 1])
+        ds = pointDistance(points[index, :2], points[corrected_index, :2])
 
         return index if (d1**2 - d2**2 + ds**2) / (2 * d1 * ds) > 0 else index - 1
 
