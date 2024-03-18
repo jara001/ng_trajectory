@@ -163,7 +163,7 @@ def trajectoryResample(points, remain):
             rotate.pop(0)
 
             # Create fpoints with a set factor to allow concatenating
-            _fpoints = INTERPOLATOR.interpolate(_points[:, :2], 10 * len(_rpoints))
+            _fpoints = INTERPOLATOR.interpolate(_points[:, :2], 1000 * len(_rpoints))
 
             fixed_points.append(_fpoints[0])
             upoints.append(_fpoints)
