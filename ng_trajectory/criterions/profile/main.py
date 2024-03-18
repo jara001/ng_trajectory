@@ -50,6 +50,7 @@ from itertools import chain  # Join generators
 CENTERLINE = None
 REFERENCE_PROGRESS = None
 OVERTAKING_POINTS = Queue()
+LOGFILE_NAME = None
 
 MAP_INSIDE = None
 MAP_OUTSIDE = None
@@ -411,7 +412,7 @@ def get_rect_points(center: numpy.ndarray, dims: numpy.ndarray, angle: float) ->
 
 def init(**kwargs) -> None:
     """Initialize criterion."""
-    global REFERENCE, CENTERLINE, OVERTAKING_POINTS, MAP_OUTSIDE, MAP_INSIDE
+    global REFERENCE, CENTERLINE, OVERTAKING_POINTS, MAP_OUTSIDE, MAP_INSIDE, LOGFILE_NAME
 
     profiler.parametersSet(**kwargs)
 
@@ -428,6 +429,8 @@ def init(**kwargs) -> None:
             "save_solution_csv",
             logfileName() + ".csv"
         )
+
+    LOGFILE_NAME = kwargs.get("logfile").name
 
     if P.getValue("reference") is not None:
         REFERENCE = numpy.load(P.getValue("reference"))[:, :3]
@@ -675,7 +678,7 @@ def compute(
     t -- time of reaching the last point of the trajectory, [s], float
          minimization criterion
     """
-    global REFERENCE, CENTERLINE, REFERENCE_PROGRESS, OVERTAKING_POINTS, MAP_OUTSIDE, MAP_INSIDE
+    global REFERENCE, CENTERLINE, REFERENCE_PROGRESS, OVERTAKING_POINTS, MAP_OUTSIDE, MAP_INSIDE, LOGFILE_NAME
 
     # Get overlap parameter
     if overlap is None:
@@ -917,14 +920,11 @@ def compute(
     # having duplicate marker(s).
     crashed = False
     crash_time = None
-    crash_side = 0  # 0 -> none, 1 -> left, 2 -> right
+    crash_side = 0  # 0 -> none, 1 -> left, 2 -> right 
+    data_to_save = []
 
-    if (P.getValue("plot_overtaking")
-            and REFERENCE is not None
-            and CENTERLINE is not None
-            and overflown.get("optimization", True)):
-        # It does not actually plot, just sends the data via Queue
-        # to the parent process.
+    if P.getValue("plot_overtaking") and REFERENCE is not None and CENTERLINE is not None:
+        # It does not actually plot, just sends the data via Queue to the parent process.
         # That said, plotting has to be handled by the optimizer.
         if REFERENCE_PROGRESS is None:
             REFERENCE_PROGRESS = [
@@ -1070,11 +1070,21 @@ def compute(
             # Additional criterion to push ego car in front of the opponent 
             additional_criterium = rd_meters - pd_meters
 
+            #      time        ; RX ; RY ; RV ;           EGO X                ;               EGO Y            ;            EGO V        ; crashed ; overtaken
+            # REFERENCE[_i, 2] ; rx ; ry ; rv ; points[closest_indices[_i], 0] ; points[closest_indices[_i], 1] ; _v[closest_indices[_i]] ; crashed ; overtaken
+            if not overflown.get("optimization", True):
+                data_to_save.append([REFERENCE[_i, 2], _t[closest_indices[_i]], rx, ry, rv, points[closest_indices[_i], 0], points[closest_indices[_i], 1], _v[closest_indices[_i]], crashed, overtaken])
+
         if not crashed:
             criterion = _t[-1] * 1.0 + additional_criterium
             if overtaken:
                 criterion -= P.getValue("favor_overtaking") * 2.0
         else:
             criterion = _t[-1] - P.getValue("favor_overtaking")
+
+        # data collection
+        if not overflown.get("optimization", True):
+            file_name = LOGFILE_NAME.replace("matryoshka.log", "save.npy")
+            numpy.save(file_name, data_to_save)
 
     return float(criterion)
