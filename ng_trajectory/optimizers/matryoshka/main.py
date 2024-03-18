@@ -442,7 +442,8 @@ def _opt(points: numpy.ndarray) -> float:
             if VERBOSITY > 1:
                 print ("penalty:%f" % penalty, file=LOGFILE)
             LOGFILE.flush()
-        return penalty
+        if CRITERION_ARGS.get("optimization", True):
+            return penalty
 
     _c = CRITERION.compute(**{**{'points': _points, 'penalty': PENALTY}, **CRITERION_ARGS})
     with FILELOCK:
