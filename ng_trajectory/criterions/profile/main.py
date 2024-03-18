@@ -336,6 +336,13 @@ def saveMap(filename: str, map_data: numpy.ndarray):
 # Functions
 ######################
 
+def determine_opponent_side(traj_pos_now, traj_pos_prev, opponent_pos):
+    # Calculate on which side is the opponent
+    ego_vector = traj_pos_now - traj_pos_prev
+    opponent_vector = opponent_pos - traj_pos_prev
+    # 1.0 - left, 0.0 - mid, -1.0 right
+    return numpy.sign(ego_vector[0] * opponent_vector[1] - ego_vector[1] * opponent_vector[0])
+
 def do_polygons_intersect(a: numpy.array, b: numpy.array) -> bool:
     """
     * Helper function to determine whether there is an intersection between the two polygons described
@@ -1013,20 +1020,19 @@ def compute(
                         ngplot.pointsPlot(numpy.vstack((REFERENCE[_i, :2], points[closest_indices[_i], :2])), color = "green", linewidth = P.getValue("plot_timelines_width"))
                     crashed = True
 
-                    # Calculate on which side is the opponent
-                    ego_vector = points[closest_indices[_i], :2] - points[closest_indices[_i] - 1, :2]
-                    opponent_vector = REFERENCE[_i, :2] - points[closest_indices[_i] - 1, :2]
-                    # 0 -> none, 1 -> left, 2 -> right 
-                    crash_side = numpy.sign(ego_vector[0] * opponent_vector[1] - ego_vector[1] * opponent_vector[1])
+                    # 1.0 - left, 0.0 - mid, -1.0 right
+                    crash_side = determine_opponent_side(traj_pos_now=points[closest_indices[_i], :2],
+                                                         traj_pos_prev=points[closest_indices[_i] - 1, :2], 
+                                                         opponent_pos=REFERENCE[_i, :2])
 
                     # TODO start using inflated part of the map. remember the start time and which side to use
                     crash_time = REFERENCE[_i, 2]
 
                     if not overflown.get("optimization", True) and P.getValue("plot"):
                         # plot inflated map
-                        if crash_side == 1:  # left MAP_OUTSIDE
+                        if crash_side == 1 or crash_side == 0:  # left MAP_OUTSIDE
                             ngplot.imgPlotMetric(MAP_OUTSIDE, color="red", s=1, marker='.', alpha=0.1)
-                        elif crash_side == 2:  # right MAP_INSIDE
+                        elif crash_side == -1:  # right MAP_INSIDE
                             ngplot.imgPlotMetric(MAP_INSIDE, color="red", s=1, marker='.', alpha=0.1)
                         print(f"Crashed {crash_side}")
 
@@ -1045,7 +1051,7 @@ def compute(
                         else:
                             print("OOB")
                     point_map = pointToMap(point)
-                    if crash_side == 2 and not MAP_INSIDE[point_map[0], point_map[1]] != 0:
+                    if crash_side == -1 and not MAP_INSIDE[point_map[0], point_map[1]] != 0:
                         if overflown.get("optimization", True) and P.getValue("plot"):
                             return float(penalty)
                         else:
