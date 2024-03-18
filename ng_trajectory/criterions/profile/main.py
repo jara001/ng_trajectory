@@ -69,10 +69,19 @@ P.createAdd("favor_overtaking", 0, float, "Penalty value to add to the lap time 
 ######################
 
 def determine_opponent_side(traj_pos_now, traj_pos_prev, opponent_pos):
-    # Calculate on which side is the opponent
+    """
+    * Helper function to determine a side of opponent relative to ego trajectory
+    *
+    * @param traj_pos_now a 1D ndarray of current trajectory point
+    * @param traj_pos_prev a 1D ndarray of previous trajectory point
+    * @param opponent_pos a 1D ndarray of opponent position 
+    * @return 1.0 === opponent left, 0.0 === opponent mid, -1.0 === opponent right
+    """
+    # Compute required vectors
     ego_vector = traj_pos_now - traj_pos_prev
     opponent_vector = opponent_pos - traj_pos_prev
     # 1.0 - left, 0.0 - mid, -1.0 right
+    # Compute vector multiplication to determine side of the opponent_pos
     return numpy.sign(ego_vector[0] * opponent_vector[1] - ego_vector[1] * opponent_vector[0])
 
 def do_polygons_intersect(a: numpy.array, b: numpy.array) -> bool:
@@ -168,6 +177,7 @@ def init(**kwargs) -> None:
             # Lap time estimate
             lap_time = REFERENCE[-1, 2] + numpy.mean([REFERENCE[-1, 2] - REFERENCE[-2, 2], REFERENCE[1, 2] - REFERENCE[0, 2]])
 
+        # roll trajectory and correct time stamps
         REFERENCE = numpy.roll(REFERENCE, - P.getValue("reference_rotate"), axis=0)
         REFERENCE[:, 2] = REFERENCE[:, 2] - REFERENCE[0, 2]
         REFERENCE[REFERENCE[:, 2] < 0, 2] += lap_time
@@ -195,7 +205,7 @@ def init(**kwargs) -> None:
         # default map is created 
 
         # calc robot mask
-        car_width = 0.5  # with safety region
+        car_width = 0.4  # with safety region
         robot_radius_grid = int(numpy.round(car_width / MAP_GRID))
         y, x = numpy.ogrid[-robot_radius_grid:robot_radius_grid + 1, -robot_radius_grid:robot_radius_grid + 1]
         mask = x ** 2 + y ** 2 <= robot_radius_grid ** 2
@@ -219,63 +229,6 @@ def init(**kwargs) -> None:
 
         # inflate outer wall
         MAP_OUTSIDE = 100 - morphology.grey_dilation(100 - MAP_OUTSIDE, footprint=mask)
-
-        # import matplotlib.pyplot as plt
-        # plt.figure(figsize=(5,5))
-        # plt.imshow(MAP_INSIDE.T, vmin=0, vmax=255)
-        # plt.show()
-        # plt.figure(figsize=(5,5))
-        # plt.imshow(MAP_OUTSIDE.T, vmin=0, vmax=255)
-        # plt.show()
-
-        # ref_ = copy.copy(REFERENCE)
-        # points = numpy.zeros((len(trajectory_norms), 2))
-        # for i in range(len(trajectory_norms)):
-        #     point = ref_[i, :2]
-        #     while True:
-        #         point += trajectory_norms[i] * MAP_GRID
-        #         if not pointInBounds(point):
-        #             points[i] = point
-        #             break
-        #         point_map = pointToMap(point)
-        #         if not validCheck(point_map):
-        #             points[i] = point
-        #             break
-
-        # ref_ = copy.copy(REFERENCE)
-        # points2 = numpy.zeros((len(trajectory_norms), 2))
-        # for i in range(len(trajectory_norms)):
-        #     point = ref_[i, :2]
-        #     while True:
-        #         point -= trajectory_norms[i] * MAP_GRID
-        #         if not pointInBounds(point):
-        #             points2[i] = point
-        #             break
-        #         point_map = pointToMap(point)
-        #         if not validCheck(point_map):
-        #             points2[i] = point
-        #             break
-
-        # vec_2 = points[1:, :2] - points[:-1, :2]
-        # trajectory_norms2 = numpy.array([-vec_2[:, 1], vec_2[:, 0]]).T / numpy.linalg.norm(vec_2, axis=1)[:, numpy.newaxis]
-
-        # points3 = points[0:180, :] - trajectory_norms2[0:180] * 0.8
-
-
-
-        # plt.figure(figsize=(5,5))
-        # plt.imshow(map_.T, vmin=0, vmax=255)
-        # plt.show()
-
-        # plt.plot(REFERENCE[:, 0], REFERENCE[:, 1], 'b')
-        # plt.plot(trajectory_norms[:, 0] + REFERENCE[:-1, 0], trajectory_norms[:, 1] + REFERENCE[:-1, 1], 'r.')
-        # plt.plot(points[:, 0], points[:, 1], 'r.')
-        # plt.plot(points2[:, 0], points2[:, 1], 'g.')
-        # plt.plot(points3[:, 0], points3[:, 1], 'b.')
-
-        # plt.fill(numpy.hstack((points[0:180, 0], numpy.flip(points3[:, 0]))), 
-        #          numpy.hstack((points[0:180, 1], numpy.flip(points3[:, 1]))), facecolor='r', edgecolor='b')
-        # plt.show()
 
         print ("Loaded reference with '%d' points, lap time %fs." % (len(REFERENCE), lap_time), file = kwargs.get("logfile", sys.stdout))
     else:
@@ -371,19 +324,19 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
             elif collision_model == 1:  # square cars
 
                 # Calculate all vertices of the ego vehicle (rectangle representation)
-                corners_ego = get_rect_points(points[_ci, :2], 
+                corners_ego = get_rect_points(points[_ci, :2],
                                               (
-                                                    0.55, 
+                                                    0.55,
                                                     0.3
-                                               ), 
+                                               ),
                                               ego_headings[_ci])
 
                 # Calculate all vertices of the opponent vehicle (rectangle representation)
-                corners_opponent = get_rect_points(REFERENCE[_i , :2], 
+                corners_opponent = get_rect_points(REFERENCE[_i , :2],
                                               (
-                                                    0.55, 
+                                                    0.55,
                                                     0.3
-                                               ), 
+                                               ),
                                               opponent_headings[_i])
 
                 if do_polygons_intersect(corners_ego, corners_opponent):
@@ -633,4 +586,3 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
             numpy.save(file_name, data_to_save)
 
     return float(criterion)
-
