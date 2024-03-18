@@ -240,6 +240,9 @@ def groupsBorderBeautify(borders: List[numpy.ndarray], border_length: int) -> Li
         # FIXME: Temporarily hidden as we are working with 0.02 map in Stage.
         border_filtered = pointsFilter(border)#0.05
 
+        if len(border_filtered) == 0:
+            border_filtered = border
+
         border_sorted = trajectorySort(border_filtered, verify_sort = True)
 
         border_interpolated = trajectoryInterpolate(border_sorted, border_length)
