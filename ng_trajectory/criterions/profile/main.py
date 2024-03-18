@@ -492,9 +492,15 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
 
         CEMTRELINE_PROGRESS_METERS = numpy.sqrt(numpy.sum(numpy.square(CENTERLINE[:-1, :] - CENTERLINE[1:, :]), axis=1))
         REFERENCE_PROGRESS_METERS = numpy.sqrt(numpy.sum(numpy.square(REFERENCE[:-1, :] - REFERENCE[1:, :]), axis=1))
+        REFERENCE_LENGTH_METERS = numpy.sum(REFERENCE_PROGRESS_METERS)
+
+        idx = numpy.argmin(numpy.sum(numpy.square(REFERENCE[:, :2] - points[closest_indices[_i], :2].reshape((1, 2))), axis=1))  # minimum point from point -> reference
+        pd_meters_prev = numpy.sum(REFERENCE_PROGRESS_METERS[:idx])
+        if (pd_meters_prev > 0.0): 
+            pd_meters_prev -= REFERENCE_LENGTH_METERS
 
         _closest = numpy.abs(numpy.subtract(REFERENCE[:, 2], _t[-1])).argmin() 
-        for _i, (rx, ry, _, _) in enumerate(REFERENCE):
+        for _i, (rx, ry, _, rv) in enumerate(REFERENCE):
 
             rd = REFERENCE_PROGRESS[_i]                    # nejblizsi i ve stejnem case
             pd = trajectoryClosestIndex(CENTERLINE, points[closest_indices[_i], :2])
@@ -518,30 +524,30 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
                     print (f"rx: {rx}\try: {ry}\trt: {_}\nrd: {rd}\tpd: {pd}\nprev_rd: {prev_rd}\tprev_pd: {prev_pd}")
                 break
 
-            #if rd > 50 and pd > rd and not overtaken:
-            if pd > rd and not overtaken:
-                overtaken = True
-                if overflown.get("optimization", True):
-                    OVERTAKING_POINTS.put(points[closest_indices[_i], :2])
-            elif pd < rd and overtaken:  # I think we need this -->> viz. examples
-                if not crashed:
-                    overtaken = False
-
             # pd, rd are just indexes, not progression in meters 
             rd_meters = numpy.sum(REFERENCE_PROGRESS_METERS[:_i])
 
             # -->> wtf ?? idx = trajectoryClosestIndex(reference=REFERENCE[:, :2], points=points[closest_indices[_i], :2].reshape((1, 2)))  # How does thia work then??
             idx = numpy.argmin(numpy.sum(numpy.square(REFERENCE[:, :2] - points[closest_indices[_i], :2].reshape((1, 2))), axis=1))  # minimum point from point -> reference
             pd_meters = numpy.sum(REFERENCE_PROGRESS_METERS[:idx])
-            if abs(rd_meters - pd_meters) > numpy.sum(REFERENCE_PROGRESS_METERS) / 2.0:
-                pd_meters -= numpy.sum(REFERENCE_PROGRESS_METERS)
+            if abs(pd_meters_prev - pd_meters) > 1.0:
+                pd_meters -= REFERENCE_LENGTH_METERS
+
+            # check for overtake without collision
+            if pd_meters > rd_meters and not overtaken:
+                overtaken = True
+                if overflown.get("optimization", True):
+                    OVERTAKING_POINTS.put(points[closest_indices[_i], :2])
+            elif pd_meters < rd_meters and overtaken: 
+                if not crashed:
+                    overtaken = False
 
             # TODO check if idx is correnctly in sequence -> mainly in the beggining
-            dist_front_crash = 0.1
+            dist_front_crash = 0.05
             if not crashed:
                 if is_collision[_i] and pd_meters - rd_meters < dist_front_crash:
                     return float(penalty)
-                elif (is_collision[_i] and pd_meters - rd_meters > dist_front_crash):
+                elif (is_collision[_i] and pd_meters - rd_meters >= dist_front_crash):
 
                     if not overflown.get("optimization", True) and P.getValue("plot"):
                         ngplot.pointsPlot(numpy.vstack((REFERENCE[idx, :2], points[closest_indices[_i], :2])), color = "blue", linewidth = P.getValue("plot_timelines_width"))
@@ -593,6 +599,8 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
 
             prev_rd = rd
             prev_pd = pd
+
+            pd_meters_prev = pd_meters
 
             # Additional criterion to push ego car in front of the opponent 
             additional_criterium = rd_meters - pd_meters
