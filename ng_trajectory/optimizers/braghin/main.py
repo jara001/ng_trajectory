@@ -212,6 +212,14 @@ def init(
             line_reduction
         )
 
+        SEGMENTATOR.segmentate(
+            points = points,
+            group_centers = group_centers_,
+            **{
+                **SEGMENTATOR_ARGS
+            }
+        )
+
         # Call init part of the penalizer
         # TODO: Check whether this works.
         PENALIZER.init(
