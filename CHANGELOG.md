@@ -16,6 +16,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Reference trajectory can have more fields, but only first three (x, y, k) are used.
 
 ### Fixed
+- Criterions
+    - _Profile_
+        - Initial velocity should not be changed when computing the profile in the not closed paths.
 - Optimizers
     - _Braghin_
         - Run the segmentator before creating the transformation.

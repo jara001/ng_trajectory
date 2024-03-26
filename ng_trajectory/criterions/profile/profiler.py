@@ -297,20 +297,37 @@ def forward_pass(
         ) / (2 * ds)
         a[k] = h(cur[k], v_fwd[k], 1)
         a[k] = min(min(a[k], a_acc_max), a_lim)
-        v_fwd[(k + 1) % len(points)] = math.sqrt(
-            v_fwd[k] * v_fwd[k] + 2 * a[k] * ds
-        )
 
-        if v_fwd[(k + 1) % len(points)] + v_fwd[k] > 0.0:
-            dt = 2 * ds / (v_fwd[(k + 1) % len(points)] + v_fwd[k])
-        else:
-            # TODO: It would be nice to actually stay at t[k] all the time.
-            # But now all we can do is to just add some random time.
-            dt = 100
+        # Do not change v_0 in not closed path.
+        """
+        There are two options:
+        1) closed path
+           With closed path you generally use overlap > 0 to smoothen all
+           transition effects of the acceleration and path curvature.
+           Therefore, this forces to not change the value at the end of the
+           overlapped trajectory, but it is generally not the real part of
+           the trajectory that is being used -- so it will not affect anything.
 
-        t[(k + 1) % len(points)] = (
-            t[k] + min(dt, 100)
-        )
+        2) open path
+           The issue was only here. With open path you generally use
+           overlap = 0 (as otherwise it does not make much sense) and you
+           do not want to change the v_0.
+        """
+        if k + 1 < len(points):
+            v_fwd[(k + 1) % len(points)] = math.sqrt(
+                v_fwd[k] * v_fwd[k] + 2 * a[k] * ds
+            )
+
+            if v_fwd[(k + 1) % len(points)] + v_fwd[k] > 0.0:
+                dt = 2 * ds / (v_fwd[(k + 1) % len(points)] + v_fwd[k])
+            else:
+                # TODO: It would be nice to actually stay at t[k] all the time.
+                # But now all we can do is to just add some random time.
+                dt = 100
+
+            t[(k + 1) % len(points)] = (
+                t[k] + min(dt, 100)
+            )
 
         k = k + 1
 
