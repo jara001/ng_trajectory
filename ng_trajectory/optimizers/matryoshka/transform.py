@@ -16,6 +16,7 @@ from typing import List, Tuple
 # Utils functions
 from ng_trajectory.interpolators.utils import trajectoryReduce, trajectorySort
 from .interpolate import trajectoryInterpolate
+from ng_trajectory.log import print0
 
 
 # Typing
@@ -245,11 +246,15 @@ def groupsBorderObtain(
 
 def groupsBorderBeautify(
         borders: List[numpy.ndarray],
-        border_length: int) -> List[numpy.ndarray]:
+        border_length: int,
+        allow_no_filter: bool = False) -> List[numpy.ndarray]:
     """Filter, sort and interpolate the borders to get smoother points.
 
     Arguments:
     borders -- border points of the groups, n-list of x2 numpy.ndarray
+    border_length -- number of points in the final border line, int
+    allow_no_filter -- when True and filter removes all points, use the
+                       unfiltered data instead, bool, default False
 
     Returns:
     bborders -- beautified border points of the groups,
@@ -264,6 +269,17 @@ def groupsBorderBeautify(
     for group_i, border in enumerate(borders):
         # FIXME: Temporarily hidden as we are working with 0.02 map in Stage.
         border_filtered = pointsFilter(border)  # 0.05
+
+        if len(border_filtered) == 0:
+            if allow_no_filter:
+                border_filtered = border
+            else:
+                print0 (
+                    "Border filter removed all points. Set function argument "
+                    "'allow_no_filter' to use unfitered data instead. You can "
+                    "also set 'border_allow_no_filter' in the configuration "
+                    "file."
+                )
 
         border_sorted = trajectorySort(border_filtered, verify_sort = True)
 

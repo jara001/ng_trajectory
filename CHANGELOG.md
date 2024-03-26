@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Optimizers
+    - _Matryoshka_
+        - Add argument 'allow_no_filter' to 'groupsBorderBeautify()' to use unfitered border data when filtration removes all of them.
+        - Add parameter 'border_allow_no_filter' to set 'allow_no_filter' from the configuration.
 ### Changed
 - Criterions
     - _Profile_

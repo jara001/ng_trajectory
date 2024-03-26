@@ -95,6 +95,7 @@ P.createAdd("plot_group_indices", True, bool, "Whether group indices should be s
 P.createAdd("plot_group_borders", True, bool, "Whether group borders should be shown on the track.", "init (viz.)")
 P.createAdd("fixed_segments", [], list, "Points to be used instead their corresponding segment.", "init")
 P.createAdd("_experimental_mm_max", -1, int, "(Experimental) Limit MM to cover only first n segments.", "init")
+P.createAdd("border_allow_no_filter", False, bool, "Allow to use unfiltered border data when filter removes all of them.", "init")
 
 
 ######################
@@ -346,7 +347,10 @@ def init(
         )
 
         GROUP_LAYERS = transform.groupsBorderObtain(_groups)
-        GROUP_LAYERS = transform.groupsBorderBeautify(GROUP_LAYERS, 400)
+        GROUP_LAYERS = transform.groupsBorderBeautify(
+            GROUP_LAYERS, 400,
+            allow_no_filter = P.getValue("border_allow_no_filter")
+        )
 
         if plot and P.getValue("plot_group_borders"):
             ngplot.bordersPlot(GROUP_LAYERS, figure)
