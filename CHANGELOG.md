@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Changed
+- Criterions
+    - _Profile_
+        - Reference trajectory can have more fields, but only first three (x, y, k) are used.
 ### Fixed
 - Optimizers
     - _Braghin_
