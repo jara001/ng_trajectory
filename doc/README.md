@@ -78,6 +78,7 @@ For the optimization itself, Nevergrad is used.
 Init parameters:
 fixed_segments (list) = [] [Points to be used instead their corresponding segment.]
 _experimental_mm_max (int) = -1 [(Experimental) Limit MM to cover only first n segments.]
+border_allow_no_filter (bool) = False [Allow to use unfiltered border data when filter removes all of them.]
 
 Init (matryoshka) parameters:
 hold_matryoshka (bool) = False [Whether the transformation should be created only once.]

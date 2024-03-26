@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.13.3 - 2024-03-26
+### Added
+- Optimizers
+    - _Matryoshka_
+        - Add argument 'allow_no_filter' to 'groupsBorderBeautify()' to use unfitered border data when filtration removes all of them.
+        - Add parameter 'border_allow_no_filter' to set 'allow_no_filter' from the configuration.
+
+### Changed
+- Criterions
+    - _Profile_
+        - Reference trajectory can have more fields, but only first three (x, y, k) are used.
+
+### Fixed
+- Criterions
+    - _Profile_
+        - Initial velocity should not be changed when computing the profile in the not closed paths.
+- Optimizers
+    - _Braghin_
+        - Run the segmentator before creating the transformation.
+
 ## 1.13.2 - 2024-03-13
 ### Changed
 - Selectors
