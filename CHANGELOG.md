@@ -9,10 +9,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
     - _Matryoshka_
         - Add argument 'allow_no_filter' to 'groupsBorderBeautify()' to use unfitered border data when filtration removes all of them.
         - Add parameter 'border_allow_no_filter' to set 'allow_no_filter' from the configuration.
+
 ### Changed
 - Criterions
     - _Profile_
         - Reference trajectory can have more fields, but only first three (x, y, k) are used.
+
 ### Fixed
 - Optimizers
     - _Braghin_
