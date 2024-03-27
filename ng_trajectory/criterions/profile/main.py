@@ -90,6 +90,11 @@ P.createAdd("friction_map_expand", False, bool, "When True, values from the fric
 P.createAdd("friction_map_plot", False, bool, "When True, friction map is plotted.", "init")
 P.createAdd("friction_map_save", False, bool, "When True, friction map is saved alongside the log files.", "init")
 P.createAdd("friction_map_yaml", None, str, "(Requires pyyaml) Name of the yaml configuration of the original map that was used to create '.npy' files. Map file specified in the configuration has to exist.")
+P.createAdd("car_width", 0.3, float, "Width of the car when using rectangle vehicle shape.", "")
+P.createAdd("car_length", 0.55, float, "Length of the car when using rectangle vehicle shape.", "")
+P.createAdd("car_shape", "rectangle", str, "Vehicle shape to use when calculating collisions during overtaking. ['circle', 'rectangle']", "")
+P.createAdd("ego_dist_overtake", 0.1, float, "How much in front of opponent ego car needs to be to have a right of way.", "")
+P.createAdd("use_safe_zone_seconds", 10.0, float, "How many seconds after crash EGO cannot enter safety zone.", "")
 
 
 ######################
@@ -714,27 +719,27 @@ def compute(
             opponent_headings[_i] = numpy.arctan2(opponent_vector[1], opponent_vector[0])
 
             # Collision detection
-            if collision_model == 0: # round cars
+            if P.getValue("car_shape") == "circle": # round cars
                 if pointDistance([rx, ry], points[_ci, :]) < _d:
                     is_collision[_i] = True
                     if not overflown.get("optimization", True):  # just for the plot
                         invalid_points.append([rx, ry])
 
-            elif collision_model == 1:  # square cars
+            elif P.getValue("car_shape") == "rectangle":  # square cars
 
                 # Calculate all vertices of the ego vehicle (rectangle representation)
                 corners_ego = get_rect_points(points[_ci, :2],
                                               (
-                                                    0.55,
-                                                    0.3
+                                                    P.getValue('car_length'),
+                                                    P.getValue('car_width')
                                                ),
                                               ego_headings[_ci])
 
                 # Calculate all vertices of the opponent vehicle (rectangle representation)
                 corners_opponent = get_rect_points(REFERENCE[_i , :2],
                                               (
-                                                    0.55,
-                                                    0.3
+                                                    P.getValue('car_length'),
+                                                    P.getValue('car_width')
                                                ),
                                               opponent_headings[_i])
 
@@ -801,22 +806,22 @@ def compute(
                             color = "red",
                         )
 
-                    if collision_model == 0:  # round cars
+                    if P.getValue("car_shape") == "circle":  # round cars
                         # plot EGO car as a round obstacle
                         ngplot.circlePlot(points[_closest_p , :2], P.getValue("reference_dist") / 2.0, color="blue")
                         # plot opponent car as a round obstacle
                         ngplot.circlePlot(REFERENCE[_closest , :2], P.getValue("reference_dist") / 2.0, color="red")
-                    elif collision_model == 1:  # rectangle cars
+                    elif P.getValue("car_shape") == "rectangle":  # rectangle cars
                         # plot EGO car as a round obstacle
                         ngplot.rectanglePlot(points[_closest_p , :2], 
-                                         0.55, 
-                                         0.3,
+                                         P.getValue('car_length'), 
+                                         P.getValue('car_width'),
                                          angle=ego_headings[_closest_p],
                                          color="blue")
                         # plot opponent car as a round obstacle
                         ngplot.rectanglePlot(REFERENCE[_closest , :2],  
-                                            0.55, 
-                                            0.3,
+                                            P.getValue('car_length'), 
+                                            P.getValue('car_width'),
                                             angle=opponent_headings[_closest],
                                             color="red")
 
