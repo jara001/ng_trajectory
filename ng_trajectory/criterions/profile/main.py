@@ -445,10 +445,6 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
     # Locate points where overtaking occurs
     # Centerline is used to obtain track progression.  2 x 910
     # Do not do this when not optimizing; just to avoid having duplicate marker(s).
-    crashed = False
-    crash_time = None
-    crash_side = 0  # 0 -> none, 1 -> left, 2 -> right 
-    data_to_save = []
     if P.getValue("plot_overtaking") and REFERENCE is not None and CENTERLINE is not None:
         # It does not actually plot, just sends the data via Queue to the parent process.
         # That said, plotting has to be handled by the optimizer.
@@ -458,11 +454,12 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
                 for _i in range(len(REFERENCE))
             ]
 
+        crashed = False
+        crash_time = None
+        crash_side = 0  # 0 -> none, 1 -> left, 2 -> right 
+        data_to_save = []
         overtaken = False
-        prev_rd = REFERENCE_PROGRESS[0]
-        prev_pd = trajectoryClosestIndex(CENTERLINE, points[closest_indices[0], :2])
-        additional_criterium = 0.0
-        #reference_end = trajectoryClosestIndex(CENTERLINE, points[-1, :2])
+        average_opponent_dist = 0.0
 
         CEMTRELINE_PROGRESS_METERS = numpy.sqrt(numpy.sum(numpy.square(CENTERLINE[:-1, :] - CENTERLINE[1:, :]), axis=1))
         REFERENCE_PROGRESS_METERS = numpy.sqrt(numpy.sum(numpy.square(REFERENCE[:-1, :] - REFERENCE[1:, :]), axis=1))
@@ -473,35 +470,12 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
         if (pd_meters_prev > 0.0): 
             pd_meters_prev -= REFERENCE_LENGTH_METERS
 
-        _closest = numpy.abs(numpy.subtract(REFERENCE[:, 2], _t[-1])).argmin() 
-        for _i, (rx, ry, _, rv) in enumerate(REFERENCE):
+        for _i, (rx, ry, time_progress, rv) in enumerate(REFERENCE):
 
-            rd = REFERENCE_PROGRESS[_i]                    # nejblizsi i ve stejnem case
-            pd = trajectoryClosestIndex(CENTERLINE, points[closest_indices[_i], :2])
-
-            # This sequence should ensure that only correct overtaking points are selected
-            # and it should be comfortable with rotating the centerline (i.e., having the
-            # 0 points somewhere along the way).
-            #if rd > reference_end:
-            #    break
-
-            if prev_rd > rd:
-                rd += len(CENTERLINE)
-
-            if prev_pd > pd:
-                pd += len(CENTERLINE)
-
-            # This should apply only for non-closed paths.
-            if pd - prev_pd > 50:
-                if overlap > 0:
-                    print ("WARNING: Detected jump in the trajectory track progress.")
-                    print (f"rx: {rx}\try: {ry}\trt: {_}\nrd: {rd}\tpd: {pd}\nprev_rd: {prev_rd}\tprev_pd: {prev_pd}")
-                break
-
-            # pd, rd are just indexes, not progression in meters 
+            # Calculate trajectory progress of the opponent in meters
             rd_meters = numpy.sum(REFERENCE_PROGRESS_METERS[:_i])
 
-            # -->> wtf ?? idx = trajectoryClosestIndex(reference=REFERENCE[:, :2], points=points[closest_indices[_i], :2].reshape((1, 2)))  # How does thia work then??
+            # Calculate trajectory progress of the ego in meters (progress on opponent's trajectory)
             idx = numpy.argmin(numpy.sum(numpy.square(REFERENCE[:, :2] - points[closest_indices[_i], :2].reshape((1, 2))), axis=1))  # minimum point from point -> reference
             pd_meters = numpy.sum(REFERENCE_PROGRESS_METERS[:idx])
             if abs(pd_meters_prev - pd_meters) > 1.0:
@@ -516,27 +490,28 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
                 if not crashed:
                     overtaken = False
 
-            # TODO check if idx is correnctly in sequence -> mainly in the beggining
-            dist_front_crash = 0.05
-            if not crashed:
-                if is_collision[_i] and pd_meters - rd_meters < dist_front_crash:
+            # If not crashed before and crashed right now
+            if (not crashed) and is_collision[_i]:
+                # Find out who caused the collision
+                if pd_meters - rd_meters < P.getValue("ego_dist_overtake"):
+                    # EGO crashed from behind --> EGO's fault
                     return float(penalty)
-                elif (is_collision[_i] and pd_meters - rd_meters >= dist_front_crash):
-
-                    if not overflown.get("optimization", True) and P.getValue("plot"):
-                        ngplot.pointsPlot(numpy.vstack((REFERENCE[idx, :2], points[closest_indices[_i], :2])), color = "blue", linewidth = P.getValue("plot_timelines_width"))
-                        ngplot.pointsPlot(numpy.vstack((REFERENCE[_i, :2], points[closest_indices[_i], :2])), color = "green", linewidth = P.getValue("plot_timelines_width"))
+                elif pd_meters - rd_meters >= P.getValue("ego_dist_overtake"):
+                    # Opponent crashed from behind --> Opponent's fault
                     crashed = True
 
                     # 1.0 - left, 0.0 - mid, -1.0 right
                     crash_side = determine_opponent_side(traj_pos_now=points[closest_indices[_i], :2],
-                                                         traj_pos_prev=points[closest_indices[_i] - 1, :2], 
+                                                         traj_pos_prev=points[closest_indices[_i] - 1, :2],
                                                          opponent_pos=REFERENCE[_i, :2])
 
                     # TODO start using inflated part of the map. remember the start time and which side to use
-                    crash_time = REFERENCE[_i, 2]
+                    crash_time = time_progress
 
                     if not overflown.get("optimization", True) and P.getValue("plot"):
+                        ngplot.pointsPlot(numpy.vstack((REFERENCE[idx, :2], points[closest_indices[_i], :2])), color = "blue", linewidth = P.getValue("plot_timelines_width"))
+                        ngplot.pointsPlot(numpy.vstack((REFERENCE[_i, :2], points[closest_indices[_i], :2])), color = "green", linewidth = P.getValue("plot_timelines_width"))
+
                         # plot inflated map
                         if crash_side == 1 or crash_side == 0:  # left MAP_OUTSIDE
                             ngplot.imgPlotMetric(MAP_OUTSIDE, color="red", s=1, marker='.', alpha=0.1)
@@ -545,33 +520,18 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
                         print(f"Crashed {crash_side}")
 
                         ngplot.pointsPlot(numpy.vstack((points[closest_indices[_i-1], :2], points[closest_indices[_i], :2])), color = "green", linewidth = P.getValue("plot_timelines_width"))
-                        ngplot.pointsPlot(REFERENCE[_i, :2].reshape((1, 2)), marker='.', color="green", linewidth=P.getValue("plot_timelines_width"))
+                        # opponent position during overtake
+                        ngplot.pointsPlot(REFERENCE[_i, :2].reshape((1, 2)), marker='.', color="green", linewidth=P.getValue("plot_timelines_width"))  
 
             # Check current trajectory point is inside the protected area
-            if crashed:
-                point = points[closest_indices[_i]]
-                # if not overflown.get("optimization", True) and P.getValue("plot"):
-                #     print(f"Iteration: {_i}")
-                if crash_time + 10.0 > REFERENCE[_i, 2]:
-                    if not pointInBounds(point):
-                        if overflown.get("optimization", True) and P.getValue("plot"):
-                            return float(penalty)
-                        else:
-                            print("OOB")
-                    point_map = pointToMap(point)
-                    if crash_side == -1 and not MAP_INSIDE[point_map[0], point_map[1]] != 0:
-                        if overflown.get("optimization", True) and P.getValue("plot"):
-                            return float(penalty)
-                        else:
-                            print("C2")
-                    if crash_side == 1 and not MAP_OUTSIDE[point_map[0], point_map[1]] != 0:
-                        if overflown.get("optimization", True) and P.getValue("plot"):
-                            return float(penalty)
-                        else:
-                            print("C1")
-
-            prev_rd = rd
-            prev_pd = pd
+            if crashed and (crash_time + P.getValue("use_safe_zone_seconds") > time_progress):
+                if not pointInBounds(points[closest_indices[_i]]):
+                    return float(penalty)
+                point_map = pointToMap(points[closest_indices[_i]])
+                if crash_side == -1 and not MAP_INSIDE[point_map[0], point_map[1]] != 0:
+                    return float(penalty)
+                if crash_side == 1 and not MAP_OUTSIDE[point_map[0], point_map[1]] != 0:
+                    return float(penalty)
 
             pd_meters_prev = pd_meters
 
@@ -579,9 +539,9 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
             additional_criterium = rd_meters - pd_meters
 
             #      time        ; RX ; RY ; RV ;           EGO X                ;               EGO Y            ;            EGO V        ; crashed ; overtaken
-            # REFERENCE[_i, 2] ; rx ; ry ; rv ; points[closest_indices[_i], 0] ; points[closest_indices[_i], 1] ; _v[closest_indices[_i]] ; crashed ; overtaken
+            # time_progress    ; rx ; ry ; rv ; points[closest_indices[_i], 0] ; points[closest_indices[_i], 1] ; _v[closest_indices[_i]] ; crashed ; overtaken
             if not overflown.get("optimization", True):
-                data_to_save.append([REFERENCE[_i, 2], _t[closest_indices[_i]], rx, ry, rv, points[closest_indices[_i], 0], points[closest_indices[_i], 1], _v[closest_indices[_i]], crashed, overtaken])
+                data_to_save.append([time_progress, _t[closest_indices[_i]], rx, ry, rv, points[closest_indices[_i], 0], points[closest_indices[_i], 1], _v[closest_indices[_i]], crashed, overtaken])
 
         if not crashed:
             criterion = _t[-1] * 1.0 + additional_criterium
