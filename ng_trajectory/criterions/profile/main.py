@@ -655,6 +655,11 @@ def compute(
     )
     criterion = _t[-1]  # default criterion of the optimization is a lap time
 
+    # test if acceleration is within limits
+    for i in range(len(_a)):
+        if _a[i] > P.getValue("a_acc_max") or _a[i] < -P.getValue("a_break_max"):
+            return float(penalty * abs(_a[i]))
+
     invalid_points = []
     if REFERENCE is not None:
         is_collision = numpy.zeros((len(REFERENCE), ), dtype=bool)
