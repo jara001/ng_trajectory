@@ -88,7 +88,7 @@ def mergePeaks(peaks_indices: np.ndarray, other: Dict[str, np.ndarray], threshol
         for _p in nearby:
             _indices.remove(_p)
 
-    return np.asarray(merged_peaks, dtype = np.int)
+    return np.asarray(merged_peaks, dtype = int)
 
 
 ######################
@@ -203,7 +203,7 @@ def select(
                         peaks[j+1],
                         int((peaks[j+1] - peaks[j]) / P.getValue("peaks_filling")) + 1,
                         endpoint = False,
-                        dtype = np.int
+                        dtype = int
                     )
                 )[1:]
 
@@ -248,7 +248,7 @@ def select(
         switching = switching[switching < (len(ipoints) - overlap_size)]
         switching = switching - overlap_size
 
-        _peaks = np.unique(np.sort(np.concatenate((peaks, filling, switching), axis=0)).astype(np.int))
+        _peaks = np.unique(np.sort(np.concatenate((peaks, filling, switching), axis=0)).astype(int))
 
         all_peaks.append(_peaks)
 

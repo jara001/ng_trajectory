@@ -56,14 +56,14 @@ def trajectoryReduce(points: numpy.ndarray, remain: int) -> numpy.ndarray:
     global ROTATE
 
     if ROTATE == 0:
-        return points[numpy.linspace(0, len(points)-1, remain, dtype=numpy.int, endpoint=False), :]
+        return points[numpy.linspace(0, len(points)-1, remain, dtype=int, endpoint=False), :]
 
-    ls = numpy.linspace(0, len(points)-1, remain, dtype=numpy.int, endpoint=False)
+    ls = numpy.linspace(0, len(points)-1, remain, dtype=int, endpoint=False)
 
     return trajectoryRotate(points, ls[1], ROTATE)[ls, :]
 
     # Old rotate (without utils)
-    ls2 = numpy.linspace((ls[1] - ls[0])*ROTATE, len(points)-1+(ls[1] - ls[0])*ROTATE, remain, dtype=numpy.int, endpoint=False)
+    ls2 = numpy.linspace((ls[1] - ls[0])*ROTATE, len(points)-1+(ls[1] - ls[0])*ROTATE, remain, dtype=int, endpoint=False)
 
     # Wrap up the array
     ls2[ls2>=len(points)] -= len(points)
@@ -76,7 +76,7 @@ def trajectoryReduce(points: numpy.ndarray, remain: int) -> numpy.ndarray:
             (len(points)-1) * ROTATE,
             (len(points)-1) * (1+ROTATE),
             remain,
-            dtype = numpy.int,
+            dtype = int,
             endpoint = False
         )
 

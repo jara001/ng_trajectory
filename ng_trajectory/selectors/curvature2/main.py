@@ -189,7 +189,7 @@ def peaksFill(points: numpy.ndarray, peaks: List[int], max_distance: float) -> L
                     _peaks[i+1],
                     int(_distance / max_distance) + 1,
                     endpoint = False,
-                    dtype = numpy.int
+                    dtype = int
                 )
             )[1:]
 

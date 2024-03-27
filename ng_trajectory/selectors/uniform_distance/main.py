@@ -154,7 +154,7 @@ def trajectoryResample(points, remain):
                 axis = 0
             )
 
-            _rpoints = _upoints[numpy.linspace(0, len(_fpoints), len(_rpoints), endpoint = False, dtype = numpy.int), :]
+            _rpoints = _upoints[numpy.linspace(0, len(_fpoints), len(_rpoints), endpoint = False, dtype = int), :]
 
             fixed_points.append(_fpoints[0])
             upoints.append(_upoints)

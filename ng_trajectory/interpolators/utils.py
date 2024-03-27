@@ -173,7 +173,7 @@ def trajectoryReduce(points: numpy.ndarray, remain: int) -> numpy.ndarray:
     Returns:
     rpoints -- list of points, remainx2 numpy.ndarray
     """
-    return points[numpy.linspace(0, len(points)-1, remain, dtype=numpy.int, endpoint=False), :]
+    return points[numpy.linspace(0, len(points)-1, remain, dtype=int, endpoint=False), :]
 
 
 def trajectoryClosest(points: numpy.ndarray, reference: numpy.ndarray, *, from_left: bool = False) -> numpy.ndarray:
