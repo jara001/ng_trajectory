@@ -976,20 +976,32 @@ def compute(
 
             pd_meters_prev = pd_meters
 
-            # Additional criterion to push ego car in front of the opponent 
-            additional_criterium = rd_meters - pd_meters
+            # Additional criterion to push ego car in front of the opponent
+            average_opponent_dist += (rd_meters - pd_meters) 
 
             #      time        ; RX ; RY ; RV ;           EGO X                ;               EGO Y            ;            EGO V        ; crashed ; overtaken
             # time_progress    ; rx ; ry ; rv ; points[closest_indices[_i], 0] ; points[closest_indices[_i], 1] ; _v[closest_indices[_i]] ; crashed ; overtaken
             if not overflown.get("optimization", True):
                 data_to_save.append([time_progress, _t[closest_indices[_i]], rx, ry, rv, points[closest_indices[_i], 0], points[closest_indices[_i], 1], _v[closest_indices[_i]], crashed, overtaken])
 
+        average_opponent_dist = average_opponent_dist / len(REFERENCE)
+
+        success = False
+        criterion = _t[-1]
         if not crashed:
-            criterion = _t[-1] * 1.0 + additional_criterium
+            criterion += average_opponent_dist
             if overtaken:
                 criterion -= P.getValue("favor_overtaking") * 2.0
+                success = True
         else:
-            criterion = _t[-1] - P.getValue("favor_overtaking")
+            criterion += -P.getValue("favor_overtaking") # + 0.05 * numpy.sum(is_collision)  # -> bad only if I am on the outside
+            success = True
+
+        if success and (not overflown.get("optimization", True)):
+            with open("success.res", "w") as f:
+                    f.write("1")
+
+        # Time instead of distance at the start position
 
         # data collection
         if not overflown.get("optimization", True):
