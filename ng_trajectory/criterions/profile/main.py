@@ -467,9 +467,10 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
 
         idx = numpy.argmin(numpy.sum(numpy.square(REFERENCE[:, :2] - points[closest_indices[_i], :2].reshape((1, 2))), axis=1))  # minimum point from point -> reference
         pd_meters_prev = numpy.sum(REFERENCE_PROGRESS_METERS[:idx])
-        if (pd_meters_prev > 0.0): 
+        if (pd_meters_prev > 0.0):
             pd_meters_prev -= REFERENCE_LENGTH_METERS
 
+        overtaking_point = None
         for _i, (rx, ry, time_progress, rv) in enumerate(REFERENCE):
 
             # Calculate trajectory progress of the opponent in meters
@@ -482,10 +483,9 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
                 pd_meters -= REFERENCE_LENGTH_METERS
 
             # check for overtake without collision
-            if pd_meters > rd_meters and not overtaken:
+            if pd_meters >= rd_meters and not overtaken:
                 overtaken = True
-                if overflown.get("optimization", True):
-                    OVERTAKING_POINTS.put(points[closest_indices[_i], :2])
+                overtaking_point = points[closest_indices[_i], :2]
             elif pd_meters < rd_meters and overtaken: 
                 if not crashed:
                     overtaken = False
@@ -548,17 +548,28 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
         success = False
         criterion = _t[-1]
         if not crashed:
-            criterion += average_opponent_dist
+            # No crash
             if overtaken:
-                criterion -= P.getValue("favor_overtaking") * 2.0
+                # Overtake
                 success = True
+            else:
+                # No overtake
+                criterion += average_opponent_dist + P.getValue("favor_overtaking") * 2.0
         else:
-            criterion += -P.getValue("favor_overtaking") # + 0.05 * numpy.sum(is_collision)  # -> bad only if I am on the outside
+            # Crash (not my mistake -> he should change his trajectory) -> successful overtake
+            criterion += average_opponent_dist + P.getValue("favor_overtaking") # + 0.05 * numpy.sum(is_collision)  # -> bad only if I am on the outside
             success = True
 
-        if success and (not overflown.get("optimization", True)):
-            with open("success.res", "w") as f:
-                    f.write("1")
+        if success:
+            if not overflown.get("optimization", True):
+                with open("success.res", "w") as f:
+                        f.write("1")
+
+            if overflown.get("optimization", True):
+                if overtaking_point is not None:
+                    OVERTAKING_POINTS.put(overtaking_point)
+                else:
+                    print("-----------------------------------------ERROR---------------------------------------")
 
         # Time instead of distance at the start position
 
