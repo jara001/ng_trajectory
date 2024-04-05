@@ -241,7 +241,7 @@ def trajectoryClosestIndex(points: numpy.ndarray, reference: numpy.ndarray, *, f
         d2 = numpy.hypot(_distances[corrected_index, 0], _distances[corrected_index, 1])
         ds = pointDistance(points[index, :2], points[corrected_index, :2])
 
-        return index if (d1**2 - d2**2 + ds**2) / (2 * d1 * ds) > 0 else index - 1
+        return index if (d1**2 - d2**2 + ds**2) / (2 * d1 * ds) > 0 else (index - 1) % len(points)
 
 
 def trajectoryFarthest(points: numpy.ndarray, reference: numpy.ndarray) -> numpy.ndarray:

@@ -310,6 +310,7 @@ def saveState(filename: str, points: numpy.ndarray, t: numpy.ndarray, v: numpy.n
             )
     arr_to_save = numpy.vstack([x[:len(points)], y[:len(points)], t[:len(points)], v[:len(points)]]).T
     data = numpy.save("optimal_trajectory_ego.npy", arr_to_save)
+    numpy.save("optimal_trajectory_ego_ds.npy", arr_to_save[0::2])  # down-scaled by 2
 
 
 def profileCompute(points: numpy.ndarray, overlap: int = 0, fd: TextIO = None, lap_time: bool = False, save: str = None) -> Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]:
