@@ -274,8 +274,8 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
     invalid_points = []
     if REFERENCE is not None:
         is_collision = numpy.zeros((len(REFERENCE), ), dtype=bool)
-        closest_indices = numpy.zeros((len(REFERENCE), ), dtype=int)
-        ego_headings = numpy.zeros((len(REFERENCE), ), dtype=numpy.double)
+        closest_indices = (-1) * numpy.ones((len(REFERENCE), ), dtype=int)
+        ego_headings = numpy.zeros((len(points), ), dtype=numpy.double)
         opponent_headings = numpy.zeros((len(REFERENCE), ), dtype=numpy.double)
 
     collision_model = 1  # 0 - round cars, 1 - square cars
@@ -306,27 +306,32 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
                else:
                    break
 
+            # This should end this loop when we run out of points on the trajectory (for open trajectories only)
+            if selected_last:
+                break
+
             closest_indices[_i] = _ci
 
             # Calculate heading of the ego vehicle
             ego_pos = points[_ci, :]
-            if len(points) <= _ci + 1:  # n -> n x 3
-                ego_vector = [ego_pos[0] - points[_ci - 1 , 0], ego_pos[1] - points[_ci - 1 , 1]]
+            if len(points) <= _ci + 2:  # n -> n x 3
+                ego_vector = [ego_pos[0] - points[_ci - 2 , 0], ego_pos[1] - points[_ci - 2 , 1]]
             else:
-                ego_vector = [points[_ci + 1, 0] - points[_ci, 0], points[_ci + 1, 1] - points[_ci, 1]]
+                ego_vector = [points[_ci + 2, 0] - points[_ci, 0], points[_ci + 2, 1] - points[_ci, 1]]
             ego_headings[_ci] = numpy.arctan2(ego_vector[1], ego_vector[0])
 
             # Calculate heading of the opponent vehicle
+            # TODO calculate what you can in INIT
             opponent_pos = [rx, ry]
-            if len(REFERENCE) <= _i + 1:
-                opponent_vector = [opponent_pos[0] - REFERENCE[_i - 1, 0], opponent_pos[1] - REFERENCE[_i - 1, 1]]
+            if len(REFERENCE) <= _i + 2:
+                opponent_vector = [opponent_pos[0] - REFERENCE[_i - 2, 0], opponent_pos[1] - REFERENCE[_i - 2, 1]]
             else:
-                opponent_vector = [REFERENCE[_i + 1, 0] - rx, REFERENCE[_i + 1, 1] - ry]
+                opponent_vector = [REFERENCE[_i + 2, 0] - rx, REFERENCE[_i + 2, 1] - ry]
             opponent_headings[_i] = numpy.arctan2(opponent_vector[1], opponent_vector[0])
 
             # Collision detection
             if P.getValue("car_shape") == "circle": # round cars
-                if pointDistance([rx, ry], points[_ci, :]) < _d:
+                if pointDistance([rx, ry], points[_ci, :]) < _d:  # TODO CHECK
                     is_collision[_i] = True
                     if not overflown.get("optimization", True):  # just for the plot
                         invalid_points.append([rx, ry])
@@ -461,10 +466,13 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
         overtaken = False
         average_opponent_dist = 0.0
 
+        # TODO calculate what you can in INIT ??
         CEMTRELINE_PROGRESS_METERS = numpy.sqrt(numpy.sum(numpy.square(CENTERLINE[:-1, :] - CENTERLINE[1:, :]), axis=1))
         REFERENCE_PROGRESS_METERS = numpy.sqrt(numpy.sum(numpy.square(REFERENCE[:-1, :] - REFERENCE[1:, :]), axis=1))
         REFERENCE_LENGTH_METERS = numpy.sum(REFERENCE_PROGRESS_METERS)
+        EGO_PROGRESS_METERS = numpy.sqrt(numpy.sum(numpy.square(points[:-1, :2] - points[1:, :2]), axis=1))
 
+        # TODO check what the hell is the "_i" supposed to be
         idx = numpy.argmin(numpy.sum(numpy.square(REFERENCE[:, :2] - points[closest_indices[_i], :2].reshape((1, 2))), axis=1))  # minimum point from point -> reference
         pd_meters_prev = numpy.sum(REFERENCE_PROGRESS_METERS[:idx])
         if (pd_meters_prev > 0.0):
@@ -472,6 +480,8 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
 
         overtaking_point = None
         for _i, (rx, ry, time_progress, rv) in enumerate(REFERENCE):
+            if closest_indices[_i] == -1:
+                break
 
             # Calculate trajectory progress of the opponent in meters
             rd_meters = numpy.sum(REFERENCE_PROGRESS_METERS[:_i])
@@ -484,8 +494,9 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
 
             # check for overtake without collision
             if pd_meters >= rd_meters and not overtaken:
-                overtaken = True
-                overtaking_point = points[closest_indices[_i], :2]
+                if numpy.sum(EGO_PROGRESS_METERS[:]) - numpy.sum(EGO_PROGRESS_METERS[:closest_indices[_i]]) > 10.0:  # TODO change this to PROGRESS ON OPPONENT ?? maybe...
+                    overtaken = True
+                    overtaking_point = points[closest_indices[_i], :2]
             elif pd_meters < rd_meters and overtaken: 
                 if not crashed:
                     overtaken = False
@@ -493,9 +504,9 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
             # If not crashed before and crashed right now
             if (not crashed) and is_collision[_i]:
                 # Find out who caused the collision
-                if pd_meters - rd_meters < P.getValue("ego_dist_overtake"):
+                if (pd_meters - rd_meters < P.getValue("ego_dist_overtake")) or not overtaken:
                     # EGO crashed from behind --> EGO's fault
-                    return float(penalty)
+                    return float(penalty * numpy.sum(is_collision) + 2045)
                 elif pd_meters - rd_meters >= P.getValue("ego_dist_overtake"):
                     # Opponent crashed from behind --> Opponent's fault
                     crashed = True
@@ -525,7 +536,7 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
 
             # Check current trajectory point is inside the protected area
             if crashed and (crash_time + P.getValue("use_safe_zone_seconds") > time_progress):
-                if not pointInBounds(points[closest_indices[_i]]):
+                if not pointInBounds(points[closest_indices[_i]]):  # TODO check this
                     return float(penalty)
                 point_map = pointToMap(points[closest_indices[_i]])
                 if crash_side == -1 and not MAP_INSIDE[point_map[0], point_map[1]] != 0:
@@ -545,8 +556,25 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
 
         average_opponent_dist = average_opponent_dist / len(REFERENCE)
 
+        # Ego's last position   points[-1]
+        # Ego's last orientation   ego_headings[-1]
+
+        # Opponent    opponent_headings       REFERENCE
+
         success = False
         criterion = _t[-1]
+
+        use_end_cost = True
+        if use_end_cost:
+            idx = numpy.argmin(numpy.sum(numpy.square(REFERENCE[:, :2] - points[-2, :2].reshape((1, 2))), axis=1))
+            dist_error = numpy.sum(numpy.square(REFERENCE[idx, :2].reshape((1, 2)) - points[-1, :2].reshape((1, 2))), axis=1)
+            heading_error = numpy.abs(ego_headings[-2] - opponent_headings[idx])
+            speed_error = numpy.abs(REFERENCE[idx, 3] - _v[-2])
+            criterion += 0.4 * dist_error + 5.0 * heading_error # + 5.0 * speed_error
+            if not overflown.get("optimization", True):
+                print(f"average_opponent_dist {average_opponent_dist}")
+                print(f"dist_error: {dist_error}    heading_error: {heading_error}    speed_error: {speed_error}")
+
         if not crashed:
             # No crash
             if overtaken:
