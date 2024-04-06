@@ -912,6 +912,7 @@ def compute(
         overtaken = False
 
         average_opponent_dist = 0.0
+        num_runs = 0
 
         # CEMTRELINE_PROGRESS_METERS = numpy.sqrt(numpy.sum(numpy.square(CENTERLINE[:-1, :] - CENTERLINE[1:, :]), axis=1))
         REFERENCE_PROGRESS_METERS = numpy.sqrt(numpy.sum(numpy.square(REFERENCE[:-1, :] - REFERENCE[1:, :]), axis=1))
@@ -1004,13 +1005,14 @@ def compute(
 
             # Additional criterion to push ego car in front of the opponent
             average_opponent_dist += (rd_meters - pd_meters)
+            num_runs += 1.0
 
             #      time        ; RX ; RY ; RV ;           EGO X                ;               EGO Y            ;            EGO V        ; crashed ; overtaken
             # time_progress    ; rx ; ry ; rv ; points[closest_indices[_i], 0] ; points[closest_indices[_i], 1] ; _v[closest_indices[_i]] ; crashed ; overtaken
             if not overflown.get("optimization", True):
                 data_to_save.append([time_progress, _t[closest_indices[_i]], rx, ry, rv, points[closest_indices[_i], 0], points[closest_indices[_i], 1], _v[closest_indices[_i]], crashed, overtaken])
 
-        average_opponent_dist = average_opponent_dist / len(REFERENCE)  # TODO CORRECT THIS
+        average_opponent_dist = average_opponent_dist / num_runs  # TODO CORRECT THIS
 
         # Ego's last position   points[-1]
         # Ego's last orientation   ego_headings[-1]
