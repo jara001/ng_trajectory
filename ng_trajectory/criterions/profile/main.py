@@ -415,11 +415,17 @@ def get_rect_points(center: numpy.ndarray, dims: numpy.ndarray, angle: float) ->
         """
         center = numpy.asarray(center)
         length, breadth = dims
-        corners = numpy.array([[-length/2, -breadth/2],
-                            [length/2, -breadth/2],
-                            [length/2, breadth/2],
-                            [-length/2, breadth/2]])
-        rot = numpy.array([[numpy.cos(-angle), numpy.sin(-angle)], [-numpy.sin(-angle), numpy.cos(-angle)]])
+        length_2 = length/2
+        breadth_2 = breadth/2
+        corners = numpy.array([[-length_2, -breadth_2],
+                            [length_2, -breadth_2],
+                            [length_2, breadth_2],
+                            [-length_2, breadth_2]])
+        sin_m_angle = numpy.sin(-angle)
+        cos_m_angle = numpy.cos(-angle)
+
+        rot = numpy.array([[cos_m_angle, sin_m_angle],
+                           [-sin_m_angle, cos_m_angle]])
         corners = rot.dot(corners.T) + center[:, None]
         return corners.T  # n x 2
 
@@ -733,25 +739,29 @@ def compute(
             elif P.getValue("car_shape") == "rectangle":  # square cars
 
                 # Calculate all vertices of the ego vehicle (rectangle representation)
-                corners_ego = get_rect_points(points[_ci, :2],
+
+                # TODO precisely calculate "dist_check_poly"
+                dist_check_poly = (P.getValue('car_length') + P.getValue('car_width')) * 2
+                if pointDistance([rx, ry], points[_ci, :]) < dist_check_poly:
+                    # Check polygon intersection only if cars are too close
+                    corners_ego = get_rect_points(points[_ci, :2],
                                               (
                                                     P.getValue('car_length'),
                                                     P.getValue('car_width')
                                                ),
                                               ego_headings[_ci])
 
-                # Calculate all vertices of the opponent vehicle (rectangle representation)
-                corners_opponent = get_rect_points(REFERENCE[_i , :2],
-                                              (
-                                                    P.getValue('car_length'),
-                                                    P.getValue('car_width')
-                                               ),
-                                              opponent_headings[_i])
-
-                if do_polygons_intersect(corners_ego, corners_opponent):
-                    if not overflown.get("optimization", True):
-                        invalid_points.append([rx, ry])  # only to print invalid points. Equivalent to this should be: invalid_points ===  REFERENCE[is_collision, :2]. So we probably do not even need to create this
-                    is_collision[_i] = True
+                    # Calculate all vertices of the opponent vehicle (rectangle representation)
+                    corners_opponent = get_rect_points(REFERENCE[_i , :2],
+                                                (
+                                                        P.getValue('car_length'),
+                                                        P.getValue('car_width')
+                                                ),
+                                                opponent_headings[_i])
+                    if do_polygons_intersect(corners_ego, corners_opponent):
+                        if not overflown.get("optimization", True):
+                            invalid_points.append([rx, ry])  # only to print invalid points. Equivalent to this should be: invalid_points ===  REFERENCE[is_collision, :2]. So we probably do not even need to create this
+                        is_collision[_i] = True
 
         # ---------------[ Visualization ]---------------
         if not overflown.get("optimization", True) and P.getValue("plot"):
@@ -903,15 +913,20 @@ def compute(
 
         average_opponent_dist = 0.0
 
-        # TODO calculate what you can in INIT ??
-        CEMTRELINE_PROGRESS_METERS = numpy.sqrt(numpy.sum(numpy.square(CENTERLINE[:-1, :] - CENTERLINE[1:, :]), axis=1))
+        # CEMTRELINE_PROGRESS_METERS = numpy.sqrt(numpy.sum(numpy.square(CENTERLINE[:-1, :] - CENTERLINE[1:, :]), axis=1))
         REFERENCE_PROGRESS_METERS = numpy.sqrt(numpy.sum(numpy.square(REFERENCE[:-1, :] - REFERENCE[1:, :]), axis=1))
         REFERENCE_LENGTH_METERS = numpy.sum(REFERENCE_PROGRESS_METERS)
+        OP_PROGRESS_CUMSUM = numpy.cumsum(REFERENCE_PROGRESS_METERS)
+        OP_PROGRESS_CUMSUM = numpy.hstack((0.0, OP_PROGRESS_CUMSUM))
+
         EGO_PROGRESS_METERS = numpy.sqrt(numpy.sum(numpy.square(points[:-1, :2] - points[1:, :2]), axis=1))
+        EGO_LENGTH_METERS = numpy.sum(EGO_PROGRESS_METERS[:])
+
+        num_conlisions = numpy.sum(is_collision)
 
         # TODO check what the hell is the "_i" supposed to be
         idx = numpy.argmin(numpy.sum(numpy.square(REFERENCE[:, :2] - points[closest_indices[_i], :2].reshape((1, 2))), axis=1))  # minimum point from point -> reference
-        pd_meters_prev = numpy.sum(REFERENCE_PROGRESS_METERS[:idx])
+        pd_meters_prev = OP_PROGRESS_CUMSUM[idx]
         if (pd_meters_prev > 0.0):
             pd_meters_prev -= REFERENCE_LENGTH_METERS
 
@@ -923,18 +938,19 @@ def compute(
                 break
 
             # Calculate trajectory progress of the opponent in meters
-            rd_meters = numpy.sum(REFERENCE_PROGRESS_METERS[:_i])
-
+            rd_meters = OP_PROGRESS_CUMSUM[_i]
             # Calculate trajectory progress of the ego in meters (progress on opponent's trajectory)
+            # TODO the next line takes a lot of time ->> it can be optimized
             idx = numpy.argmin(numpy.sum(numpy.square(REFERENCE[:, :2] - points[closest_indices[_i], :2].reshape((1, 2))), axis=1))  # minimum point from point -> reference
-            pd_meters = numpy.sum(REFERENCE_PROGRESS_METERS[:idx])
+
+            pd_meters = OP_PROGRESS_CUMSUM[idx]
             if abs(pd_meters_prev - pd_meters) > 1.0:
                 pd_meters -= REFERENCE_LENGTH_METERS
 
             # check for overtake without collision
             # PR note: This used pd/rd (indices), but was changed to meters.
-            if pd_meters >= rd_meters and not overtaken:
-                if numpy.sum(EGO_PROGRESS_METERS[:]) - numpy.sum(EGO_PROGRESS_METERS[:closest_indices[_i]]) > 10.0:  # TODO change this to PROGRESS ON OPPONENT ?? maybe...
+            if (pd_meters >= rd_meters) and (not overtaken):
+                if EGO_LENGTH_METERS - numpy.sum(EGO_PROGRESS_METERS[:closest_indices[_i]]) > 10.0:  # TODO change this to PROGRESS ON OPPONENT ?? maybe...
                     overtaken = True
                     overtaking_point = points[closest_indices[_i], :2]
             elif pd_meters < rd_meters and overtaken: 
@@ -946,7 +962,7 @@ def compute(
                 # Find out who caused the collision
                 if (pd_meters - rd_meters < P.getValue("ego_dist_overtake")) or not overtaken:
                     # EGO crashed from behind --> EGO's fault
-                    return float(penalty * numpy.sum(is_collision) + 2045)
+                    return float(penalty * num_conlisions + 2045)
                 elif pd_meters - rd_meters >= P.getValue("ego_dist_overtake"):
                     # Opponent crashed from behind --> Opponent's fault
                     crashed = True
@@ -987,14 +1003,14 @@ def compute(
             pd_meters_prev = pd_meters
 
             # Additional criterion to push ego car in front of the opponent
-            average_opponent_dist += (rd_meters - pd_meters) 
+            average_opponent_dist += (rd_meters - pd_meters)
 
             #      time        ; RX ; RY ; RV ;           EGO X                ;               EGO Y            ;            EGO V        ; crashed ; overtaken
             # time_progress    ; rx ; ry ; rv ; points[closest_indices[_i], 0] ; points[closest_indices[_i], 1] ; _v[closest_indices[_i]] ; crashed ; overtaken
             if not overflown.get("optimization", True):
                 data_to_save.append([time_progress, _t[closest_indices[_i]], rx, ry, rv, points[closest_indices[_i], 0], points[closest_indices[_i], 1], _v[closest_indices[_i]], crashed, overtaken])
 
-        average_opponent_dist = average_opponent_dist / len(REFERENCE)
+        average_opponent_dist = average_opponent_dist / len(REFERENCE)  # TODO CORRECT THIS
 
         # Ego's last position   points[-1]
         # Ego's last orientation   ego_headings[-1]
@@ -1025,7 +1041,7 @@ def compute(
                 criterion += average_opponent_dist + P.getValue("favor_overtaking") * 2.0
         else:
             # Crash (not my mistake -> he should change his trajectory) -> successful overtake
-            criterion += average_opponent_dist + P.getValue("favor_overtaking") # + 0.05 * numpy.sum(is_collision)  # -> bad only if I am on the outside
+            criterion += average_opponent_dist + P.getValue("favor_overtaking") # + 0.05 * num_conlisions  # -> bad only if I am on the outside
             success = True
 
         if success:
