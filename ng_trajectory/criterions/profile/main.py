@@ -19,6 +19,8 @@ from multiprocessing import Queue
 
 from itertools import chain # Join generators
 
+from scipy import spatial
+
 
 # Global variables
 CENTERLINE = None
@@ -300,7 +302,6 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
             while True:
                # Find closest point in time domain
                _ci = (abs(_t[:-1] + __t - rt)).argmin()
-
                # In case that we select the last point
                # Do it again for next repetition of the trajectory
                if _ci == len(_t) - 2:
@@ -344,12 +345,16 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
 
             elif P.getValue("car_shape") == "rectangle":  # square cars
 
-                # Calculate all vertices of the ego vehicle (rectangle representation)
-
-                # TODO precisely calculate "dist_check_poly"
-                dist_check_poly = (P.getValue('car_length') + P.getValue('car_width')) * 2
-                if pointDistance([rx, ry], points[_ci, :]) < dist_check_poly:
+                dist_check_poly = numpy.sqrt(numpy.power(P.getValue('car_length'), 2.0) + numpy.power(P.getValue('car_width'), 2.0))  # Constant
+                car_distance = pointDistance([rx, ry], points[_ci, :])
+                if car_distance < P.getValue('car_width'):
+                    # Cars are always colliding
+                    if not overflown.get("optimization", True):
+                        invalid_points.append([rx, ry])  # only to print invalid points. Equivalent to this should be: invalid_points ===  REFERENCE[is_collision, :2]. So we probably do not even need to create this
+                    is_collision[_i] = True
+                elif car_distance < dist_check_poly:
                     # Check polygon intersection only if cars are too close
+                    # Calculate all vertices of the ego vehicle (rectangle representation)
                     corners_ego = get_rect_points(points[_ci, :2],
                                               (
                                                     P.getValue('car_length'),
@@ -487,10 +492,10 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
         EGO_LENGTH_METERS = numpy.sum(EGO_PROGRESS_METERS[:])
 
         num_conlisions = numpy.sum(is_collision)
+        kd = spatial.KDTree(REFERENCE[:, :2])
+        _, min_dist_idx = kd.query(points[closest_indices, :2])
 
-        # TODO check what the hell is the "_i" supposed to be
-        idx = numpy.argmin(numpy.sum(numpy.square(REFERENCE[:, :2] - points[closest_indices[_i], :2].reshape((1, 2))), axis=1))  # minimum point from point -> reference
-        pd_meters_prev = OP_PROGRESS_CUMSUM[idx]
+        pd_meters_prev = OP_PROGRESS_CUMSUM[min_dist_idx[0]]
         if (pd_meters_prev > 0.0):
             pd_meters_prev -= REFERENCE_LENGTH_METERS
 
@@ -502,10 +507,7 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
             # Calculate trajectory progress of the opponent in meters
             rd_meters = OP_PROGRESS_CUMSUM[_i]
             # Calculate trajectory progress of the ego in meters (progress on opponent's trajectory)
-            # TODO the next line takes a lot of time ->> it can be optimized
-            idx = numpy.argmin(numpy.sum(numpy.square(REFERENCE[:, :2] - points[closest_indices[_i], :2].reshape((1, 2))), axis=1))  # minimum point from point -> reference
-
-            pd_meters = OP_PROGRESS_CUMSUM[idx]
+            pd_meters = OP_PROGRESS_CUMSUM[min_dist_idx[_i]]
             if abs(pd_meters_prev - pd_meters) > 1.0:
                 pd_meters -= REFERENCE_LENGTH_METERS
 
@@ -537,7 +539,7 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
                     crash_time = time_progress
 
                     if not overflown.get("optimization", True) and P.getValue("plot"):
-                        ngplot.pointsPlot(numpy.vstack((REFERENCE[idx, :2], points[closest_indices[_i], :2])), color = "blue", linewidth = P.getValue("plot_timelines_width"))
+                        ngplot.pointsPlot(numpy.vstack((REFERENCE[min_dist_idx[_i], :2], points[closest_indices[_i], :2])), color = "blue", linewidth = P.getValue("plot_timelines_width"))
                         ngplot.pointsPlot(numpy.vstack((REFERENCE[_i, :2], points[closest_indices[_i], :2])), color = "green", linewidth = P.getValue("plot_timelines_width"))
 
                         # plot inflated map
