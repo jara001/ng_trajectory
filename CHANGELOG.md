@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Changed
+- Interpolators
+    - `trajectoryClosestIndex()` now returns only positive indices.
+
 ## 1.13.3 - 2024-03-26
 ### Added
 - Optimizers
