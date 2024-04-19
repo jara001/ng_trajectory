@@ -243,6 +243,9 @@ def trajectoryClosestIndex(
 
     Returns:
     index -- index of the point on the trajectory closest to the reference, int
+
+    Note:
+    Since v1.13.4 this returns only positive indices.
     """
     _distances = numpy.subtract(points[:, :2], reference[:2])
 
@@ -293,7 +296,9 @@ def trajectoryClosestIndex(
         )
 
         return (
-            index if (d1**2 - d2**2 + ds**2) / (2 * d1 * ds) > 0 else index - 1
+            index
+            if (d1**2 - d2**2 + ds**2) / (2 * d1 * ds) > 0
+            else (index - 1) % len(points)  # Return positive number everytime
         )
 
 
