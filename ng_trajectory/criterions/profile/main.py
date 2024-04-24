@@ -20,7 +20,7 @@ from multiprocessing import Queue
 from itertools import chain # Join generators
 
 from scipy import spatial
-
+import math
 
 # Global variables
 CENTERLINE = None
@@ -569,12 +569,26 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
             average_opponent_dist += (rd_meters - pd_meters)
             num_runs += 1.0
 
-            #      time        ; RX ; RY ; RV ;           EGO X                ;               EGO Y            ;            EGO V        ; crashed ; overtaken
-            # time_progress    ; rx ; ry ; rv ; points[closest_indices[_i], 0] ; points[closest_indices[_i], 1] ; _v[closest_indices[_i]] ; crashed ; overtaken
+            #      time      ; time ego  ; RX ; RY ; RV ;           EGO X                ;               EGO Y            ;            EGO V        ; kappa ego ; crashed ; overtaken
+            # time_progress  ; time ego  ; rx ; ry ; rv ; points[closest_indices[_i], 0] ; points[closest_indices[_i], 1] ; _v[closest_indices[_i]] ; kappa ego ; crashed ; overtaken
             if not overflown.get("optimization", True):
-                data_to_save.append([time_progress, _t[closest_indices[_i]], rx, ry, rv, points[closest_indices[_i], 0], points[closest_indices[_i], 1], _v[closest_indices[_i]], crashed, overtaken])
+                # yaw_rate, steer_front
+                ego_x = points[closest_indices[_i], 0]
+                ego_y = points[closest_indices[_i], 1]
+                kappa_ego = points[closest_indices[_i], 2]
+                _lr = 0.139
+                _lf = 0.191
+                _beta = math.atan(_lr * kappa_ego)
+                vx_ego = _v[closest_indices[_i]] * math.cos(_beta)
+                vy_ego = _v[closest_indices[_i]] * math.sin(_beta)
+                ego_yaw = ego_headings[closest_indices[_i]]
+                ego_omega_radps = _v[closest_indices[_i]] * math.cos(_beta) * kappa_ego
+                ego_delta_rad = (_lf + _lr) * kappa_ego
+                data_to_save.append([time_progress, _t[closest_indices[_i]], rx, ry, rv,
+                                     ego_x, ego_y, vx_ego, kappa_ego, ego_yaw, vy_ego, _a[closest_indices[_i]], ego_omega_radps, ego_delta_rad,
+                                     crashed, overtaken])
 
-        average_opponent_dist = average_opponent_dist / num_runs  # TODO CORRECT THIS
+        average_opponent_dist = average_opponent_dist / num_runs
 
         # Ego's last position   points[-1]
         # Ego's last orientation   ego_headings[-1]
