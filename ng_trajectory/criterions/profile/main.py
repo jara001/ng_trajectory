@@ -47,7 +47,7 @@ P.createAdd("a_acc_max", 0.8, float, "Maximum longitudal acceleration [m.s^-2]",
 P.createAdd("a_break_max", 4.5, float, "Maximum longitudal decceleration [m.s^-2]", "init")
 P.createAdd("_lf", 0.191, float, "Distance from center of mass to the front axle [m]", "init")
 P.createAdd("_lr", 0.139, float, "Distance from center of mass to the rear axle [m]", "init")
-P.createAdd("reference", None, str, "Name of the file to load (x, y, t) reference path that cannot be close.", "init")
+P.createAdd("reference", None, str, "Name of the file to load (x, y, t, v) reference path that cannot be close. Currently, the only supported type is .npy", "init")
 P.createAdd("reference_dist", 1.0, float, "Minimum allowed distance from the reference at given time [m].", "init")
 P.createAdd("reference_rotate", 0, int, "Number of points to rotate the reference trajectory.", "init")
 P.createAdd("reference_laptime", 0, float, "Lap time of the given reference. 0 = estimated from data", "init")
