@@ -27,9 +27,19 @@ This tool was used to identify possible overtaking zones on a given track when t
 We optimized many different maneuvers while varying initial position to determine possible overtaking zones. We present the overtaking zones in the form of a heat map where red means "most of the overtakes happened at this place".
 
 ### Example 1
-In this example opponent drives different trajectory types (purple dotted line). 
+In this example, the opponent drives different trajectory types (purple dotted line). 
 
 <img src="doc/images/zones/zones_track_1.png" alt="example1" style="width:70%;"/>
+
+### Example 2
+In this example, the ego vehicle has a friction coefficient increased. The opponent's trajectory is the purple dotted line.
+
+<img src="doc/images/zones/zones_higher_mu.png" alt="example1" style="width:70%;"/>
+
+### Example 3
+In this example, the ego vehicle has a maximum speed increased. The opponent's trajectory is the purple dotted line.
+
+<img src="doc/images/zones/zones_higher_speed.png" alt="example1" style="width:70%;"/>
 
 
 ## Citing
