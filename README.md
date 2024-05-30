@@ -26,10 +26,10 @@ This tool was used to identify possible overtaking zones on a given track when t
 ## Overtaking zones examples
 We optimized many different maneuvers while varying initial position to determine possible overtaking zones. We present the overtaking zones in the form of a heat map where red means "most of the overtakes happened at this place".
 
-# Example 1
+### Example 1
 In this example opponent drives different trajectory types (purple dotted line). 
 
-![image](images/zones/zone_track_1.png)
+<img src="doc/images/zones/zones_track_1.png" alt="example1" style="width:70%;"/>
 
 
 ## Citing
