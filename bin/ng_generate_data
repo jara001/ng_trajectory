@@ -207,6 +207,11 @@ def printv(*a, **kw) -> None:
         print (*a, **kw)
 
 
+def save(nd, filename: str) -> None:
+    """Save a numpy array into a file."""
+    numpy.save(filename, nd)
+
+
 def savev(im, filename: str) -> None:
     """Save an image when verbose is set to >=2."""
     if args.verbose >= 2:
@@ -800,7 +805,7 @@ def processImage(im: Image) -> None:
     # Swap yx
     start_points = numpy.vstack((start_points[:, 1], start_points[:, 0])).T
 
-    numpy.save("start_points.npy", start_points)
+    save(start_points, "start_points.npy")
 
     valid_points = numpy.asarray(im, dtype = int)
     valid_points = numpy.argwhere(
@@ -822,7 +827,7 @@ def processImage(im: Image) -> None:
     # Swap yx
     valid_points = numpy.vstack((valid_points[:, 1], valid_points[:, 0])).T
 
-    numpy.save("valid_points.npy", valid_points)
+    save(valid_points, "valid_points.npy")
 
     print (" - DONE")
 
@@ -1053,7 +1058,7 @@ def createFrictionMap(im: Image, filename: str) -> None:
         (friction_map[:, 1], friction_map[:, 0], friction_map[:, 2])
     ).T
 
-    numpy.save("friction_map.npy", friction_map)
+    save(friction_map, "friction_map.npy")
 
 
 ######################
