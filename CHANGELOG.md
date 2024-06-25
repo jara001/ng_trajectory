@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Segmentators
     - Function `filterPoints` to filter points outside of the map.
 - 'ng_generate_data': Save image of generated friction map when verbosity is higher.
+- 'ng_generate_data': Arguments `--prefix` and `--suffix` to change the output files' filenames.
 
 ### Changed
 - Use sequential executor when only one worker is requested.

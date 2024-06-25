@@ -196,6 +196,23 @@ PARSER.add_argument(
     action = "store_true",
 )
 
+PARSER.add_argument(
+    "--prefix",
+
+    dest = "prefix",
+    help = "Name prefixed to the output files, %%s",
+    default = "",
+    type = str,
+)
+
+PARSER.add_argument(
+    "--suffix",
+
+    dest = "suffix",
+    help = "Name suffixed to the output files, %%s",
+    default = "",
+    type = str,
+)
 
 ######################
 # Utilities
@@ -207,14 +224,21 @@ def printv(*a, **kw) -> None:
         print (*a, **kw)
 
 
+def generate_filename(filename: str) -> str:
+    """Generate a filename with proper prefix and suffix."""
+    _filename = ".".join(filename.split(".")[:-1])
+    _extension = filename.split(":")[-1]
+    return "%s%s%s%s" % (args.prefix, _filename, args.suffix, _extension)
+
+
 def save(nd, filename: str) -> None:
     """Save a numpy array into a file."""
-    numpy.save(filename, nd)
+    numpy.save(generate_filename(filename), nd)
 
 
 def saveim(im, filename: str) -> None:
     """Save an image into a file."""
-    im.save(filename)
+    im.save(generate_filename(filename))
 
 
 def savev(im, filename: str) -> None:
