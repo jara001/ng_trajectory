@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Criterions
     - [**NEW**] _Manual_
         - Criterion 'manual' requests user to specify fitness value for each candidate.
+- Segmentators
+    - Function `filterPoints` to filter points outside of the map.
 
 ### Changed
 - Use sequential executor when only one worker is requested.
