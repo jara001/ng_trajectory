@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Criterion 'manual' requests user to specify fitness value for each candidate.
 - Segmentators
     - Function `filterPoints` to filter points outside of the map.
+- 'ng_generate_data': Save image of generated friction map when verbosity is higher.
 
 ### Changed
 - Use sequential executor when only one worker is requested.

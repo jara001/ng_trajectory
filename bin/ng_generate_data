@@ -1022,6 +1022,16 @@ def createFrictionMap(im: Image, filename: str) -> None:
         (friction_map.T, nd2[friction_map[:, 0], friction_map[:, 1]][None])
     ).T.astype(float)
 
+    if args.verbose >= 2:
+        fmap2 = numpy.asarray(im.copy(), dtype = int)
+
+        for _row in range(len(friction_map)):
+            fmap2[
+                int(friction_map[_row, 0]), int(friction_map[_row, 1])
+            ] = int(friction_map[_row, 2])
+
+        savev(fmap2, "generated_friction_map.png")
+
     # Invert colors
     if args.friction_map_inverse:
         friction_map[:, 2] = 255.0 - friction_map[:, 2]
