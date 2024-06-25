@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Changed
+- Use sequential executor when only one worker is requested.
+
 ## 1.13.4 - 2024-04-19
 ### Changed
 - Interpolators
