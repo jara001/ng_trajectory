@@ -212,6 +212,11 @@ def save(nd, filename: str) -> None:
     numpy.save(filename, nd)
 
 
+def saveim(im, filename: str) -> None:
+    """Save an image into a file."""
+    im.save(filename)
+
+
 def savev(im, filename: str) -> None:
     """Save an image when verbose is set to >=2."""
     if args.verbose >= 2:
@@ -221,7 +226,7 @@ def savev(im, filename: str) -> None:
             _image = P.fromarray(numpy.asarray(im, dtype = numpy.uint8).copy())
 
         _image.convert("L")
-        _image.save(filename)
+        saveim(_image, filename)
 
 
 def pointsFilter(points: numpy.ndarray, grid: float = None) -> numpy.ndarray:
@@ -783,7 +788,7 @@ def processImage(im: Image) -> None:
         pass
 
     nndi = P.fromarray(nnd)
-    nndi.save("generated_data.png")
+    saveim(nndi, "generated_data.png")
 
 
     # # Save into npy # #
