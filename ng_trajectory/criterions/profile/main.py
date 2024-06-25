@@ -23,6 +23,7 @@ from ng_trajectory.interpolators.utils import (
 )
 
 from ng_trajectory.segmentators.utils import (
+    filterPoints,
     pointsToMap,
     pointsToWorld,
     getMap, getMapOrigin, getMapGrid
@@ -377,6 +378,13 @@ def init(**kwargs) -> None:
 
     if P.getValue("friction_map") is not None:
         fmap = numpy.load(P.getValue("friction_map"))
+
+        # Filter out points outside of the map
+        """
+        This can happen when the friction map is slightly different, e.g.,
+        it is built for non-inflated map of the track.
+        """
+        fmap = filterPoints(fmap)
 
         if P.getValue("friction_map_inverse"):
             fmap[:, 2] = 255 - fmap[:, 2]

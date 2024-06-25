@@ -14,6 +14,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Changed
 - Use sequential executor when only one worker is requested.
 
+### Fixed
+- Criterions
+    - _Profile_
+        - Filter out points that are outside of the map when building the friction map.
+
 ## 1.13.4 - 2024-04-19
 ### Changed
 - Interpolators
