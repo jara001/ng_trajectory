@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Criterions
+    - [**NEW**] _Manual_
+        - Criterion 'manual' requests user to specify fitness value for each candidate.
+
 ### Changed
 - Use sequential executor when only one worker is requested.
 
