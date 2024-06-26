@@ -227,8 +227,8 @@ def printv(*a, **kw) -> None:
 def generate_filename(filename: str) -> str:
     """Generate a filename with proper prefix and suffix."""
     _filename = ".".join(filename.split(".")[:-1])
-    _extension = filename.split(":")[-1]
-    return "%s%s%s%s" % (args.prefix, _filename, args.suffix, _extension)
+    _extension = filename.split(".")[-1]
+    return "%s%s%s.%s" % (args.prefix, _filename, args.suffix, _extension)
 
 
 def save(nd, filename: str) -> None:
