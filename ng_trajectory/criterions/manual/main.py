@@ -49,9 +49,9 @@ def compute(
             try:
                 val = input("Specify fitness value (%f): ")
                 float(val)
+                break
+
             except ValueError:
                 print ("Unable to parse the value.", file = sys.stderr)
-
-            break
 
     return float(val)
