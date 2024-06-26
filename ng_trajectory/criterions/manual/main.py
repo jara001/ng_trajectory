@@ -47,7 +47,7 @@ def compute(
     with INPUT_LOCK:
         while True:
             try:
-                val = input("Gimme fitness:")
+                val = input("Specify fitness value (%f): ")
                 float(val)
             except ValueError:
                 print ("Unable to parse the value.", file = sys.stderr)
