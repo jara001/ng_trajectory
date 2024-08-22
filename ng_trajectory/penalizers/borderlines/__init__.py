@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.6
 """Borderlines penalizer.
 
-Borderlines are sets of points on the borders between to adjacent
+Borderlines are sets of points on the borders between two adjacent
 segments. We have borderlines for each segment and for each neighbour
 (usually resulting into n * 2 arrays).
 
@@ -14,4 +14,4 @@ and points of the borderline.
 
 Final penalty is the minimum of all of these distances.
 """
-from .main import init, penalize, INVALID_POINTS
+from .main import init, penalize, INVALID_POINTS  # noqa: F401

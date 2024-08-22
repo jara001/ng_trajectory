@@ -14,5 +14,5 @@ Interpolation is done by CubicSpline from scipy.interpolate.
 
 Note: It is expected that the input points describe a continuous
 path (end-start).
-"""
-from .main import init, interpolate
+"""  # noqa: W191
+from .main import init, interpolate  # noqa: F401

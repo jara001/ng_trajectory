@@ -5,16 +5,30 @@
 # Imports & Globals
 ######################
 
-from ng_trajectory.interpolators.utils import *
 import ng_trajectory.plot as ngplot
 
-from ng_trajectory.segmentators.utils import gridCompute, pointToMap, validCheck
+from ng_trajectory.segmentators.utils import (
+    gridCompute,
+    pointToMap,
+    validCheck
+)
+
+from ng_trajectory.parameter import ParameterList
+
+from ng_trajectory.log import (
+    print0,
+    log, logv, logvv, logvvv,
+    logfileGet, logfileName, logfileFlush
+)
 
 from . import transform
 
 import nevergrad
 
-import sys, os
+import sys
+import os
+import numpy
+import tqdm
 
 # Parallel computing of genetic algorithm
 from concurrent import futures
@@ -23,7 +37,7 @@ from concurrent import futures
 from threading import Lock
 
 # Typing
-from typing import Tuple, Callable, Dict, TextIO, List, types
+from typing import Tuple, Dict, TextIO, List, types
 
 
 # Global variables
@@ -41,7 +55,6 @@ SELECTOR_ARGS = None
 PENALIZER = None
 PENALIZER_INIT = None
 PENALIZER_ARGS = None
-LOGFILE = None
 VERBOSITY = 3
 FILELOCK = Lock()
 HOLDMAP = None
@@ -51,10 +64,10 @@ FIGURE = None
 PLOT = None
 GROUP_CENTERS = None
 GROUP_LAYERS = None
+PROGRESS_BAR = None
 
 
 # Parameters
-from ng_trajectory.parameter import *
 P = ParameterList()
 P.createAdd("budget", 100, int, "Budget parameter for the genetic algorithm.", "init (general)")
 P.createAdd("groups", 8, int, "Number of groups to segmentate the track into.", "init (general)")
@@ -82,13 +95,62 @@ P.createAdd("plot_group_indices", True, bool, "Whether group indices should be s
 P.createAdd("plot_group_borders", True, bool, "Whether group borders should be shown on the track.", "init (viz.)")
 P.createAdd("fixed_segments", [], list, "Points to be used instead their corresponding segment.", "init")
 P.createAdd("_experimental_mm_max", -1, int, "(Experimental) Limit MM to cover only first n segments.", "init")
+P.createAdd("border_allow_no_filter", False, bool, "Allow to use unfiltered border data when filter removes all of them.", "init")
+
+
+######################
+# Concurrent Pool-tqdm
+######################
+
+class PPETQDM(futures.ProcessPoolExecutor):
+    """ProcessPoolExecutor object that supports tqdm progress bar.
+
+    Progress is updated on every 'submit()' to the pool.
+    """
+
+    def __init__(self, *args, progress_bar, **kwargs):
+        """Initialize a new PPETQDM instance.
+
+        Arguments:
+        progress_bar -- instance of tqdm object
+        """
+        super(PPETQDM, self).__init__(*args, **kwargs)
+
+        self.progress_bar = progress_bar
+
+
+    def submit(self, *args, **kwargs):
+        """Submit a callable to be executed with given arguments.
+
+        In addition, it increments the progress on the progress bar.
+
+        Returns:
+        f -- future representing the given call
+        """
+        self.progress_bar.update()
+        return super(PPETQDM, self).submit(*args, **kwargs)
+
+
+    def __enter__(self, *args, **kwargs):
+        """Enter the with statement and clear the progress bar."""
+        self.progress_bar.reset()
+        return super(PPETQDM, self).__enter__(*args, **kwargs)
+
+
+    def __exit__(self, *args, **kwargs):
+        """Exit the with statement and fill the progress bar."""
+        self.progress_bar.close()
+        return super(PPETQDM, self).__exit__(*args, **kwargs)
 
 
 ######################
 # Functions
 ######################
 
-def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: numpy.ndarray, \
+def init(
+        points: numpy.ndarray,
+        group_centers: numpy.ndarray,
+        group_centerline: numpy.ndarray,
         budget: int = 100,
         layers: int = 5,
         groups: int = 8,
@@ -105,7 +167,6 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         penalizer: types.ModuleType = None,
         penalizer_init: Dict[str, any] = {},
         penalizer_args: Dict[str, any] = {},
-        logfile: TextIO = sys.stdout,
         logging_verbosity: int = 2,
         hold_matryoshka: bool = False,
         plot: bool = False,
@@ -144,17 +205,20 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
                  default None
     penalizer_init -- arguments for the init part of the penalizer function, dict, default {}
     penalizer_args -- arguments for the penalizer function, dict, default {}
-    logfile -- file descriptor for logging, TextIO, default sys.stdout
     logging_verbosity -- index for verbosity of logger, int, default 2
     hold_matryoshka -- whether the Matryoshka should be created only once, bool, default False
     plot -- whether a graphical representation should be created, bool, default False
     grid -- size of the grid used for the points discretization, 2-float List, computed by default
     figure -- target figure for plotting, matplotlib.figure.Figure, default None (get current)
     **kwargs -- arguments not caught by previous parts
-    """
-    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, LOGFILE, VERBOSITY, HOLDMAP, GRID, PENALTY, FIGURE, PLOT
-    global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER, PENALIZER_INIT, PENALIZER_ARGS
+    """  # noqa: E501
+    global OPTIMIZER, MATRYOSHKA, VALID_POINTS, VERBOSITY
+    global HOLDMAP, GRID, PENALTY, FIGURE, PLOT
+    global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS
+    global SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER
+    global PENALIZER_INIT, PENALIZER_ARGS
     global GROUP_CENTERS, GROUP_LAYERS
+    global PROGRESS_BAR
 
     # Local to global variables
     CRITERION = criterion
@@ -168,7 +232,6 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     PENALIZER = penalizer
     PENALIZER_INIT = penalizer_init
     PENALIZER_ARGS = {**penalizer_args, **{"optimization": True}}
-    LOGFILE = logfile
     VERBOSITY = logging_verbosity
     _holdmatryoshka = hold_matryoshka
     PENALTY = penalty
@@ -183,19 +246,37 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     # Load Matryoshka
     if MATRYOSHKA is None and P.getValue("load_matryoshka") is not None:
         try:
-            _data = numpy.load(P.getValue("load_matryoshka"), allow_pickle = True)
+            _data = numpy.load(
+                P.getValue("load_matryoshka"),
+                allow_pickle = True
+            )
 
-            if all([ _d in _data.files for _d in ["matryoshka", "group_layers", "group_centers"] ]):
+            if all([
+                _d in _data.files for _d in [
+                    "matryoshka",
+                    "group_layers",
+                    "group_centers"
+                ]
+            ]):
                 MATRYOSHKA = _data.get("matryoshka").tolist()
                 GROUP_LAYERS = _data.get("group_layers")
                 GROUP_CENTERS = _data.get("group_centers")
 
-                print ("Matryoshka mapping loaded from '%s'." % P.getValue("load_matryoshka"))
+                print0(
+                    "Matryoshka mapping loaded from '%s'."
+                    % P.getValue("load_matryoshka")
+                )
 
                 if not _holdmatryoshka:
-                    print ("Warning: 'hold_matryoshka' is not set, so mapping won't be probably used.")
+                    print0(
+                        "Warning: 'hold_matryoshka' is not set, "
+                        "so mapping won't be probably used."
+                    )
         except Exception as e:
-            print ("Failed to load Matryoshka from '%s': %s" % (P.getValue("load_matryoshka"), e))
+            print0(
+                "Failed to load Matryoshka from '%s': %s"
+                % (P.getValue("load_matryoshka"), e)
+            )
             MATRYOSHKA = None
             GROUP_LAYERS = None
             GROUP_CENTERS = None
@@ -206,19 +287,39 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     #  - There is no transformation.
     #  - Current transformation does not work for selected number of segments.
     #  - We want to create a new transformation.
-    if MATRYOSHKA is None or (groups > 0 and groups != len(MATRYOSHKA)) or not _holdmatryoshka:
+    if (
+        MATRYOSHKA is None
+        or (groups > 0 and groups != len(MATRYOSHKA))
+        or not _holdmatryoshka
+    ):
         already_plot = True
-        # Note: In version <=1.3.0 the group_centerline passed to the SELECTOR was sorted using
-        #       ng_trajectory.interpolators.utils.trajectorySort, but it sometimes rotated the
-        #       already sorted centerline; interestingly, the result was counterclockwise at all
-        #       times (or at least very very often).
-        GROUP_CENTERS = SELECTOR.select(**{**{"points": group_centerline, "remain": groups}, **SELECTOR_ARGS})
+        # Note: In version <=1.3.0 the group_centerline passed to the SELECTOR
+        #       was sorted using
+        #        ng_trajectory.interpolators.utils.trajectorySort,
+        #       but it sometimes rotated the already sorted centerline;
+        #       interestingly, the result was counterclockwise at all times
+        #       (or at least very very often).
+        GROUP_CENTERS = SELECTOR.select(
+            **{
+                **{
+                    "points": group_centerline,
+                    "remain": groups
+                },
+                **SELECTOR_ARGS
+            }
+        )
 
         if plot and P.getValue("plot_group_indices"):
             ngplot.indicesPlot(GROUP_CENTERS)
 
         # Matryoshka construction
-        _groups = SEGMENTATOR.segmentate(points=points, group_centers=GROUP_CENTERS, **{**SEGMENTATOR_ARGS})
+        _groups = SEGMENTATOR.segmentate(
+            points = points,
+            group_centers = GROUP_CENTERS,
+            **{
+                **SEGMENTATOR_ARGS
+            }
+        )
 
         # Call the init function of penalizer
         PENALIZER.init(
@@ -232,7 +333,13 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
             **{
                 **{
                     key: value for key, value in kwargs.items() if key not in [
-                        "valid_points", "start_points", "map", "map_origin", "map_grid", "map_last", "group_centers"
+                        "valid_points",
+                        "start_points",
+                        "map",
+                        "map_origin",
+                        "map_grid",
+                        "map_last",
+                        "group_centers"
                     ]
                 },
                 **PENALIZER_INIT
@@ -240,46 +347,82 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         )
 
         GROUP_LAYERS = transform.groupsBorderObtain(_groups)
-        GROUP_LAYERS = transform.groupsBorderBeautify(GROUP_LAYERS, 400)
+        GROUP_LAYERS = transform.groupsBorderBeautify(
+            GROUP_LAYERS, 400,
+            allow_no_filter = P.getValue("border_allow_no_filter")
+        )
 
         if plot and P.getValue("plot_group_borders"):
             ngplot.bordersPlot(GROUP_LAYERS, figure)
 
         layers_center = transform.groupsCenterCompute(_groups)
-        layers_count = [ layers for i in range(len(GROUP_LAYERS)) ]
+        layers_count = [layers for i in range(len(GROUP_LAYERS))]
 
 
-        MATRYOSHKA = [ transform.matryoshkaCreate(GROUP_LAYERS[_i], layers_center[_i], layers_count[_i]) for _i in range(len(_groups)) ]
+        MATRYOSHKA = [
+            transform.matryoshkaCreate(
+                GROUP_LAYERS[_i],
+                layers_center[_i],
+                layers_count[_i]
+            )
+            for _i in range(len(_groups))
+        ]
 
         if plot and P.getValue("plot_mapping"):
-            xx, yy = numpy.meshgrid(numpy.linspace(0, 1, 110), numpy.linspace(0, 1, 110))
-            gridpoints = numpy.hstack((xx.flatten()[:, numpy.newaxis], yy.flatten()[:, numpy.newaxis]))
+            xx, yy = numpy.meshgrid(
+                numpy.linspace(0, 1, 110),
+                numpy.linspace(0, 1, 110)
+            )
+            gridpoints = numpy.hstack((
+                xx.flatten()[:, numpy.newaxis],
+                yy.flatten()[:, numpy.newaxis]
+            ))
 
             for _g in range(len(_groups)):
-                ngplot.pointsScatter(transform.matryoshkaMap(MATRYOSHKA[_g], gridpoints), marker="x", s=0.1)
+                ngplot.pointsScatter(
+                    transform.matryoshkaMap(MATRYOSHKA[_g], gridpoints),
+                    marker = "x",
+                    s = 0.1
+                )
 
-        print ("Matryoshka mapping constructed.")
+        print0("Matryoshka mapping constructed.")
 
         if GRID is None:
             if len(grid) == 2:
                 GRID = grid
             else:
                 _GRID = gridCompute(points)
-                GRID = [ _GRID, _GRID ]
+                GRID = [_GRID, _GRID]
 
         if P.getValue("save_matryoshka") is not None:
             try:
-                numpy.savez(P.getValue("save_matryoshka"), matryoshka = MATRYOSHKA, group_layers = GROUP_LAYERS, group_centers = GROUP_CENTERS)
-                print ("Matryoshka mapping saved to '%s'." % P.getValue("save_matryoshka"))
+                numpy.savez(
+                    P.getValue("save_matryoshka"),
+                    matryoshka = MATRYOSHKA,
+                    group_layers = GROUP_LAYERS,
+                    group_centers = GROUP_CENTERS
+                )
+                print0(
+                    "Matryoshka mapping saved to '%s'."
+                    % P.getValue("save_matryoshka")
+                )
             except Exception as e:
-                print ("Failed to save Matryoshka to '%s': %s" % (P.getValue("save_matryoshka"), e))
+                print0(
+                    "Failed to save Matryoshka to '%s': %s"
+                    % (P.getValue("save_matryoshka"), e)
+                )
 
     # Use fixed segments to reduce Matryoshka
     # TODO: Actually reduce the array to reduce the problem dimension
     if len(P.getValue("fixed_segments")) > 0:
         for _fs in P.getValue("fixed_segments"):
             if not validCheck(pointToMap(_fs)):
-                print ("Warning: Skipped segment fixed by '%s' as it is outside of the valid area." % _fs, file = sys.stderr)
+                print0(
+                    "Warning: Skipped segment fixed by '%s' as "
+                    "it is outside of the valid area."
+                    % _fs,
+                    file = sys.stderr
+                )
                 continue
 
             _dists = [
@@ -307,14 +450,14 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
             # We create a "fake" interpolator that returns the requested value
             MATRYOSHKA[_closest_i] = [
                 [
-                    numpy.repeat([0, 1], 4), # 0, 0, 0, 0, 1, 1, 1, 1
+                    numpy.repeat([0, 1], 4),  # 0, 0, 0, 0, 1, 1, 1, 1
                     numpy.repeat([0, 1], 4),
                     numpy.repeat(_fs[0], 16),
                     3,
                     3
                 ],
                 [
-                    numpy.repeat([0, 1], 4), # 0, 0, 0, 0, 1, 1, 1, 1
+                    numpy.repeat([0, 1], 4),  # 0, 0, 0, 0, 1, 1, 1, 1
                     numpy.repeat([0, 1], 4),
                     numpy.repeat(_fs[1], 16),
                     3,
@@ -322,7 +465,7 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
                 ]
             ]
 
-    if plot and not already_plot: # Plot when mapping is held
+    if plot and not already_plot:  # Plot when mapping is held
         if P.getValue("plot_group_indices"):
             ngplot.indicesPlot(GROUP_CENTERS)
 
@@ -330,16 +473,36 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
             ngplot.bordersPlot(GROUP_LAYERS, figure)
 
         if P.getValue("plot_mapping"):
-            xx, yy = numpy.meshgrid(numpy.linspace(0, 1, 110), numpy.linspace(0, 1, 110))
-            gridpoints = numpy.hstack((xx.flatten()[:, numpy.newaxis], yy.flatten()[:, numpy.newaxis]))
+            xx, yy = numpy.meshgrid(
+                numpy.linspace(0, 1, 110),
+                numpy.linspace(0, 1, 110)
+            )
+            gridpoints = numpy.hstack((
+                xx.flatten()[:, numpy.newaxis],
+                yy.flatten()[:, numpy.newaxis]
+            ))
 
             for _m in MATRYOSHKA:
-                ngplot.pointsScatter(transform.matryoshkaMap(_m, gridpoints), marker="x", s=0.1)
+                ngplot.pointsScatter(
+                    transform.matryoshkaMap(_m, gridpoints),
+                    marker = "x",
+                    s = 0.1
+                )
     if P.getValue("_experimental_mm_max") > 0:
         MATRYOSHKA = MATRYOSHKA[0:P.getValue("_experimental_mm_max")]
     # Optimizer definition
-    instrum = nevergrad.Instrumentation(nevergrad.var.Array(len(MATRYOSHKA), 2).bounded(0, 1))
-    OPTIMIZER = nevergrad.optimizers.DoubleFastGADiscreteOnePlusOne(instrumentation = instrum, budget = budget, num_workers = workers)
+    instrum = nevergrad.Instrumentation(
+        nevergrad.var.Array(len(MATRYOSHKA), 2).bounded(0, 1)
+    )
+    OPTIMIZER = nevergrad.optimizers.DoubleFastGADiscreteOnePlusOne(
+        instrumentation = instrum,
+        budget = budget,
+        num_workers = workers
+    )
+    PROGRESS_BAR = tqdm.tqdm(
+        total = budget,
+        disable = logfileGet() == sys.stdout
+    )
 
 
 def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
@@ -347,22 +510,37 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
 
     Returns:
     final -- best value of the criterion, float
-    points -- points in the best solution in real coordinates, nx2 numpy.ndarray
-    tcpoints -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
-    trajectory -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
+    points -- points in the best solution in real coordinates,
+              nx2 numpy.ndarray
+    tcpoints -- points in the best solution in transformed coordinates,
+              nx2 numpy.ndarray
+    trajectory -- trajectory of the best solution in real coordinates,
+              mx2 numpy.ndarray
     """
-    global OPTIMIZER, MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS, CRITERION_ARGS
+    global OPTIMIZER, MATRYOSHKA, FILELOCK, VERBOSITY, INTERPOLATOR
+    global INTERPOLATOR_ARGS, FIGURE, PLOT
+    global PENALIZER, PENALIZER_ARGS, CRITERION_ARGS
 
     overtaking = []
 
-    with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
-        recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
+    with PPETQDM(
+            max_workers = OPTIMIZER.num_workers,
+            progress_bar = PROGRESS_BAR,
+    ) as executor:
+        recommendation = OPTIMIZER.minimize(
+            _opt,
+            executor = executor if OPTIMIZER.num_workers > 1 else None,
+            batch_mode = False
+        )
 
         if hasattr(CRITERION, "OVERTAKING_POINTS"):
             while CRITERION.OVERTAKING_POINTS.qsize() > 0:
                 overtaking.append(CRITERION.OVERTAKING_POINTS.get(False))
 
-    points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p])[0] for i, p in enumerate(numpy.asarray(recommendation.args[0])) ]
+    points = [
+        transform.matryoshkaMap(MATRYOSHKA[i], [p])[0]
+        for i, p in enumerate(numpy.asarray(recommendation.args[0]))
+    ]
 
     # TODO: Move this to ParameterList
     PENALIZER_ARGS["optimization"] = False
@@ -370,37 +548,67 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     final = _opt(numpy.asarray(recommendation.args[0]))
 
 
-    ## Plot overtaking points
+    # # Plot overtaking points # #
     if len(overtaking) > 0:
-        with open(LOGFILE.name + ".overtaking", "w") as f:
+        with open(logfileName() + ".overtaking", "w") as f:
             f.write(str(numpy.asarray(overtaking).tolist()))
 
         ngplot.pointsScatter(
-            numpy.asarray(overtaking), #numpy.asarray(OVERTAKING_POINTS),
+            numpy.asarray(overtaking),
+            # numpy.asarray(OVERTAKING_POINTS),
             s = 10,
             color = [0.0, 1.0, 0.0, 0.1],
         )
 
 
-    ## Plot invalid points if available
+    # # Plot invalid points if available # #
 
     # Interpolate received points
     # It is expected that they are unique and sorted.
-    _points = INTERPOLATOR.interpolate(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
+    # _points = INTERPOLATOR.interpolate(
+    #     **{
+    #         **{
+    #             "points": numpy.asarray(points)
+    #         },
+    #         **INTERPOLATOR_ARGS
+    #     }
+    # )
 
     # Display invalid points if found
     if PLOT and len(PENALIZER.INVALID_POINTS) > 0:
-        ngplot.pointsScatter(numpy.asarray(PENALIZER.INVALID_POINTS), FIGURE, color="red", marker="x")
+        ngplot.pointsScatter(
+            numpy.asarray(PENALIZER.INVALID_POINTS),
+            FIGURE,
+            color = "red",
+            marker = "x"
+        )
 
 
     ##
 
     with FILELOCK:
-        if VERBOSITY > 0:
-            print ("solution:%s" % str(numpy.asarray(points).tolist()), file=LOGFILE)
-            print ("final:%f" % final, file=LOGFILE)
+        log (
+            "solution:%s"
+            % str(numpy.asarray(points).tolist()),
+        )
+        log (
+            "final:%f"
+            % final,
+        )
 
-    return final, numpy.asarray(points), numpy.asarray(recommendation.args[0]), INTERPOLATOR.interpolate(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
+    return (
+        final,
+        numpy.asarray(points),
+        numpy.asarray(recommendation.args[0]),
+        INTERPOLATOR.interpolate(
+            **{
+                **{
+                    "points": numpy.asarray(points)
+                },
+                **INTERPOLATOR_ARGS
+            }
+        )
+    )
 
 
 def _opt(points: numpy.ndarray) -> float:
@@ -414,44 +622,72 @@ def _opt(points: numpy.ndarray) -> float:
     Returns:
     _c -- criterion value, float
 
-    Note: It receives selected points from the groups (see callback_centerline).
+    Note: It receives selected points from the groups;
+          see callback_centerline.
 
     Note: The result of this function is 'criterion' when possible, otherwise
     number of invalid points (multiplied by some value) is returned.
 
     Note: This function is called after all necessary data is received.
     """
-    global VALID_POINTS, CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, PENALIZER, PENALIZER_ARGS
-    global MATRYOSHKA, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
+    global VALID_POINTS, CRITERION, CRITERION_ARGS
+    global INTERPOLATOR, INTERPOLATOR_ARGS, PENALIZER, PENALIZER_ARGS
+    global MATRYOSHKA, FILELOCK, VERBOSITY, GRID, PENALTY
 
     # Transform points
-    points = [ transform.matryoshkaMap(MATRYOSHKA[i], [p])[0] for i, p in enumerate(points) ]
+    points = [
+        transform.matryoshkaMap(MATRYOSHKA[i], [p])[0]
+        for i, p in enumerate(points)
+    ]
 
     # Interpolate received points
     # It is expected that they are unique and sorted.
-    _points = INTERPOLATOR.interpolate(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
+    _points = INTERPOLATOR.interpolate(
+        **{
+            **{
+                "points": numpy.asarray(points)
+            },
+            **INTERPOLATOR_ARGS
+        }
+    )
 
     # Check the correctness of the points and compute penalty
-    penalty = PENALIZER.penalize(**{**{"points": _points, "valid_points": VALID_POINTS, "grid": GRID, "penalty": PENALTY, "candidate": points}, **PENALIZER_ARGS})
+    penalty = PENALIZER.penalize(
+        **{
+            **{
+                "points": _points,
+                "valid_points": VALID_POINTS,
+                "grid": GRID,
+                "penalty": PENALTY,
+                "candidate": points
+            },
+            **PENALIZER_ARGS
+        }
+    )
 
-    if ( penalty != 0 ):
+    if penalty != 0:
         with FILELOCK:
-            if VERBOSITY > 2:
-                print ("pointsA:%s" % str(points), file=LOGFILE)
-                print ("pointsT:%s" % str(_points.tolist()), file=LOGFILE)
-            if VERBOSITY > 1:
-                print ("penalty:%f" % penalty, file=LOGFILE)
-            LOGFILE.flush()
+            logvvv ("pointsA:%s" % str(points), level = VERBOSITY)
+            logvvv ("pointsT:%s" % str(_points.tolist()), level = VERBOSITY)
+            logvv ("penalty:%f" % penalty, level = VERBOSITY)
+            logfileFlush()
+            
         if CRITERION_ARGS.get("optimization", True):
             return penalty
 
-    _c = CRITERION.compute(**{**{'points': _points, 'penalty': PENALTY}, **CRITERION_ARGS})
+    _c = CRITERION.compute(
+        **{
+            **{
+                'points': _points,
+                'penalty': PENALTY
+            },
+            **CRITERION_ARGS
+        }
+    )
     with FILELOCK:
-        if VERBOSITY > 2:
-            print ("pointsA:%s" % str(points), file=LOGFILE)
-            print ("pointsT:%s" % str(_points.tolist()), file=LOGFILE)
-        if VERBOSITY > 1:
-            print ("correct:%f" % _c, file=LOGFILE)
-        LOGFILE.flush()
+        logvvv ("pointsA:%s" % str(points), level = VERBOSITY)
+        logvvv ("pointsT:%s" % str(_points.tolist()), level = VERBOSITY)
+        logvv ("correct:%f" % _c, level = VERBOSITY)
+        logfileFlush()
 
     return _c

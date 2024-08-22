@@ -1,6 +1,6 @@
 #!/usr/bin/env python3.6
 # plot.py
-"""## Plot functions for ng_trajectory
+r"""## Plot functions for ng_trajectory
 
 From the user side (i.e., configuration file), only dynamic plotting is available.
 However, all plotting (package-wise) should be controlled by variable `plot` that
@@ -9,25 +9,28 @@ is set to False by default.
 Dynamic plotting is defined using a custom key in the JSON. Following example
 resembles what is a "standard" and most used configuration:
 ```json
-"plot": true,
-"plot_args": [
-    {
-        "_figure": {
-            "function": "axis",
-            "_args": [ "equal" ]
-        },
-        "trackPlot": [ "@track" ]
-    },
-    {
-        "pointsPlot": {
-            "_args": [ "@result" ]
-        },
-        "pointsScatter": {
-            "_args": [ "@rcandidate" ]
-        }
-    }
-]
+{
+	"plot": true,
+	"plot_args": [
+		{
+			"_figure": {
+				"function": "axis",
+				"_args": [ "equal" ]
+			},
+			"trackPlot": [ "@track" ]
+		},
+		{
+			"pointsPlot": {
+				"_args": [ "@result" ]
+			},
+			"pointsScatter": {
+				"_args": [ "@rcandidate" ]
+			}
+		}
+	]
+}
 ```
+
 Note: This creates a figure with equal axis, underlying track, optimized control
 points of the trajectory and their interpolation.
 
@@ -37,14 +40,18 @@ the second one is executed after optimization finishes.
 
 Commands in the `plot_args` are executed in order, key-wise. Basic syntax is
 ```json
-"func": [ "arg1", "arg2" ]
+{
+	"func": [ "arg1", "arg2" ]
+}
 ```
 
 which sends all arguments to the function, or
 ```json
-"func": {
-    "_args": [ "arg1", "arg2" ],
-    "kw_arg": 4
+{
+	"func": {
+		"_args": [ "arg1", "arg2" ],
+		"kw_arg": 4
+	}
 }
 ```
 
@@ -62,6 +69,7 @@ that the variable is not available, an exception is raised.
 
 
 ### Available functions
+
 Following functions are available for plotting, however only the first three
 are usually used:
 
@@ -78,6 +86,7 @@ are usually used:
 
 
 ### Available variables
+
 Following variables are available for plotting (by setting the value to `@` + name
 of the variable):
 
@@ -87,36 +96,40 @@ of the variable):
 - tcandidate -- Control points of the best solution in Matryoshka space.
 - result -- Optimized trajectory (interpolation of rcandidate).
 - figure -- Currently used figure for plotting.
-- + any variable defined in the current loop from the configuration file.
+- \+ any variable defined in the current loop from the configuration file.
 
 
 ### Matplotlib wrapper
+
 In addition, it is possible to call literally any function related to `pyplot` or
 `figure` from the matplotlib. To do this, call function `_pyplot`/`_figure`
 with argument `function` with the name of the required function.
 
 For example, to make the axis equal, one can use this:
 ```json
-"_figure": {
-    "function": "axis",
-    "_args": [ "equal" ]
+{
+	"_figure": {
+		"function": "axis",
+		"_args": [ "equal" ]
+	}
 }
 ```
-"""
+"""  # noqa: D400,E501,W191
 ######################
 # Imports & Globals
 ######################
 
-import numpy, sys
+import numpy
+import sys
 
 
 try:
     from ng_trajectory import matplotlib, pyplot
     import matplotlib._pylab_helpers
-except:
+except Exception:
     pass
 
-from ng_trajectory import PLOT_AVAILABLE
+from ng_trajectory import PLOT_AVAILABLE  # noqa: F401
 
 from typing import List, Dict
 
@@ -133,7 +146,7 @@ CANVAS_OLD = None
 ######################
 
 def plot_only(f):
-    """Decorator for disabling plotting functions."""
+    """Decorate to disable plotting functions."""
     global PLOT_AVAILABLE
 
     def block(*args, **kwargs):
@@ -183,7 +196,7 @@ def figureCreate() -> matplotlib.figure.Figure:
         #    matplotlib._pylab_helpers.Gcf.get_fig_manager(1).canvas._tkphoto
         # or matplotlib._pylab_helpers.Gcf.get_all_fig_managers()[0].canvas._tkphoto
         CANVAS = matplotlib._pylab_helpers.Gcf.get_active().canvas._tkphoto
-    except:
+    except Exception:
         pass
 
     return figure
@@ -194,7 +207,8 @@ def axisEqual(figure: matplotlib.figure.Figure = None) -> List[float]:
     """Equal axis on current / selected figure.
 
     Arguments:
-    figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+    figure -- figure to plot to,
+              matplotlib.figure.Figure, default 'current figure'
 
     Returns:
     xmin, xmax, ymin, ymax -- the axis limits
@@ -206,22 +220,37 @@ def axisEqual(figure: matplotlib.figure.Figure = None) -> List[float]:
 
 
 @plot_only
-def figureSave(filename: str, figure: matplotlib.figure.Figure = None, *, bbox_inches = "tight", dpi = 300, pad_inches = 0, **kwargs) -> None:
+def figureSave(
+        filename: str,
+        figure: matplotlib.figure.Figure = None,
+        *,
+        bbox_inches = "tight",
+        dpi = 300,
+        pad_inches = 0,
+        **kwargs) -> None:
     """Save figure into a file.
 
     Arguments:
     filename -- path to the file where to save the image, str
-    figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+    figure -- figure to plot to,
+              matplotlib.figure.Figure, default 'current figure'
 
     Keyword-only arguments (same as matplotlib.pyplot.savefig):
     bbox_inches -- boundary box in inches, str or float, defaults to 'tight'
     dpi -- the image resolution, float > 0, defaults to 300
-    pad_inches -- padding around the image with tight bbox, float, defaults to 0
+    pad_inches -- padding around the image with tight bbox,
+                  float, defaults to 0
     """
     if figure is None:
         figure = pyplot.gcf()
 
-    figure.savefig(filename, bbox_inches=bbox_inches, dpi=dpi, pad_inches=pad_inches, **kwargs)
+    figure.savefig(
+        filename,
+        bbox_inches=bbox_inches,
+        dpi=dpi,
+        pad_inches=pad_inches,
+        **kwargs
+    )
 
 
 @plot_only
@@ -235,7 +264,8 @@ def figureClose(figure: matplotlib.figure.Figure = None) -> None:
     """Close figure.
 
     Arguments:
-    figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+    figure -- figure to plot to,
+              matplotlib.figure.Figure, default 'current figure'
     """
     pyplot.close(figure)
 
@@ -244,57 +274,86 @@ def figureClose(figure: matplotlib.figure.Figure = None) -> None:
 # Type plot functions
 ######################
 
-def trackPlot(track: numpy.ndarray, figure: matplotlib.figure.Figure = None, *, s = 1, color = "gainsboro", **kwargs) -> None:
+def trackPlot(
+        track: numpy.ndarray,
+        figure: matplotlib.figure.Figure = None,
+        *,
+        s = 1,
+        color = "gainsboro",
+        **kwargs) -> None:
     """Plot a track to selected figure.
 
     Arguments:
     track -- points of the track valid area, nx2 numpy.ndarray
-    figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+    figure -- figure to plot to,
+              matplotlib.figure.Figure, default 'current figure'
 
     Keyword-only arguments (same as matplotlib.pyplot.scatter):
-    s --  marker size in points**2, scalar or array-like with shape (n, ), defaults to 1
-    color -- marker color for the track, color or sequence, defaults to 'gainsboro'
+    s --  marker size in points**2,
+          scalar or array-like with shape (n, ), defaults to 1
+    color -- marker color for the track,
+             color or sequence, defaults to 'gainsboro'
     """
     pointsScatter(track, figure, s=s, color=color, **kwargs)
 
 
-def bordersPlot(borders: List[numpy.ndarray], colored: bool = True, figure: matplotlib.figure.Figure = None, *, linewidth = 0.6, linestyle = "dotted", color = "gray", **kwargs) -> None:
+def bordersPlot(
+        borders: List[numpy.ndarray],
+        colored: bool = True,
+        figure: matplotlib.figure.Figure = None,
+        *,
+        linewidth = 0.6,
+        linestyle = "dotted",
+        color = "gray",
+        **kwargs) -> None:
     """Plot borders of the segments to a selected figure.
 
     Arguments:
     borders -- border points of the groups, n-list of x2 numpy.ndarray
-    colored -- when True, plot is done colored, otherwise single color, bool, default True
-    figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+    colored -- when True, plot is done colored, otherwise single color,
+               bool, default True
+    figure -- figure to plot to,
+              matplotlib.figure.Figure, default 'current figure'
 
     Keyword-only arguments (same as matplotlib.pyplot.plot):
     linewidth -- float, defaults to 0.6
     linestyle -- str, defaults to 'dotted'
     color -- color or sequence, defaults to 'gray'
     """
+    groupsPlot(
+        borders,
+        figure,
+        linewidth = linewidth,
+        linestyle = linestyle,
+        color = color if colored else None,
+        **kwargs
+    )
 
-    if colored:
-        #groupsScatter(borders, figure, s=1)
-        groupsPlot(borders, figure, linewidth=linewidth, linestyle=linestyle, **kwargs)
-    else:
-        #groupsScatter(borders, figure, s=1, color="gray")
-        groupsPlot(borders, figure, linewidth=linewidth, linestyle=linestyle, color=color, **kwargs)
 
-
-def indicesPlot(points: numpy.ndarray, figure: matplotlib.figure.Figure = None, *, verticalalignment = "center", horizontalalignment = "center", fontsize = 18, **kwargs) -> None:
+def indicesPlot(
+        points: numpy.ndarray,
+        figure: matplotlib.figure.Figure = None,
+        *,
+        verticalalignment = "center",
+        horizontalalignment = "center",
+        fontsize = 18,
+        **kwargs) -> None:
     """Show an index of each element on its location.
 
     Arguments:
     points -- locations where to show the indices, nx2 numpy.ndarray
-    figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+    figure -- figure to plot to,
+              matplotlib.figure.Figure, default 'current figure'
 
     Keyword-only arguments (same as matplotlib.text.Text):
     verticalalignment -- str, defaults to 'center'
     horizontalalignment -- str, defaults to 'center'
     fontsize -- float, defaults to 18
     """
-
     for i, point in enumerate(points):
-        labelText(point, i,
+        labelText(
+            point,
+            i,
             verticalalignment = verticalalignment,
             horizontalalignment = horizontalalignment,
             fontsize = fontsize,
@@ -307,7 +366,10 @@ def indicesPlot(points: numpy.ndarray, figure: matplotlib.figure.Figure = None, 
 ######################
 
 @plot_only
-def pointsScatter(points: numpy.ndarray, figure: matplotlib.figure.Figure = None, **kwargs) -> matplotlib.collections.PathCollection:
+def pointsScatter(
+        points: numpy.ndarray,
+        figure: matplotlib.figure.Figure = None,
+        **kwargs) -> matplotlib.collections.PathCollection:
     """Scatter points.
 
     Arguments:
@@ -324,7 +386,10 @@ def pointsScatter(points: numpy.ndarray, figure: matplotlib.figure.Figure = None
 
 
 @plot_only
-def pointsPlot(points: numpy.ndarray, figure: matplotlib.figure.Figure = None, **kwargs) -> List[matplotlib.lines.Line2D]:
+def pointsPlot(
+        points: numpy.ndarray,
+        figure: matplotlib.figure.Figure = None,
+        **kwargs) -> List[matplotlib.lines.Line2D]:
     """Plot points.
 
     Arguments:
@@ -385,59 +450,73 @@ def rectanglePlot(centre: numpy.ndarray, width: numpy.double, height: numpy.doub
 
 
 @plot_only
-def groupsScatter(groups: numpy.ndarray, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+def groupsScatter(
+        groups: numpy.ndarray,
+        figure: matplotlib.figure.Figure = None,
+        **kwargs) -> None:
     """Scatter points inside groups.
 
     Arguments:
     groups -- list of grouped points, m-list of x2 numpy.ndarrays
     **kwargs -- keyword arguments to be passed to scatter
     """
-
     for _g in groups:
         pointsScatter(_g, figure, **kwargs)
 
 
 @plot_only
-def groupsPlot(groups: numpy.ndarray, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+def groupsPlot(
+        groups: numpy.ndarray,
+        figure: matplotlib.figure.Figure = None,
+        **kwargs) -> None:
     """Plot points inside groups.
 
     Arguments:
     groups -- list of grouped points, m-list of x2 numpy.ndarrays
     **kwargs -- keyword arguments to be passed to plot
     """
-
     for _g in groups:
         pointsPlot(_g, figure, **kwargs)
 
 
 @plot_only
-def grouplayersScatter(grouplayers: numpy.ndarray, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+def grouplayersScatter(
+        grouplayers: numpy.ndarray,
+        figure: matplotlib.figure.Figure = None,
+        **kwargs) -> None:
     """Scatter points from layers of all groups.
 
     Arguments:
-    grouplayers -- points in all layers, n-list of (layer_count)-lists of x2 numpy.ndarray
+    grouplayers -- points in all layers,
+                   n-list of (layer_count)-lists of x2 numpy.ndarray
     **kwargs -- keyword arguments to be passed to scatter
     """
-
     for _g in grouplayers:
         groupsScatter(_g, figure, **kwargs)
 
 
 @plot_only
-def grouplayersPlot(grouplayers: numpy.ndarray, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+def grouplayersPlot(
+        grouplayers: numpy.ndarray,
+        figure: matplotlib.figure.Figure = None,
+        **kwargs) -> None:
     """Plot points from layers of all groups.
 
     Arguments:
-    grouplayers -- points in all layers, n-list of (layer_count)-lists of x2 numpy.ndarray
+    grouplayers -- points in all layers,
+                   n-list of (layer_count)-lists of x2 numpy.ndarray
     **kwargs -- keyword arguments to be passed to plot
     """
-
     for _g in grouplayers:
         groupsPlot(_g, figure, **kwargs)
 
 
 @plot_only
-def labelText(point: numpy.ndarray, s: str, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+def labelText(
+        point: numpy.ndarray,
+        s: str,
+        figure: matplotlib.figure.Figure = None,
+        **kwargs) -> None:
     """Show a label on a point.
 
     Arguments:
@@ -445,7 +524,6 @@ def labelText(point: numpy.ndarray, s: str, figure: matplotlib.figure.Figure = N
     s -- text to show, str
     **kwargs -- keyword arguments to be passed to text
     """
-
     if figure is None:
         figure = pyplot.gcf()
 
@@ -457,7 +535,11 @@ def labelText(point: numpy.ndarray, s: str, figure: matplotlib.figure.Figure = N
 ######################
 
 @plot_only
-def _pyplot(*args, function: str, figure: matplotlib.figure.Figure = None, **kwargs) -> any:
+def _pyplot(
+        *args,
+        function: str,
+        figure: matplotlib.figure.Figure = None,
+        **kwargs) -> any:
     """Call directly a function of matplotlib pyplot.
 
     Arguments:
@@ -468,30 +550,38 @@ def _pyplot(*args, function: str, figure: matplotlib.figure.Figure = None, **kwa
     Returns:
     The returned object of the function.
     """
-
     if function not in dir(pyplot):
-        print ("Unknown function '%s' of pyplot." % function, file = sys.stderr)
+        print (
+            "Unknown function '%s' of pyplot." % function, file = sys.stderr
+        )
         return
 
     return pyplot.__getattribute__(function)(*args, **kwargs)
 
 
 @plot_only
-def _figure(*args, function: str, figure: matplotlib.figure.Figure = None, **kwargs) -> any:
+def _figure(
+        *args,
+        function: str,
+        figure: matplotlib.figure.Figure = None,
+        **kwargs) -> any:
     """Call directly a function of matplotlib pyplot's figure.
 
     Arguments:
     function -- name of the function, str
-    figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+    figure -- figure to plot to,
+              matplotlib.figure.Figure, default 'current figure'
     *args -- positional arguments to be passed to the function
     **kwargs -- keyword arguments to be passed to the function
 
     Returns:
     The returned object of the function.
     """
-
     if function not in dir(pyplot):
-        print ("Unknown function '%s' of pyplot figure." % function, file = sys.stderr)
+        print (
+            "Unknown function '%s' of pyplot figure." % function,
+            file = sys.stderr
+        )
         return
 
     if figure is None:
@@ -504,15 +594,18 @@ def _figure(*args, function: str, figure: matplotlib.figure.Figure = None, **kwa
 # Dynamic plotting
 ######################
 
-def plotDyn(args: Dict[str, Dict[str, any]], figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+def plotDyn(
+        args: Dict[str, Dict[str, any]],
+        figure: matplotlib.figure.Figure = None,
+        **kwargs) -> None:
     """Dynamically create figure according to the configuration.
 
     Arguments:
     args -- dynamic plot arguments
-    figure -- figure to plot to, matplotlib.figure.Figure, default 'current figure'
+    figure -- figure to plot to,
+              matplotlib.figure.Figure, default 'current figure'
     **kwargs -- arguments not caught by previous parts
     """
-
     if figure is None:
         figure = pyplot.gcf()
 
@@ -546,13 +639,24 @@ def plotDyn(args: Dict[str, Dict[str, any]], figure: matplotlib.figure.Figure = 
                     a = a[1:]
                     if a not in kwargs:
                         if VERBOSITY > 0:
-                            print ("Key '%s' is not available." % a, file=sys.stderr)
+                            print (
+                                "Key '%s' is not available." % a,
+                                file=sys.stderr
+                            )
                     else:
                         pargs.append(kwargs.get(a))
                 else:
                     pargs.append(a)
 
             if isinstance(fargs, dict):
-                globals()[function](*pargs, **{**dict([ (f, i) for f, i in fargs.items() if f[0] != "_" ]), **{"figure": figure}})
+                globals()[function](
+                    *pargs,
+                    **{
+                        **dict([
+                            (f, i) for f, i in fargs.items() if f[0] != "_"
+                        ]),
+                        **{"figure": figure}
+                    }
+                )
             else:
                 globals()[function](*pargs, **{"figure": figure})

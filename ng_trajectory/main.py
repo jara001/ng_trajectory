@@ -63,16 +63,18 @@ top level).
 	"logging_verbosity": 2
 }
 ```
-"""
+"""  # noqa: W191,D206,D400
 ######################
 # Imports & Globals
 ######################
 
-import sys, numpy, json, time
+import sys
+import numpy
+import json
+import time
 
-#from ng_trajectory.configuration import configurationLoad
-#from ng_trajectory.configuration import CONFIGURATION
-CONFIGURATION = {}
+# from ng_trajectory.configuration import configurationLoad
+# from ng_trajectory.configuration import CONFIGURATION
 
 import ng_trajectory
 
@@ -83,16 +85,28 @@ import ng_trajectory.segmentators as segmentators
 import ng_trajectory.selectors as selectors
 import ng_trajectory.penalizers as penalizers
 
+from ng_trajectory.log import (
+    verbositySet,
+    logfileSet, logfileReset, logfileFlush,
+    log,
+    print0, printvv
+)
+
 import ng_trajectory.plot as plot
+
+from ng_trajectory.parameter import ParameterList
 
 # Typing
 from typing import Tuple, Dict
+
+
+# Global variables
+CONFIGURATION = {}
 Solution = Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]
+P = ParameterList()
 
 
 # Parameters
-from ng_trajectory.parameter import *
-P = ParameterList()
 # FIXME: Actually, the default values do not work here as it was not adapted for ParameterList.
 P.createAdd("_version", None, int, "Version of the configuration.", "General")
 P.createAdd("_comment", None, str, "Commentary of the configuration file.", "General")
@@ -132,12 +146,22 @@ class Stub:
     """Object used when optimizer/etc. is not given."""
 
     def __init__(self, name, silent_stub):
+        """Initialize Stub object.
+
+        Arguments:
+        name -- name of the object, str
+        silent_stub -- when True, usage of this stub is not reported, bool
+        """
         self.name = name
         self.silent_stub = silent_stub
 
     def __getattr__(self, attr):
         """Return dummy lambda function."""
-        return lambda *x, **y: print("Called '%s' on '%s' object, but it was not specified in the configuration." % (attr, self.name), file=sys.stderr) if not self.silent_stub else None
+        return lambda *x, **y: print(
+            "Called '%s' on '%s' object, but it was not specified "
+            "in the configuration."
+            % (attr, self.name), file=sys.stderr
+        ) if not self.silent_stub else None
 
 
 ######################
@@ -145,7 +169,7 @@ class Stub:
 ######################
 
 def loop(iterator):
-    """Decorator for looping functions."""
+    """Decorate to create looping functions."""
 
     def wrapper(function, *args, **kwags):
         def looper(elements, *args, **kwargs):
@@ -156,7 +180,10 @@ def loop(iterator):
                     output = function(*args, **{**kwargs, **{"loop_i": i}})
                     first = False
                 else:
-                    output = function(*args, **{**kwargs, **{"loop_i": i, "loop_output": output}})
+                    output = function(
+                        *args,
+                        **{**kwargs, **{"loop_i": i, "loop_output": output}}
+                    )
             return output
         return looper
     return wrapper
@@ -167,7 +194,7 @@ def loop(iterator):
 ######################
 
 def configurationLoad(filename: str) -> bool:
-    """Loads a configuration stored in 'filename'.
+    """Load a configuration stored in 'filename'.
 
     Arguments:
     filename -- name of the file along with its path, str
@@ -182,21 +209,25 @@ def configurationLoad(filename: str) -> bool:
             conf = json.load(configuration_file)
 
             if conf.get("_version", 1) < 2:
-                print ("Unsupported version of the configuration file.", file=sys.stderr)
+                print (
+                    "Unsupported version of the configuration file.",
+                    file=sys.stderr
+                )
             else:
                 CONFIGURATION = {**CONFIGURATION, **conf}
     except Exception as e:
         print (e)
         return False
 
-    if conf.get("logging_verbosity", 1) > 1:
-        print (CONFIGURATION)
+    verbositySet(conf.get("logging_verbosity", 1))
+
+    printvv (CONFIGURATION)
 
     return True
 
 
 def configurationAppend(conf: Dict[str, any]) -> bool:
-    """Appends configuration to the global settings.
+    """Append configuration to the global settings.
 
     Arguments:
     conf -- new configuration, dict
@@ -208,14 +239,15 @@ def configurationAppend(conf: Dict[str, any]) -> bool:
 
     CONFIGURATION = {**CONFIGURATION, **conf}
 
-    if CONFIGURATION.get("logging_verbosity", 1) > 1:
-        print (CONFIGURATION)
+    verbositySet(CONFIGURATION.get("logging_verbosity", 1))
+
+    printvv (CONFIGURATION)
 
     return True
 
 
 def configurationMerge(conf: Dict[str, any]) -> bool:
-    """Merges configuration with the global settings.
+    """Merge configuration with the global settings.
 
     Arguments:
     conf -- configuration to merge, dict
@@ -237,10 +269,12 @@ def configurationMerge(conf: Dict[str, any]) -> bool:
                 if isinstance(dict1[k], dict) and isinstance(dict2[k], dict):
                     yield (k, dict(mergedicts(dict1[k], dict2[k])))
                 else:
-                    # If one of the values is not a dict, you can't continue merging it.
-                    # Value from second dict overrides one in first and we move on.
+                    # If one of the values is not a dict, you can't continue
+                    # merging it. Value from second dict overrides one in first
+                    # and we move on.
                     yield (k, dict2[k])
-                    # Alternatively, replace this with exception raiser to alert you of value conflicts
+                    # Alternatively, replace this with exception raiser to
+                    # alert you of value conflicts
             elif k in dict1:
                 yield (k, dict1[k])
             else:
@@ -248,14 +282,15 @@ def configurationMerge(conf: Dict[str, any]) -> bool:
 
     CONFIGURATION = dict(mergedicts(CONFIGURATION, conf))
 
-    if CONFIGURATION.get("logging_verbosity", 1) > 1:
-        print (CONFIGURATION)
+    verbositySet(CONFIGURATION.get("logging_verbosity", 1))
+
+    printvv (CONFIGURATION)
 
     return True
 
 
 def dataLoad(filename: str) -> numpy.ndarray:
-    """Loads data from stored file.
+    """Load data from stored file.
 
     Arguments:
     filename -- name of the file, str
@@ -271,9 +306,13 @@ def dataLoad(filename: str) -> numpy.ndarray:
 ######################
 
 @loop(lambda x: enumerate(x))
-def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i: int, \
-    loop_output: Solution, **conf) \
-    -> Solution:
+def cascadeRun(
+        track: numpy.ndarray,
+        fileformat: str,
+        notification: str,
+        loop_i: int,
+        loop_output: Solution,
+        **conf) -> Solution:
     """Run steps of the GA cascade.
 
     Arguments:
@@ -286,11 +325,13 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
 
     Returns:
     fitness -- best value of the criterion, float
-    rcandidate -- points in the best solution in real coordinates, nx2 numpy.ndarray
-    tcandidate -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
-    result -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
+    rcandidate -- points in the best solution in real coordinates,
+                  nx2 numpy.ndarray
+    tcandidate -- points in the best solution in transformed coordinates,
+                  nx2 numpy.ndarray
+    result -- trajectory of the best solution in real coordinates,
+              mx2 numpy.ndarray
     """
-
     # Cascade step timing
     step_time = time.time()
 
@@ -304,14 +345,26 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
     # If exists, we continue to next round.
     if fileformat:
         try:
-            with open(fileformat % (loop_i[0]+1) + "-%s.log" % _alg.get("algorithm"), "r") as f:
-                _stored = { name: json.loads(value) for name, value in [ line.split(":") for line in f.readlines() if line[0] == "#" ]}
+            with open(
+                fileformat % (loop_i[0] + 1) + "-%s.log"
+                % _alg.get("algorithm"),
+                "r"
+            ) as f:
+                _stored = {
+                    name: json.loads(value)
+                    for name, value in [
+                        line.split(":")
+                        for line in f.readlines() if line[0] == "#"
+                    ]
+                }
 
                 if _stored["#fitness"] < fitness:
-                    return _stored["#fitness"], \
-                           numpy.asarray(_stored["#rcandidate"]), \
-                           numpy.asarray(_stored["#tcandidate"]), \
-                           numpy.asarray(_stored["#trajectory"])
+                    return (
+                        _stored["#fitness"],
+                        numpy.asarray(_stored["#rcandidate"]),
+                        numpy.asarray(_stored["#tcandidate"]),
+                        numpy.asarray(_stored["#trajectory"])
+                    )
                 else:
                     return loop_output
 
@@ -319,24 +372,39 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
         except FileNotFoundError:
             pass
 
-        # One of the values is not found, meaning we probably have corrupted log.
+        # One of the values is not found, meaning that
+        # we probably have a corrupted log.
         # So we just to the measurement again.
         except KeyError:
             pass
 
     # Open up logging file
     if fileformat:
-        LOGFILE = open(fileformat % (loop_i[0]+1) + "-%s.log" % _alg.get("algorithm"), "w")
-        print (_alg, file=LOGFILE)
-        print ("Running %s version %s" % (ng_trajectory.__name__, ng_trajectory.__version__), file=LOGFILE)
-        LOGFILE.flush()
+        LOGFILE = open(
+            fileformat % (loop_i[0] + 1) + "-%s.log" % _alg.get("algorithm"),
+            "w"
+        )
+        logfileSet(LOGFILE)
+
+        log (_alg)
+        log (
+            "Running %s version %s"
+            % (
+                ng_trajectory.__name__,
+                ng_trajectory.__version__
+            )
+        )
+        logfileFlush()
     else:
         LOGFILE = sys.stdout
 
 
-    ## Initialization
+    # # Initialization # #
     # Get optimizers etc.
-    obtain = lambda group, name: group.__getattribute__(_alg.get(name)) if hasattr(group, _alg.get(name, "")) else Stub(name, _alg.get("silent_stub", False))
+    obtain = lambda group, name: \
+        group.__getattribute__(_alg.get(name)) \
+        if hasattr(group, _alg.get(name, "")) \
+        else Stub(name, _alg.get("silent_stub", False))
     opt = obtain(optimizers, "algorithm")
     cri = obtain(criterions, "criterion")
     itp = obtain(interpolators, "interpolator")
@@ -348,8 +416,17 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
     pen = obtain(penalizers, "penalizer")
 
     # Show up current progress
-    print (notification % (loop_i[0]+1) + " %s with %s criterion (penalized by %s), int. by %s" % (_alg.get("algorithm", ""), _alg.get("criterion", ""), _alg.get("penalizer", ""), _alg.get("interpolator", "")), file=LOGFILE)
-    LOGFILE.flush()
+    log (
+        notification % (loop_i[0] + 1) + " "
+        "%s with %s criterion (penalized by %s), int. by %s"
+        % (
+            _alg.get("algorithm", ""),
+            _alg.get("criterion", ""),
+            _alg.get("penalizer", ""),
+            _alg.get("interpolator", "")
+        )
+    )
+    logfileFlush()
 
     # Prepare plot
     if _alg.get("plot", False):
@@ -358,55 +435,112 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
         # Append figure
         _alg = {**_alg, **{"figure": fig}}
 
-        plot.plotDyn(_alg.get("plot_args", [])[0], **{**_alg, **{"track": track, "fitness": fitness, "rcandidate": rcandidate, "tcandidate": tcandidate, "result": result}})
-        #plot.axisEqual()
-        #plot.trackPlot(track)
+        plot.plotDyn(
+            _alg.get("plot_args", [])[0],
+            **{
+                **_alg,
+                **{
+                    "track": track,
+                    "fitness": fitness,
+                    "rcandidate": rcandidate,
+                    "tcandidate": tcandidate,
+                    "result": result
+                }
+            }
+        )
 
     # Initialize parts
-    sel.init(**{**_alg, **_alg.get("selector_init", {}), **{"logfile": LOGFILE}})
-    itp.init(**{**_alg, **_alg.get("interpolator_init", {}), **{"logfile": LOGFILE}})
-    seg.init(track, **{**_alg, **_alg.get("segmentator_init", {}), **{"logfile": LOGFILE}})
-    cri.init(**{**_alg, **_alg.get("criterion_init", {}), **{"logfile": LOGFILE}})
+    sel.init(
+        **{
+            **_alg,
+            **_alg.get("selector_init", {})
+        }
+    )
+    itp.init(
+        **{
+            **_alg,
+            **_alg.get("interpolator_init", {})
+        }
+    )
+    seg.init(
+        track,
+        **{
+            **_alg,
+            **_alg.get("segmentator_init", {})
+        }
+    )
+    cri.init(
+        **{
+            **_alg,
+            **_alg.get("criterion_init", {})
+        }
+    )
 
     # Note: This passes the initial line (which is usually centerline).
     # TODO: Actually pass centerline.
     if not hasattr(cri.main, "CENTERLINE") or cri.main.CENTERLINE is None:
         cri.main.CENTERLINE = result.copy()
 
-    opt.init(track, rcandidate, result, **{**_alg, **{"criterion": cri}, **{"interpolator": itp}, **{"segmentator": seg}, **{"selector": sel}, **{"penalizer": pen}, **{"logfile": LOGFILE}})
+    opt.init(
+        track,
+        rcandidate,
+        result,
+        **{
+            **_alg,
+            **{"criterion": cri},
+            **{"interpolator": itp},
+            **{"segmentator": seg},
+            **{"selector": sel},
+            **{"penalizer": pen}
+        }
+    )
+    logfileFlush()
 
-
-    ## Optimization
+    # # Optimization # #
     _fitness, _rcandidate, _tcandidate, _result = opt.optimize()
 
 
-    ## Plot the solution
+    # # Plot the solution # #
     if _alg.get("plot", False):
-        #plot.pointsPlot(_result)
-        #plot.pointsScatter(_rcandidate)
         if len(_alg.get("plot_args", [])) > 1:
-            plot.plotDyn(_alg.get("plot_args", [])[-1], **{**_alg, **{"track": track, "fitness": _fitness, "rcandidate": _rcandidate, "tcandidate": _tcandidate, "result": _result}})
+            plot.plotDyn(
+                _alg.get("plot_args", [])[-1],
+                **{
+                    **_alg,
+                    **{
+                        "track": track,
+                        "fitness": _fitness,
+                        "rcandidate": _rcandidate,
+                        "tcandidate": _tcandidate,
+                        "result": _result
+                    }
+                }
+            )
         if fileformat:
-            plot.figureSave(fileformat % (loop_i[0]+1) + "-%s.png" % _alg.get("algorithm"))
+            plot.figureSave(
+                fileformat % (loop_i[0] + 1) + "-%s.png"
+                % _alg.get("algorithm")
+            )
             plot.figureClose()
         else:
             plot.figureShow()
 
 
-    ## End parts
+    # # End parts # #
     if fileformat:
         # Show all results of optimize function (log only)
-        print ("#fitness:%.14f" % _fitness, file=LOGFILE)
-        print ("#rcandidate:%s" % _rcandidate.tolist(), file=LOGFILE)
-        print ("#tcandidate:%s" % _tcandidate.tolist(), file=LOGFILE)
-        print ("#trajectory:%s" % _result.tolist(), file=LOGFILE)
+        log ("#fitness:%.14f" % _fitness)
+        log ("#rcandidate:%s" % _rcandidate.tolist())
+        log ("#tcandidate:%s" % _tcandidate.tolist())
+        log ("#trajectory:%s" % _result.tolist())
     # Show up time elapsed
-    print ("time:%f" % (time.time() - step_time), file=LOGFILE)
-    print ("==============", file=LOGFILE)
+    log ("time:%f" % (time.time() - step_time))
+    log ("==============")
 
     # Close file if opened
     if fileformat:
         LOGFILE.close()
+        logfileReset()
 
     # Store only better solution for next steps of the cascade
     if _fitness < fitness:
@@ -416,7 +550,14 @@ def cascadeRun(track: numpy.ndarray, fileformat: str, notification: str, loop_i:
 
 
 @loop(lambda x: range(x))
-def loopCascadeRun(track: numpy.ndarray, initline: numpy.ndarray, fileformat: str, notification: str, loop_i: int, loop_output: Solution = None, **conf) -> Solution:
+def loopCascadeRun(
+        track: numpy.ndarray,
+        initline: numpy.ndarray,
+        fileformat: str,
+        notification: str,
+        loop_i: int,
+        loop_output: Solution = None,
+        **conf) -> Solution:
     """Loop the whole GA cascade.
 
     Arguments:
@@ -427,7 +568,6 @@ def loopCascadeRun(track: numpy.ndarray, initline: numpy.ndarray, fileformat: st
     loop_i -- loop index, int
     **conf -- GA configuration, dict
     """
-
     # Cascade timing
     cascade_time = time.time()
 
@@ -435,19 +575,25 @@ def loopCascadeRun(track: numpy.ndarray, initline: numpy.ndarray, fileformat: st
     fitness = 10000000
     result = initline
     rcandidate = initline
-    tcandidate = numpy.asarray([ [0.5, 0.5] for _i in range(initline.shape[0])])
+    tcandidate = numpy.asarray([
+        [0.5, 0.5] for _i in range(initline.shape[0])
+    ])
 
     # Update logging file
     if fileformat:
-        _fileformat = fileformat % (loop_i+1) + "-%%0%dd" % len(str(len(conf.get("cascade"))))
+        _fileformat = fileformat % (loop_i + 1) + (
+            "-%%0%dd" % len(str(len(conf.get("cascade"))))
+        )
     else:
         _fileformat = None
 
     # Update notification
-    notification = notification % (loop_i+1) + " Running step %%d/%d" % len(conf.get("cascade"))
+    notification = notification % (loop_i + 1) + (
+        " Running step %%d/%d" % len(conf.get("cascade"))
+    )
 
 
-    ## Run cascade
+    # # Run cascade # #
     cascade_output = cascadeRun(
         elements=conf.get("cascade"),
         track=track,
@@ -458,10 +604,10 @@ def loopCascadeRun(track: numpy.ndarray, initline: numpy.ndarray, fileformat: st
 
 
     if fileformat:
-        with open(fileformat % (loop_i+1) + ".log", "w") as logfile:
-            print ("timeA:%f" % (time.time() - cascade_time), file=logfile)
+        with open(fileformat % (loop_i + 1) + ".log", "w") as logfile:
+            log ("timeA:%f" % (time.time() - cascade_time), logfile=logfile)
     else:
-        print ("timeA:%f" % (time.time() - cascade_time), file=sys.stdout)
+        log ("timeA:%f" % (time.time() - cascade_time))
 
     if loop_output is None or cascade_output[0] < loop_output[0]:
         return cascade_output
@@ -470,16 +616,21 @@ def loopCascadeRun(track: numpy.ndarray, initline: numpy.ndarray, fileformat: st
 
 
 @loop(lambda x: enumerate(x))
-def variateRun(fileformat: str, notification: str, loop_i: Tuple[int, Tuple[str, int]], loop_output: Solution = None, **conf) -> Solution:
+def variateRun(
+        fileformat: str,
+        notification: str,
+        loop_i: Tuple[int, Tuple[str, int]],
+        loop_output: Solution = None,
+        **conf) -> Solution:
     """Run GA with variated number of an element.
 
     Arguments:
     fileformat -- name of the logging file, str
     notification -- notification about current progress, str
-    loop_i -- loop index and (name of the variable, value), 2-tuple [int, Tuple[str, int]]
+    loop_i -- loop index and (name of the variable, value),
+              2-tuple [int, Tuple[str, int]]
     **conf -- GA configuration, dict
     """
-
     # Group timing
     variate_time = time.time()
 
@@ -491,14 +642,18 @@ def variateRun(fileformat: str, notification: str, loop_i: Tuple[int, Tuple[str,
     # Update logging file
     if fileformat:
         # Fill group count, and add format for number of loops
-        fileformat = fileformat % (_value) + "-%%0%dd" % len(str(CONFIGURATION.get("loops")))
+        fileformat = fileformat % (_value) + (
+            "-%%0%dd" % len(str(CONFIGURATION.get("loops")))
+        )
 
     # Update notification
     # Fill loop index, group count and prepare loops progress
-    notification = notification % (_i+1, _value, _param) + " [%%d / %d]" % CONFIGURATION.get("loops")
+    notification = notification % (_i + 1, _value, _param) + (
+        " [%%d / %d]" % CONFIGURATION.get("loops")
+    )
 
 
-    ## Loop cascade
+    # # Loop cascade # #
     cascade_output = loopCascadeRun(
         elements=CONFIGURATION.get("loops"),
         fileformat=fileformat,
@@ -507,7 +662,10 @@ def variateRun(fileformat: str, notification: str, loop_i: Tuple[int, Tuple[str,
     )
 
 
-    print ("Variating %s %s finished in %fs." % (_param, _value, time.time() - variate_time))
+    print0(
+        "Variating %s %s finished in %fs."
+        % (_param, _value, time.time() - variate_time)
+    )
 
     if loop_output is None or cascade_output[0] < loop_output[0]:
         return cascade_output
@@ -515,12 +673,16 @@ def variateRun(fileformat: str, notification: str, loop_i: Tuple[int, Tuple[str,
         return loop_output
 
 
-def execute(START_POINTS: numpy.ndarray = None, VALID_POINTS: numpy.ndarray = None) -> Solution:
+def execute(
+        START_POINTS: numpy.ndarray = None,
+        VALID_POINTS: numpy.ndarray = None) -> Solution:
     """Execute GA according to the configuration.
 
     Arguments:
-    START_POINTS -- points of the track valid area, nx2 numpy.ndarray
-    VALID_POINTS -- points of the initial line for segmentation, mx2 numpy.ndarray
+    START_POINTS -- points of the track valid area,
+                    nx2 numpy.ndarray
+    VALID_POINTS -- points of the initial line for segmentation,
+                    mx2 numpy.ndarray
 
     Note: Currently, it is executed as follows:
         - groupsRun() for each group
@@ -529,7 +691,10 @@ def execute(START_POINTS: numpy.ndarray = None, VALID_POINTS: numpy.ndarray = No
     """
     global CONFIGURATION
 
-    print ("Starting %s version %s" % (ng_trajectory.__name__, ng_trajectory.__version__))
+    print (
+        "Starting %s version %s"
+        % (ng_trajectory.__name__, ng_trajectory.__version__)
+    )
 
     # Overall time
     overall_time = time.time()
@@ -553,24 +718,33 @@ def execute(START_POINTS: numpy.ndarray = None, VALID_POINTS: numpy.ndarray = No
 
 
     # Identify and prepare variating variable
-    if "variate" in CONFIGURATION and CONFIGURATION.get("variate") in CONFIGURATION:
+    if CONFIGURATION.get("variate", None) in CONFIGURATION:
         param = CONFIGURATION.get("variate")
         values = CONFIGURATION.get(param)
 
         # Force list
         if not isinstance(values, list):
-            values = [ values ]
+            values = [values]
 
         # Convert to tuples
-        tvalues = [ (param, value) for value in values ]
+        tvalues = [(param, value) for value in values]
 
         # Add variate to the file format
         if fileformat:
-            if all([ isinstance(_value, int) for _value in values ]):
+            if all([isinstance(_value, int) for _value in values]):
                 fileformat = fileformat + "-%%0%dd" % len(str(max(values)))
-            elif all([ isinstance(_value, (int, float)) for _value in values ]):
-                _len_decimal = max([ len(str(float(_value)).split(".")[1]) for _value in values ])
-                fileformat = fileformat + "-%%0%d.%df" % (len(str(int(max(values)))) + 1 + _len_decimal, _len_decimal)
+            elif all([isinstance(_value, (int, float)) for _value in values]):
+                _len_decimal = max([
+                    len(str(float(_value)).split(".")[1])
+                    for _value in values
+                ])
+                fileformat = fileformat + (
+                    "-%%0%d.%df"
+                    % (
+                        len(str(int(max(values)))) + 1 + _len_decimal,
+                        _len_decimal
+                    )
+                )
             else:
                 fileformat = fileformat + "-%s"
         else:
@@ -580,7 +754,7 @@ def execute(START_POINTS: numpy.ndarray = None, VALID_POINTS: numpy.ndarray = No
         notification = notification + "{%%d / %d (%%s %%s)}" % len(values)
 
 
-        ## And variate the parameter
+        # # And variate the parameter # #
         solution = variateRun(
             elements=tvalues,
             track=VALID_POINTS,
@@ -594,12 +768,14 @@ def execute(START_POINTS: numpy.ndarray = None, VALID_POINTS: numpy.ndarray = No
         # Skip to the loop
         # Update logging file
         if fileformat:
-            fileformat = fileformat + "-%%0%dd" % len(str(CONFIGURATION.get("loops")))
+            fileformat = fileformat + (
+                "-%%0%dd" % len(str(CONFIGURATION.get("loops")))
+            )
 
         # Update notification
         notification = notification + "[%%d / %d]" % CONFIGURATION.get("loops")
 
-        ## Loop cascade
+        # # Loop cascade # #
         solution = loopCascadeRun(
             elements=CONFIGURATION.get("loops"),
             track=VALID_POINTS,
@@ -609,6 +785,6 @@ def execute(START_POINTS: numpy.ndarray = None, VALID_POINTS: numpy.ndarray = No
             **CONFIGURATION
         )
 
-    print ("Optimization finished in %fs." % (time.time() - overall_time))
+    print0("Optimization finished in %fs." % (time.time() - overall_time))
 
     return solution

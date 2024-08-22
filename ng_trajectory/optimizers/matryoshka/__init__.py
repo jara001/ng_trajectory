@@ -11,4 +11,4 @@ a homeomorphism transformation is created (Matryoshka).
 
 For the optimization itself, Nevergrad is used.
 """
-from .main import init, optimize
+from .main import init, optimize  # noqa: F401

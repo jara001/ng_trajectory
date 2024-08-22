@@ -1,12 +1,13 @@
 #!/usr/bin/env python3.6
 # ng_run.py
-"""Script for running the package.
-"""
+"""Script for running the package."""
 ######################
 # Imports & Globals
 ######################
 
-import sys, os, argparse
+import sys
+import os
+import argparse
 
 from ng_trajectory import configurationLoad, execute, configurationMerge
 
@@ -27,7 +28,9 @@ Subdictionaries can be accessed with '/' in the argument name.
 )
 
 # Arguments
-PARSER.add_argument("input_file",
+PARSER.add_argument(
+    "input_file",
+
     help = "Path to the '.json' configuration file.",
     default = None,
     type = str,
@@ -47,19 +50,18 @@ def autoType(value: str) -> any:
     Returns:
     true_value -- converted data, float/int/str/bool
     """
-
     # is float
     try:
         float(value)
         is_float = True
-    except:
+    except ValueError:
         is_float = False
 
     # is int
     try:
         int(value)
         is_int = True
-    except:
+    except ValueError:
         is_int = False
 
     if is_float and is_int:
@@ -93,7 +95,7 @@ def dictExpand(d: dict, key: str, value: any) -> None:
         if topkey not in d:
             d[topkey] = {}
 
-        dictExpand(d[topkey], key[key.index("/")+1:], value)
+        dictExpand(d[topkey], key[key.index("/") + 1:], value)
 
 
 ######################
@@ -125,9 +127,14 @@ if __name__ == "__main__":
                 configurationMerge(dcargs)
                 print (execute())
             else:
-                print ("Unable to load configuration from given file.", file=sys.stderr)
+                print (
+                    "Unable to load configuration from given file.",
+                    file=sys.stderr
+                )
         else:
             print ("File %s does not exist." % sys.argv[1], file=sys.stderr)
     else:
-        print ("Expected one argument with path to the configuration file.", file=sys.stderr)
-
+        print (
+            "Expected one argument with path to the configuration file.",
+            file=sys.stderr
+        )

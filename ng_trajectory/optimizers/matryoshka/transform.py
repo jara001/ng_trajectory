@@ -1,7 +1,6 @@
 #!/usr/bin/env python3.6
 # transform.py
-"""Matryoshka transform and transform utilities.
-"""
+"""Matryoshka transform and transform utilities."""
 ######################
 # Imports & Globals
 ######################
@@ -17,6 +16,7 @@ from typing import List, Tuple
 # Utils functions
 from ng_trajectory.interpolators.utils import trajectoryReduce, trajectorySort
 from .interpolate import trajectoryInterpolate
+from ng_trajectory.log import print0
 
 
 # Typing
@@ -38,26 +38,29 @@ def pointsFilter(points: numpy.ndarray, grid: float = None) -> numpy.ndarray:
 
     Note: It is expected that points are aligned to a square grid.
     """
-
     _points = []
 
     # Obtain grid size if not set
     _grid = grid if grid else numpy.min(
+        [
+            numpy.min(numpy.subtract(u[1:], u[:-1])) for u in
             [
-                numpy.min( numpy.subtract(u[1:], u[:-1]) ) for u in
-                    [
-                        numpy.unique( points[:, d] ) for d in range(points.shape[1])
-                    ]
+                numpy.unique(points[:, d]) for d in range(points.shape[1])
             ]
-        )
+        ]
+    )
 
     # Convert points to cell-oriented list
     _cells = [
-            [ int( numpy.round(_p[_d] / _grid) ) for _d in range(points.shape[1]) ] for _p in points
-        ]
+        [
+            int(numpy.round(_p[_d] / _grid)) for _d in range(points.shape[1])
+        ] for _p in points
+    ]
     _cells_copy = [
-            [ int( numpy.round(_p[_d] / _grid) ) for _d in range(points.shape[1]) ] for _p in points
-        ]
+        [
+            int(numpy.round(_p[_d] / _grid)) for _d in range(points.shape[1])
+        ] for _p in points
+    ]
 
     # Treat points as list
     pointsL = points.tolist()
@@ -68,17 +71,27 @@ def pointsFilter(points: numpy.ndarray, grid: float = None) -> numpy.ndarray:
         # _XX  _XX  XX_  XX_  |  _X_  _XX  _XX  _X_  _X_  XX_  XX_  _X_
         # ___  _X_  _X_  ___  |  ___  ___  __X  _XX  XX_  X__  ___  ___
         # Convert points to a cell
-        _cell = [ int( numpy.round(_p[_d] / _grid) ) for _d in range(points.shape[1]) ]
+        _cell = [
+            int(numpy.round(_p[_d] / _grid)) for _d in range(points.shape[1])
+        ]
 
         # Ranges
         _xr = range(-1, 2)
         _yr = range(-1, 2)
 
         # Count number of points in the area (x-wise, y-wise)
-        x = sum([ any([ [ _cell[0] + _x, _cell[1] + _y ] in _cells for _x in _xr ]) for _y in _yr ])
-        y = sum([ any([ [ _cell[0] + _x, _cell[1] + _y ] in _cells for _y in _yr ]) for _x in _xr ])
+        x = sum([
+            any([
+                [_cell[0] + _x, _cell[1] + _y] in _cells for _x in _xr
+            ]) for _y in _yr
+        ])
+        y = sum([
+            any([
+                [_cell[0] + _x, _cell[1] + _y] in _cells for _y in _yr
+            ]) for _x in _xr
+        ])
 
-        if ( x < 3 ) and ( y < 3 ):
+        if x < 3 and y < 3:
             # Return nearby points back to the loop
             for _xr in range(-1, 2):
                 for _yr in range(-1, 2):
@@ -86,10 +99,13 @@ def pointsFilter(points: numpy.ndarray, grid: float = None) -> numpy.ndarray:
                         continue
 
                     # Get index of the cell
-                    _nearbyc = [ _cell[0] + _xr, _cell[1] + _yr ]
+                    _nearbyc = [_cell[0] + _xr, _cell[1] + _yr]
 
                     # Find whether it is a valid border cell and try to find it
-                    if _nearbyc in _cells_copy and pointsL[_cells_copy.index(_nearbyc)] in _points:
+                    if (
+                        _nearbyc in _cells_copy
+                        and pointsL[_cells_copy.index(_nearbyc)] in _points
+                    ):
                         _nearbyp = pointsL[_cells_copy.index(_nearbyc)]
                         _points.remove(_nearbyp)
                         pointsL.append(_nearbyp)
@@ -115,10 +131,12 @@ def groupsCenterCompute(groups: List[numpy.ndarray]) -> numpy.ndarray:
     Returns:
     centers -- center points of the groups, nx2 numpy.ndarray
     """
-    return numpy.asarray([numpy.mean( _g, axis = 0 ) for _g in groups])
+    return numpy.asarray([numpy.mean(_g, axis = 0) for _g in groups])
 
 
-def groupsBorderObtain(groups: List[numpy.ndarray], grid: float = None) -> List[numpy.ndarray]:
+def groupsBorderObtain(
+        groups: List[numpy.ndarray],
+        grid: float = None) -> List[numpy.ndarray]:
     """Obtain border points of the groups.
 
     Arguments:
@@ -134,7 +152,6 @@ def groupsBorderObtain(groups: List[numpy.ndarray], grid: float = None) -> List[
     TODOd: This version is expecting mostly convex areas. Highly unconvex
     areas are missing some of the border points.
     """
-
     _borders = []
 
     for _i, _g in enumerate(groups):
@@ -142,13 +159,13 @@ def groupsBorderObtain(groups: List[numpy.ndarray], grid: float = None) -> List[
 
         # Obtain grid size if not set
         _grid = grid if grid else numpy.min(
+            [
+                numpy.min(numpy.subtract(u[1:], u[:-1])) for u in
                 [
-                    numpy.min( numpy.subtract(u[1:], u[:-1]) ) for u in
-                        [
-                            numpy.unique( _g[:, d] ) for d in range(_g.shape[1])
-                        ]
+                    numpy.unique(_g[:, d]) for d in range(_g.shape[1])
                 ]
-            )
+            ]
+        )
 
         # Go through all dimensions
         for _d in range(_g.shape[1]):
@@ -174,10 +191,11 @@ def groupsBorderObtain(groups: List[numpy.ndarray], grid: float = None) -> List[
                 # Append inner borders
                 # Obtain values in the dimension
                 _v = _g[numpy.where(_g[:, _d] == _u), :][0]
-                _v = numpy.delete(_v, _d, axis = 1) # Select other dimensions
+                _v = numpy.delete(_v, _d, axis = 1)  # Select other dimensions
 
                 # Sort them
-                # Enforce the axis as otherwise it is not sorted in ascending order everytime.
+                # Enforce the axis as otherwise it is not sorted
+                # in ascending order everytime.
                 _v = numpy.sort(_v, axis = 0)
 
                 # Find distances between concurrent points
@@ -193,42 +211,54 @@ def groupsBorderObtain(groups: List[numpy.ndarray], grid: float = None) -> List[
                 # DO NOT FORGET TO ADD 1 TO INDICES!
 
                 # Add these points to the border
-                #for _b in _bords:
-                #    _border.append(
-                #        _g[
-                #            numpy.intersect1d(
-                #                numpy.where(_g[:, _d] == _u)[0],
-                #                numpy.where(_g[:, ^_d] == _b)[0]
-                #            )
-                #        ].tolist()
-                #    )
+                # for _b in _bords:
+                #     _border.append(
+                #         _g[
+                #             numpy.intersect1d(
+                #                 numpy.where(_g[:, _d] == _u)[0],
+                #                 numpy.where(_g[:, ^_d] == _b)[0]
+                #             )
+                #         ].tolist()
+                #     )
                 # ^^ Intersect would restrict dimensions.
 
-                # Reuse '_v' array as it is sorted. At this point, using 'where(_g...)' is
-                # NOT USABLE AT ALL because the indices are not the same!
+                # Reuse '_v' array as it is sorted. At this point,
+                # using 'where(_g...)' is NOT USABLE AT ALL because
+                # the indices are not the same!
                 for _b in _bords:
                     _border.append(
-                        ([ _u ] + _v[_b].tolist()) if _d == 0 else (_v[_b].tolist() + [ _u ])
+                        ([_u] + _v[_b].tolist()) if _d == 0
+                        else (_v[_b].tolist() + [_u])
                     )
 
                     _border.append(
-                        ([ _u ] + _v[_b+1].tolist()) if _d == 0 else (_v[_b+1].tolist() + [ _u ])
+                        ([_u] + _v[_b + 1].tolist()) if _d == 0
+                        else (_v[_b + 1].tolist() + [_u])
                     )
 
 
         _borders.append(_border)
 
-    return [ numpy.unique( numpy.asarray( b ), axis = 0 ) for b in _borders ]
+    return [
+        numpy.unique(numpy.asarray(b), axis = 0) for b in _borders
+    ]
 
 
-def groupsBorderBeautify(borders: List[numpy.ndarray], border_length: int) -> List[numpy.ndarray]:
+def groupsBorderBeautify(
+        borders: List[numpy.ndarray],
+        border_length: int,
+        allow_no_filter: bool = False) -> List[numpy.ndarray]:
     """Filter, sort and interpolate the borders to get smoother points.
 
     Arguments:
     borders -- border points of the groups, n-list of x2 numpy.ndarray
+    border_length -- number of points in the final border line, int
+    allow_no_filter -- when True and filter removes all points, use the
+                       unfiltered data instead, bool, default False
 
     Returns:
-    bborders -- beautified border points of the groups, n-list of (border_length)x2 numpy.ndarray
+    bborders -- beautified border points of the groups,
+                n-list of (border_length)x2 numpy.ndarray
 
     Note: This function is in beta, especially the point filtering.
     """
@@ -238,21 +268,38 @@ def groupsBorderBeautify(borders: List[numpy.ndarray], border_length: int) -> Li
 
     for group_i, border in enumerate(borders):
         # FIXME: Temporarily hidden as we are working with 0.02 map in Stage.
-        border_filtered = pointsFilter(border)#0.05
+        border_filtered = pointsFilter(border)  # 0.05
+
+        if len(border_filtered) == 0:
+            if allow_no_filter:
+                border_filtered = border
+            else:
+                print0 (
+                    "Border filter removed all points. Set function argument "
+                    "'allow_no_filter' to use unfitered data instead. You can "
+                    "also set 'border_allow_no_filter' in the configuration "
+                    "file."
+                )
 
         if len(border_filtered) == 0:
             border_filtered = border
 
         border_sorted = trajectorySort(border_filtered, verify_sort = True)
 
-        border_interpolated = trajectoryInterpolate(border_sorted, border_length)
+        border_interpolated = trajectoryInterpolate(
+            border_sorted,
+            border_length
+        )
 
         bborders.append(border_interpolated)
 
     return bborders
 
 
-def groupLayersCompute(layer0: numpy.ndarray, layer0_center: numpy.ndarray, layer_count: int) -> List[numpy.ndarray]:
+def groupLayersCompute(
+        layer0: numpy.ndarray,
+        layer0_center: numpy.ndarray,
+        layer_count: int) -> List[numpy.ndarray]:
     """Compute layers of a group in real coordinates.
 
     Arguments:
@@ -266,26 +313,30 @@ def groupLayersCompute(layer0: numpy.ndarray, layer0_center: numpy.ndarray, laye
     return groupsLayersCompute([layer0], [layer0_center], [layer_count])[0]
 
 
-def groupsLayersCompute(layers0: List[numpy.ndarray], layers0_center: List[numpy.ndarray], layers_count: List[int]) \
-    -> List[List[numpy.ndarray]]:
+def groupsLayersCompute(
+        layers0: List[numpy.ndarray],
+        layers0_center: List[numpy.ndarray],
+        layers_count: List[int]) -> List[List[numpy.ndarray]]:
     """Compute layers of groups in real coordinates.
 
     Arguments:
     layers0 -- points on first layer of groups, n-list of mx(>=2) numpy.ndarray
-    layers0_center -- center point of the first layer of groups, n-list of 1x2 numpy.ndarray
-    layers_count -- number of layers in the transformation for each group, n-list of ints
+    layers0_center -- center point of the first layer of groups,
+                      n-list of 1x2 numpy.ndarray
+    layers_count -- number of layers in the transformation for each group,
+                    n-list of ints
 
     Returns:
-    grouplayers -- points in all layers, n-list of (layer_count)-lists of x2 numpy.ndarray
+    grouplayers -- points in all layers,
+                   n-list of (layer_count)-lists of x2 numpy.ndarray
 
-    Note: This computes layers of a segment (based on the layer 0 / border). Points are
-    moved towards the centroid of the segment.
+    Note: This computes layers of a segment (based on the layer 0 / border).
+          Points are moved towards the centroid of the segment.
 
     Note: Similarly to 'layerIndexToParameters', number of points in each layer
-    is lowered.
+          is lowered.
     """
-
-    layers0_size = [ len(layer) for layer in layers0 ]
+    layers0_size = [len(layer) for layer in layers0]
 
     return [
         [
@@ -293,17 +344,26 @@ def groupsLayersCompute(layers0: List[numpy.ndarray], layers0_center: List[numpy
                 numpy.add(
                     numpy.multiply(
                         numpy.subtract(
-                            layer0[:, :2], layers0_center[i][:, numpy.newaxis].T
+                            layer0[:, :2],
+                            layers0_center[i][:, numpy.newaxis].T
                         ), 1 - (1 / layers_count[i]) * layer_index
                     ), layers0_center[i][:, numpy.newaxis].T
-                ), int(layers0_size[i] - (layers0_size[i] / layers_count[i]) * layer_index)
+                ),
+                int(
+                    layers0_size[i]
+                    - (layers0_size[i] / layers_count[i])
+                    * layer_index
+                )
             )
             for layer_index in range(layers_count[i])
         ] for i, layer0 in enumerate(layers0)
     ]
 
 
-def layerIndexToParameters(layer_index: int, layer0_size: int, layer_count: int) -> Tuple[int, float]:
+def layerIndexToParameters(
+        layer_index: int,
+        layer0_size: int,
+        layer_count: int) -> Tuple[int, float]:
     """Compute size of a layer and its scale from its index.
 
     Arguments:
@@ -327,10 +387,16 @@ def layerIndexToParameters(layer_index: int, layer0_size: int, layer_count: int)
             layer 1 : 66% points, scale 0.66
             layer 2 : 33% points, scale 0.33
     """
-    return (int(layer0_size - ( (layer0_size / layer_count) * layer_index )), 1 - ( 1.0 / layer_count ) * layer_index)
+    return (
+        int(layer0_size - ((layer0_size / layer_count) * layer_index)),
+        1 - (1.0 / layer_count) * layer_index
+    )
 
 
-def indicesToTransformedCoordinates(indices: List[float], layer_size: int, scale: float) -> numpy.ndarray:
+def indicesToTransformedCoordinates(
+        indices: List[float],
+        layer_size: int,
+        scale: float) -> numpy.ndarray:
     """Convert indices of a layer to transformed coordinates.
 
     Arguments:
@@ -341,11 +407,11 @@ def indicesToTransformedCoordinates(indices: List[float], layer_size: int, scale
     Returns:
     coords -- coordinates of points, nx2 numpy.ndarray
 
-    Note: Scale is provided as a size of a square side of this coordinate frame.
+    Note: Scale is provided as a size of a square side of
+          this coordinate frame.
     """
-
     _coords = []
-    l = float(layer_size)
+    l = float(layer_size)  # noqa: E741
 
     for _i in indices:
         _point = []
@@ -355,11 +421,11 @@ def indicesToTransformedCoordinates(indices: List[float], layer_size: int, scale
             _point.append(
                 max(
                     min(
-                        ( abs(-( ( ( (l / 2.0) + _i + _d * (l / 8.0) ) % l ) - ( l / 2.0 )) ) / ( l / 4.0 ) ) - 0.5,
+                        ( abs(-( ( ( (l / 2.0) + _i + _d * (l / 8.0) ) % l ) - ( l / 2.0 )) ) / ( l / 4.0 ) ) - 0.5,  # noqa: E201,E202,E501
                         1
                     ),
                     0
-                ) * scale + ( ( 1 - scale ) / 2.0 )
+                ) * scale + ((1 - scale) / 2.0)
             )
 
         _coords.append(_point)
@@ -367,7 +433,9 @@ def indicesToTransformedCoordinates(indices: List[float], layer_size: int, scale
     return numpy.asarray(_coords)
 
 
-def indicesToRealCoordinatesInt(indices: List[int], points: numpy.ndarray) -> numpy.ndarray:
+def indicesToRealCoordinatesInt(
+        indices: List[int],
+        points: numpy.ndarray) -> numpy.ndarray:
     """Convert indices (int only) of a layer to real coordinates.
 
     Arguments:
@@ -383,7 +451,9 @@ def indicesToRealCoordinatesInt(indices: List[int], points: numpy.ndarray) -> nu
     return points[indices, :]
 
 
-def indicesToRealCoordinates(indices: List[float], points: numpy.ndarray) -> numpy.ndarray:
+def indicesToRealCoordinates(
+        indices: List[float],
+        points: numpy.ndarray) -> numpy.ndarray:
     """Convert indices of a layer to real coordinates.
 
     Arguments:
@@ -393,17 +463,21 @@ def indicesToRealCoordinates(indices: List[float], points: numpy.ndarray) -> num
     Returns:
     rcoords -- real coordinates of points, nx2 numpy.ndarray
 
-    Note: When index is float, result is an interpolation between integer neighbours.
+    Note: When index is float, result is an interpolation
+          between the integer neighbours.
     """
-
     _rcoords = []
 
     for _i in indices:
         if int(_i) == _i:
-            _rcoords.append( points[ int(_i) , :] )
+            _rcoords.append(points[int(_i), :])
         else:
             _rcoords.append(
-                points[ int(_i), : ] + (_i - int(_i)) * ( points[ ( int(_i) + 1 ) % points.shape[0], : ] - points [ int(_i), : ] )
+                points[int(_i), :]
+                + (_i - int(_i)) * (
+                    points[(int(_i) + 1) % points.shape[0], :]
+                    - points[int(_i), :]
+                )
             )
 
     return numpy.asarray(_rcoords)
@@ -413,7 +487,10 @@ def indicesToRealCoordinates(indices: List[float], points: numpy.ndarray) -> num
 # Matryoshka
 ######################
 
-def matryoshkaCreate(layer0: numpy.ndarray, layer0_center: numpy.ndarray, layer_count: int) -> List[Interpolator]:
+def matryoshkaCreate(
+        layer0: numpy.ndarray,
+        layer0_center: numpy.ndarray,
+        layer_count: int) -> List[Interpolator]:
     """Set up an interpolator for Matryoshka transformation.
 
     Arguments:
@@ -424,24 +501,27 @@ def matryoshkaCreate(layer0: numpy.ndarray, layer0_center: numpy.ndarray, layer_
     Returns:
     ip2d -- Matryoshka mapping, 2-list of bisplrep
     """
-
     layers = groupLayersCompute(layer0, layer0_center, layer_count)
     layer0_size = len(layer0)
 
-    # Method, where we learn the interpolator all layers at once and use that information
-    # for computing of the transformation
+    # Method, where we learn the interpolator all layers at once
+    # and use that information for computing of the transformation
     # Note: This is much more precise.
-    _tc = numpy.empty( (0, 2) )
-    _rc = numpy.empty( (0, 2) )
+    _tc = numpy.empty((0, 2))
+    _rc = numpy.empty((0, 2))
 
     for _layer_index in range(layer_count):
-        layer_params = layerIndexToParameters(_layer_index, layer0_size, layer_count)
+        layer_params = layerIndexToParameters(
+            _layer_index,
+            layer0_size,
+            layer_count
+        )
         indices = range(layer_params[0])
         tc = indicesToTransformedCoordinates(indices, *layer_params)
         rc = indicesToRealCoordinatesInt(indices, layers[int(_layer_index)])
 
-        _tc = numpy.vstack( (_tc, tc) )
-        _rc = numpy.vstack( (_rc, rc) )
+        _tc = numpy.vstack((_tc, tc))
+        _rc = numpy.vstack((_rc, rc))
 
     # transformedCoordinatesToRealCoordinates
     _ip2d = []
@@ -454,7 +534,9 @@ def matryoshkaCreate(layer0: numpy.ndarray, layer0_center: numpy.ndarray, layer_
     return _ip2d
 
 
-def matryoshkaMap(matryoshka: List[Interpolator], coords: numpy.ndarray) -> numpy.ndarray:
+def matryoshkaMap(
+        matryoshka: List[Interpolator],
+        coords: numpy.ndarray) -> numpy.ndarray:
     """Transform a point through Matryoshka mapping.
 
     Arguments:
@@ -464,7 +546,6 @@ def matryoshkaMap(matryoshka: List[Interpolator], coords: numpy.ndarray) -> nump
     Returns:
     rcoords -- points in real coordinates, nxp numpy.ndarray
     """
-
     _rcoords = []
 
     for _c in coords:
@@ -472,7 +553,7 @@ def matryoshkaMap(matryoshka: List[Interpolator], coords: numpy.ndarray) -> nump
 
         for _interpolator in matryoshka:
             _dims.append(
-                #_interpolator(_c[0], _c[1])[0]
+                # _interpolator(_c[0], _c[1])[0]
                 bisplev(_c[0], _c[1], _interpolator)
             )
 

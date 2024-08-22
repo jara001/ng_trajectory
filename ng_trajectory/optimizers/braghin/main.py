@@ -5,16 +5,25 @@
 # Imports & Globals
 ######################
 
-from ng_trajectory.interpolators.utils import *
 import ng_trajectory.plot as ngplot
 
 from ng_trajectory.segmentators.utils import gridCompute
+
+from ng_trajectory.parameter import ParameterList
+
+from ng_trajectory.log import (
+    print0,
+    log, logv, logvv, logvvv,
+    logfileFlush
+)
 
 from . import transform
 
 import nevergrad
 
-import sys, os
+import sys
+import os
+import numpy
 
 # Parallel computing of genetic algorithm
 from concurrent import futures
@@ -23,7 +32,7 @@ from concurrent import futures
 from threading import Lock
 
 # Typing
-from typing import Tuple, Callable, Dict, TextIO, List, types
+from typing import Tuple, Dict, TextIO, List, types
 
 
 # Global variables
@@ -41,7 +50,6 @@ SELECTOR_ARGS = None
 PENALIZER = None
 PENALIZER_INIT = None
 PENALIZER_ARGS = None
-LOGFILE = None
 VERBOSITY = 3
 FILELOCK = Lock()
 HOLDMAP = None
@@ -52,7 +60,6 @@ PLOT = None
 
 
 # Parameters
-from ng_trajectory.parameter import *
 P = ParameterList()
 P.createAdd("budget", 100, int, "Budget parameter for the genetic algorithm.", "init (general)")
 P.createAdd("groups", 8, int, "Number of groups to segmentate the track into.", "init (general)")
@@ -84,7 +91,10 @@ P.createAdd("grid", "computed by default", list, "X-size and y-size of the grid 
 # Functions
 ######################
 
-def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: numpy.ndarray, \
+def init(
+        points: numpy.ndarray,
+        group_centers: numpy.ndarray,
+        group_centerline: numpy.ndarray,
         budget: int = 100,
         groups: int = 8,
         workers: int = os.cpu_count(),
@@ -100,7 +110,6 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
         penalizer: types.ModuleType = None,
         penalizer_init: Dict[str, any] = {},
         penalizer_args: Dict[str, any] = {},
-        logfile: TextIO = sys.stdout,
         logging_verbosity: int = 2,
         hold_transform: bool = False,
         plot: bool = False,
@@ -143,7 +152,6 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
                  default None
     penalizer_init -- arguments for the init part of the penalizer function, dict, default {}
     penalizer_args -- arguments for the penalizer function, dict, default {}
-    logfile -- file descriptor for logging, TextIO, default sys.stdout
     logging_verbosity -- index for verbosity of logger, int, default 2
     hold_transform -- whether the transformation should be created only once, bool, default False
     plot -- whether a graphical representation should be created, bool, default False
@@ -155,9 +163,12 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     grid -- size of the grid used for the points discretization, 2-float List, computed by default
     figure -- target figure for plotting, matplotlib.figure.Figure, default None (get current)
     **kwargs -- arguments not caught by previous parts
-    """
-    global OPTIMIZER, CUTS, VALID_POINTS, LOGFILE, VERBOSITY, GRID, PENALTY, FIGURE
-    global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER, PENALIZER_INIT, PENALIZER_ARGS
+    """  # noqa: E501
+    global OPTIMIZER, CUTS, VALID_POINTS, VERBOSITY, GRID
+    global PENALTY, FIGURE
+    global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS
+    global SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER
+    global PENALIZER_INIT, PENALIZER_ARGS
 
     # Local to global variables
     CRITERION = criterion
@@ -171,7 +182,6 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     PENALIZER = penalizer
     PENALIZER_INIT = penalizer_init
     PENALIZER_ARGS = {**penalizer_args, **{"optimization": True}}
-    LOGFILE = logfile
     VERBOSITY = logging_verbosity
     _holdtransform = hold_transform
     PENALTY = penalty
@@ -184,8 +194,31 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
     if CUTS is None or not _holdtransform:
 
         # Transform construction
-        group_centers_ = SELECTOR.select(**{**{"points": group_centerline, "remain": groups}, **SELECTOR_ARGS})
-        CUTS = transform.create(points, group_centerline, group_centers_, endpoint_distance, endpoint_accuracy, line_reduction)
+        group_centers_ = SELECTOR.select(
+            **{
+                **{
+                    "points": group_centerline,
+                    "remain": groups
+                },
+                **SELECTOR_ARGS
+            }
+        )
+        CUTS = transform.create(
+            points,
+            group_centerline,
+            group_centers_,
+            endpoint_distance,
+            endpoint_accuracy,
+            line_reduction
+        )
+
+        SEGMENTATOR.segmentate(
+            points = points,
+            group_centers = group_centers_,
+            **{
+                **SEGMENTATOR_ARGS
+            }
+        )
 
         # Call init part of the penalizer
         # TODO: Check whether this works.
@@ -200,7 +233,13 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
             **{
                 **{
                     key: value for key, value in kwargs.items() if key not in [
-                        "valid_points", "start_points", "map", "map_origin", "map_grid", "map_last", "group_centers"
+                        "valid_points",
+                        "start_points",
+                        "map",
+                        "map_origin",
+                        "map_grid",
+                        "map_last",
+                        "group_centers"
                     ]
                 },
                 **PENALIZER_INIT
@@ -214,27 +253,41 @@ def init(points: numpy.ndarray, group_centers: numpy.ndarray, group_centerline: 
 
                     # New center point
                     ngplot.pointsScatter(
-                        (numpy.divide(cut[1, :] - cut[0, :], 2) + cut[0, :])[:, numpy.newaxis].T,
+                        (
+                            numpy.divide(cut[1, :] - cut[0, :], 2) + cut[0, :]
+                        )[:, numpy.newaxis].T,
                         figure=figure
                     )
 
             if plot_reduced_line:
-                i, i1, i2 = transform.pointsInterpolate(transform.trajectoryReduce(group_centerline, int(len(group_centerline)/line_reduction)), len(group_centerline))
+                i, i1, i2 = transform.pointsInterpolate(
+                    transform.trajectoryReduce(
+                        group_centerline,
+                        int(len(group_centerline) / line_reduction)
+                    ),
+                    len(group_centerline)
+                )
                 ngplot.pointsPlot(numpy.asarray(i), figure=figure)
 
-        print ("Braghin's transformation constructed.")
+        print0("Braghin's transformation constructed.")
 
         if GRID is None:
             if len(grid) == 2:
                 GRID = grid
             else:
                 _GRID = gridCompute(points)
-                GRID = [ _GRID, _GRID ]
+                GRID = [_GRID, _GRID]
 
 
     # Optimizer definition
-    instrum = nevergrad.Instrumentation(nevergrad.var.Array(len(CUTS), 1).bounded(0, 1))
-    OPTIMIZER = nevergrad.optimizers.DoubleFastGADiscreteOnePlusOne(instrumentation = instrum, budget = budget, num_workers = workers)
+    instrum = nevergrad.Instrumentation(
+        nevergrad.var.Array(len(CUTS), 1).bounded(0, 1)
+    )
+    OPTIMIZER = nevergrad.optimizers.DoubleFastGADiscreteOnePlusOne(
+        instrumentation = instrum,
+        budget = budget,
+        num_workers = workers
+    )
 
 
 def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
@@ -242,16 +295,26 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
 
     Returns:
     final -- best value of the criterion, float
-    points -- points in the best solution in real coordinates, nx2 numpy.ndarray
-    tcpoints -- points in the best solution in transformed coordinates, nx2 numpy.ndarray
-    trajectory -- trajectory of the best solution in real coordinates, mx2 numpy.ndarray
+    points -- points in the best solution in real coordinates,
+              nx2 numpy.ndarray
+    tcpoints -- points in the best solution in transformed coordinates,
+              nx2 numpy.ndarray
+    trajectory -- trajectory of the best solution in real coordinates,
+              mx2 numpy.ndarray
     """
-    global OPTIMIZER, CUTS, LOGFILE, FILELOCK, VERBOSITY, INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT, PENALIZER, PENALIZER_ARGS, CRITERION_ARGS
+    global OPTIMIZER, CUTS, FILELOCK, VERBOSITY
+    global INTERPOLATOR, INTERPOLATOR_ARGS, FIGURE, PLOT
+    global PENALIZER, PENALIZER_ARGS, CRITERION_ARGS
 
     overtaking = []
 
-    with futures.ProcessPoolExecutor(max_workers=OPTIMIZER.num_workers) as executor:
-        recommendation = OPTIMIZER.minimize(_opt, executor=executor, batch_mode=False)
+    with futures.ProcessPoolExecutor(
+            max_workers=OPTIMIZER.num_workers) as executor:
+        recommendation = OPTIMIZER.minimize(
+            _opt,
+            executor = executor,
+            batch_mode = False
+        )
 
         if hasattr(CRITERION, "OVERTAKING_POINTS"):
             while CRITERION.OVERTAKING_POINTS.qsize() > 0:
@@ -264,37 +327,62 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     final = _opt(numpy.asarray(recommendation.args[0]))
 
 
-    ## Plot overtaking points
+    # # Plot overtaking points # #
     if len(overtaking) > 0:
         ngplot.pointsScatter(
-            numpy.asarray(overtaking), #numpy.asarray(OVERTAKING_POINTS),
+            numpy.asarray(overtaking),
+            # numpy.asarray(OVERTAKING_POINTS),
             s = 10,
             color = [0.0, 1.0, 0.0, 0.1],
         )
 
 
-    ## Plot invalid points if available
+    # # Plot invalid points if available # #
 
     # Transform points
     points = transform.transform(recommendation.args[0], CUTS)
 
     # Interpolate received points
     # It is expected that they are unique and sorted.
-    _points = INTERPOLATOR.interpolate(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
+    # _points = INTERPOLATOR.interpolate(
+    #     **{
+    #         **{
+    #             "points": numpy.asarray(points)
+    #         },
+    #         **INTERPOLATOR_ARGS
+    #     }
+    # )
 
     # Display invalid points if found
     if PLOT and len(PENALIZER.INVALID_POINTS) > 0:
-        ngplot.pointsScatter(numpy.asarray(PENALIZER.INVALID_POINTS), FIGURE, color="red", marker="x")
+        ngplot.pointsScatter(
+            numpy.asarray(PENALIZER.INVALID_POINTS),
+            FIGURE,
+            color = "red",
+            marker="x"
+        )
 
 
     ##
 
     with FILELOCK:
-        if VERBOSITY > 0:
-            print ("solution:%s" % str(numpy.asarray(points).tolist()), file=LOGFILE)
-            print ("final:%f" % final, file=LOGFILE)
+        log (
+            "solution:%s"
+            % str(numpy.asarray(points).tolist()),
+        )
+        log ("final:%f" % final)
 
-    return final, numpy.asarray(points), numpy.asarray(recommendation.args[0]), INTERPOLATOR.interpolate(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
+    return (
+        final,
+        numpy.asarray(points),
+        numpy.asarray(recommendation.args[0]),
+        INTERPOLATOR.interpolate(
+            **{
+                **{"points": numpy.asarray(points)},
+                **INTERPOLATOR_ARGS
+            }
+        )
+    )
 
 
 def _opt(points: numpy.ndarray) -> float:
@@ -308,44 +396,64 @@ def _opt(points: numpy.ndarray) -> float:
     Returns:
     _c -- criterion value, float
 
-    Note: It receives selected points from the groups (see callback_centerline).
+    Note: It receives selected points from the groups;
+          see callback_centerline.
 
     Note: The result of this function is 'criterion' when possible, otherwise
     number of invalid points (multiplied by some value) is returned.
 
     Note: This function is called after all necessary data is received.
     """
-    global VALID_POINTS, CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS, PENALIZER, PENALIZER_ARGS
-    global CUTS, LOGFILE, FILELOCK, VERBOSITY, GRID, PENALTY
+    global VALID_POINTS, CRITERION, CRITERION_ARGS
+    global INTERPOLATOR, INTERPOLATOR_ARGS, PENALIZER, PENALIZER_ARGS
+    global CUTS, FILELOCK, VERBOSITY, GRID, PENALTY
 
     # Transform points
     points = transform.transform(points, CUTS)
 
     # Interpolate received points
     # It is expected that they are unique and sorted.
-    _points = INTERPOLATOR.interpolate(**{**{"points": numpy.asarray(points)}, **INTERPOLATOR_ARGS})
+    _points = INTERPOLATOR.interpolate(
+        **{
+            **{
+                "points": numpy.asarray(points)
+            },
+            **INTERPOLATOR_ARGS
+        }
+    )
 
     # Check if all interpolated points are valid and compute penalty
     # Note: This is required for low number of groups.
-    penalty = PENALIZER.penalize(**{**{"points": _points, "valid_points": VALID_POINTS, "grid": GRID, "penalty": PENALTY, "candidate": points}, **PENALIZER_ARGS})
+    penalty = PENALIZER.penalize(
+        **{
+            **{
+                "points": _points,
+                "valid_points": VALID_POINTS,
+                "grid": GRID,
+                "penalty": PENALTY,
+                "candidate": points
+            },
+            **PENALIZER_ARGS}
+    )
 
-    if ( penalty != 0 ):
+    if penalty != 0:
         with FILELOCK:
-            if VERBOSITY > 2:
-                print ("pointsA:%s" % str(points), file=LOGFILE)
-                print ("pointsT:%s" % str(_points.tolist()), file=LOGFILE)
-            if VERBOSITY > 1:
-                print ("penalty:%f" % penalty, file=LOGFILE)
-            LOGFILE.flush()
+            logvvv ("pointsA:%s" % str(points), level = VERBOSITY)
+            logvvv ("pointsT:%s" % str(_points.tolist()), level = VERBOSITY)
+            logvv ("penalty:%f" % penalty, level = VERBOSITY)
+            logfileFlush()
         return penalty
 
-    _c = CRITERION.compute(**{**{'points': _points, 'penalty': PENALTY}, **CRITERION_ARGS})
+    _c = CRITERION.compute(
+        **{
+            **{'points': _points, 'penalty': PENALTY},
+            **CRITERION_ARGS
+        }
+    )
     with FILELOCK:
-        if VERBOSITY > 2:
-            print ("pointsA:%s" % str(points), file=LOGFILE)
-            print ("pointsT:%s" % str(_points.tolist()), file=LOGFILE)
-        if VERBOSITY > 1:
-            print ("correct:%f" % _c, file=LOGFILE)
-        LOGFILE.flush()
+        logvvv ("pointsA:%s" % str(points), level = VERBOSITY)
+        logvvv ("pointsT:%s" % str(_points.tolist()), level = VERBOSITY)
+        logvv ("correct:%f" % _c, level = VERBOSITY)
+        logfileFlush()
 
     return _c

@@ -2,6 +2,7 @@
 # _version.py
 """Script for managing versions."""
 
+
 class Version():
     """Simple class for parsing versions and creating a Py-compatible format.
 
@@ -12,7 +13,11 @@ class Version():
     """
 
     def __init__(self, git_version):
-        version = (git_version if "-" not in git_version else git_version[:git_version.index("-")]).split(".")
+        """Initialize the Version object."""
+        version = (
+            git_version if "-" not in git_version
+            else git_version[:git_version.index("-")]
+        ).split(".")
 
         self.MAJOR = version[0]
         self.MINOR = version[1]
@@ -20,7 +25,7 @@ class Version():
 
         # Dirty
         if "-" in git_version:
-            git_version = git_version[git_version.index("-")+1:]
+            git_version = git_version[git_version.index("-") + 1:]
 
             self.DEV = git_version[-5:] == "dirty"
 
@@ -33,14 +38,21 @@ class Version():
         self.POSTPATCH = None
         if len(git_version) > 0 and "-" in git_version:
             self.POSTPATCH = git_version[:git_version.index("-")]
-            git_version = git_version[git_version.index("-")+1:]
+            git_version = git_version[git_version.index("-") + 1:]
 
         self.OTHER = git_version
 
 
     def __str__(self):
-        return "%s.%s" % (self.MAJOR, self.MINOR) + (".%s" % self.PATCH if self.PATCH else "") + (".post%s" % self.POSTPATCH if self.POSTPATCH else "") + (".dev" if self.DEV else "")
+        """Convert the Version into a string."""
+        return (
+            "%s.%s" % (self.MAJOR, self.MINOR)
+            + (".%s" % self.PATCH if self.PATCH else "")
+            + (".post%s" % self.POSTPATCH if self.POSTPATCH else "")
+            + (".dev" if self.DEV else "")
+        )
 
 
     def __repr__(self):
+        """Convert the Version into a repr string."""
         return self.__str__() + " (" + self.OTHER + ")"

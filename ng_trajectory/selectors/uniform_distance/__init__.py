@@ -4,4 +4,4 @@
 This selector uniformly samples the input path so that
 the selected points are equidistantly spaced.
 """
-from .main import init, select
+from .main import init, select  # noqa: F401

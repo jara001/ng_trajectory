@@ -1,6 +1,9 @@
 #!/usr/bin/env python3.6
 # main.py
 """Compute criterion using the length of the path.
+
+The length is computed as a sum of all distances between
+two subsequent points.
 """
 ######################
 # Imports & Globals
@@ -38,8 +41,9 @@ def compute(points: numpy.ndarray, **overflown) -> float:
                             numpy.roll(points[:, :2], 1, axis=0),
                             points[:, :2]
                         ),
-                    2),
-                axis=1)
+                        2
+                    ), axis=1
+                )
             )
         )
     )

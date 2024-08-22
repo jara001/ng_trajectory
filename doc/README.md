@@ -77,6 +77,8 @@ For the optimization itself, Nevergrad is used.
 ```html
 Init parameters:
 fixed_segments (list) = [] [Points to be used instead their corresponding segment.]
+_experimental_mm_max (int) = -1 [(Experimental) Limit MM to cover only first n segments.]
+border_allow_no_filter (bool) = False [Allow to use unfiltered border data when filter removes all of them.]
 
 Init (matryoshka) parameters:
 hold_matryoshka (bool) = False [Whether the transformation should be created only once.]
@@ -166,6 +168,7 @@ _ng_trajectory.criterions.*_
 - _jazar_model_  Model simulation according to the simplified model from Jazar [1].
 - _length_       Length criterion for fitness evaluation.
 - _profile_      Profile criterion for fitness evaluation.
+- _manual_       Manual criterion for fitness evaluation.
 
 
 #### Curvature
@@ -249,6 +252,7 @@ Note: The parameters shown below are not synced with the algorithm itself. There
 ```html
 Parameters:
 overlap (int) = 0 [Size of the trajectory overlap. 0 disables this.]
+friction_map_yaml (str) = None [(Requires pyyaml) Name of the yaml configuration of the original map that was used to create '.npy' files. Map file specified in the configuration has to exist.]
 
 Init parameters:
 _mu (float) = 0.2 [Friction coeficient]
@@ -266,7 +270,14 @@ _lr (float) = 0.139 [Distance from center of mass to the rear axle [m]]
 reference (str) = None [Name of the file to load (x, y, t) reference path that cannot be close.]
 reference_dist (float) = 1.0 [Minimum allowed distance from the reference at given time [m].]
 reference_rotate (int) = 0 [Number of points to rotate the reference trajectory.]
+reference_laptime (float) = 0 [Lap time of the given reference. 0 = estimated from data]
 save_solution_csv (str) = $ [When non-empty, save final trajectory to this file as CSV. Use '$' to use log name instead.]
+favor_overtaking (float) = 0 [Penalty value to add to the lap time when overtaking does not occur.]
+friction_map (str) = None [Name of the file to load (x, y, mu*100) with friction map.]
+friction_map_inverse (bool) = False [When True, invert the values in the friction map.]
+friction_map_expand (bool) = False [When True, values from the friction map are expanded over the whole map using flood fill.]
+friction_map_plot (bool) = False [When True, friction map is plotted.]
+friction_map_save (bool) = False [When True, friction map is saved alongside the log files.]
 
 Init (viz.) parameters:
 plot (bool) = False [Whether a graphical representation should be created.]
@@ -280,6 +291,16 @@ plot_overtaking (bool) = True [Whether to plot places where an overtaking occurs
 ```
 
 
+#### Manual
+_criterions.manual_
+
+Manual criterion for fitness evaluation.
+
+Upon calling 'compute()' the criterion prints out current candidate and waits for the user to specify the fitness value.
+
+Note: This is usable only when a single worker is used.
+
+
 ### Interpolators
 
 Interpolators are used for interpolating the waypoints / path subsets in order to get full (continuous) path.
@@ -287,7 +308,22 @@ Interpolators are used for interpolating the waypoints / path subsets in order t
 
 _ng_trajectory.interpolators.*_
 
+- _none_          Dummy interpolator.
 - _cubic_spline_  Cubic spline interpolator.
+
+
+#### None
+_interpolators.none_
+
+Dummy interpolator.
+
+It does not interpolate, just forwards the points.
+
+
+```html
+Init parameters:
+closed_loop (bool) = True [When set, interpolation creates a closed loop.]
+```
 
 
 #### Cubic Spline
@@ -492,6 +528,7 @@ Following algorithms are used:
 ```html
 Parameters:
 overlap (int) = 0 [Size of the trajectory overlap. 0 disables this.]
+friction_map_yaml (str) = None [(Requires pyyaml) Name of the yaml configuration of the original map that was used to create '.npy' files. Map file specified in the configuration has to exist.]
 
 Init parameters:
 rotate (float) = 0 [Parameter for rotating the input path. 0 is not rotated. <0, 1)]
@@ -510,7 +547,14 @@ _lr (float) = 0.139 [Distance from center of mass to the rear axle [m]]
 reference (str) = None [Name of the file to load (x, y, t) reference path that cannot be close.]
 reference_dist (float) = 1.0 [Minimum allowed distance from the reference at given time [m].]
 reference_rotate (int) = 0 [Number of points to rotate the reference trajectory.]
+reference_laptime (float) = 0 [Lap time of the given reference. 0 = estimated from data]
 save_solution_csv (str) = $ [When non-empty, save final trajectory to this file as CSV. Use '$' to use log name instead.]
+favor_overtaking (float) = 0 [Penalty value to add to the lap time when overtaking does not occur.]
+friction_map (str) = None [Name of the file to load (x, y, mu*100) with friction map.]
+friction_map_inverse (bool) = False [When True, invert the values in the friction map.]
+friction_map_expand (bool) = False [When True, values from the friction map are expanded over the whole map using flood fill.]
+friction_map_plot (bool) = False [When True, friction map is plotted.]
+friction_map_save (bool) = False [When True, friction map is saved alongside the log files.]
 sampling_distance (float) = 1.0 [[m] Distance of super-sampling before the interpolation, skipped when 0.]
 distance (float) = 0 [[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.]
 fixed_points (list) = [] [Points to be used in the selection upon calling 'select'.]
@@ -575,6 +619,7 @@ _ng_trajectory.penalizers.*_
 - _curvature_    Curvature penalizer.
 - _centerline_   Centerline penalizer.
 - _count_        Count penalizer.
+- _none_         Dummy penalizer.
 - _borderlines_  Borderlines penalizer.
 
 
@@ -654,12 +699,20 @@ Count penalizer.
 This penalizer simply counts all invalid points (outside of the valid area) and returns their count.
 
 
+#### None
+_penalizers.none_
+
+Dummy penalizer.
+
+This effectively disables the penalizer, as it passes any candidate.
+
+
 #### Borderlines
 _penalizers.borderlines_
 
 Borderlines penalizer.
 
-Borderlines are sets of points on the borders between to adjacent segments. We have borderlines for each segment and for each neighbour
+Borderlines are sets of points on the borders between two adjacent segments. We have borderlines for each segment and for each neighbour
 (usually resulting into n * 2 arrays).
 
 This penalizer detects all misplaced points. Each point is associated with a borderline based upon its location -- e.g., points in between selected points of segments #5 and #6 belong to borderline 5-6.
@@ -715,68 +768,65 @@ silent_stub (bool) = False [When set, the application does not report that an al
 
 ## Plot functions for ng_trajectory
 
-From the user side (i.e., configuration file), only dynamic plotting is available.
-However, all plotting (package-wise) should be controlled by variable `plot` that
-is set to False by default.
+From the user side (i.e., configuration file), only dynamic plotting is available. However, all plotting (package-wise) should be controlled by variable `plot` that is set to False by default.
 
-Dynamic plotting is defined using a custom key in the JSON. Following example
-resembles what is a "standard" and most used configuration:
+Dynamic plotting is defined using a custom key in the JSON. Following example resembles what is a "standard" and most used configuration:
 ```json
-"plot": true,
-"plot_args": [
-    {
-        "_figure": {
-            "function": "axis",
-            "_args": [ "equal" ]
-        },
-        "trackPlot": [ "@track" ]
-    },
-    {
-        "pointsPlot": {
-            "_args": [ "@result" ]
-        },
-        "pointsScatter": {
-            "_args": [ "@rcandidate" ]
-        }
-    }
-]
+{
+	"plot": true,
+	"plot_args": [
+		{
+			"_figure": {
+				"function": "axis",
+				"_args": [ "equal" ]
+			},
+			"trackPlot": [ "@track" ]
+		},
+		{
+			"pointsPlot": {
+				"_args": [ "@result" ]
+			},
+			"pointsScatter": {
+				"_args": [ "@rcandidate" ]
+			}
+		}
+	]
+}
 ```
-Note: This creates a figure with equal axis, underlying track, optimized control
-points of the trajectory and their interpolation.
 
-The list in `plot_args` contains two dictionaries. The first one is executed
-before the optimization (and even before initialization of algorithms), whereas
-the second one is executed after optimization finishes.
+Note: This creates a figure with equal axis, underlying track, optimized control points of the trajectory and their interpolation.
+
+The list in `plot_args` contains two dictionaries. The first one is executed before the optimization (and even before initialization of algorithms), whereas the second one is executed after optimization finishes.
 
 Commands in the `plot_args` are executed in order, key-wise. Basic syntax is
 ```json
-"func": [ "arg1", "arg2" ]
+{
+	"func": [ "arg1", "arg2" ]
+}
 ```
 
 which sends all arguments to the function, or
 ```json
-"func": {
-    "_args": [ "arg1", "arg2" ],
-    "kw_arg": 4
+{
+	"func": {
+		"_args": [ "arg1", "arg2" ],
+		"kw_arg": 4
+	}
 }
 ```
 
-which calls `func` with the arguments stored in `_args`, appended with other
-arguments as kwargs.
+which calls `func` with the arguments stored in `_args`, appended with other arguments as kwargs.
 
 Note: Keys starting with `_` are treated differently; and are removed from kwargs.
 
-Since it is not possible to have a dictionary with repeating keys, you can use
-a meta character `-`. Dash, and everything after it is discarded during dynamic
-plotting.
+Since it is not possible to have a dictionary with repeating keys, you can use a meta character `-`. Dash, and everything after it is discarded during dynamic plotting.
 
-To pass a variable to the function, write its name prefixed with `@`. In case
-that the variable is not available, an exception is raised.
+To pass a variable to the function, write its name prefixed with `@`. In case that the variable is not available, an exception is raised.
 
 
 ### Available functions
-Following functions are available for plotting, however only the first three
-are usually used:
+
+Following functions are available for plotting, however only the first three are usually used:
 
 - trackPlot
 - pointsScatter
@@ -791,8 +841,8 @@ are usually used:
 
 
 ### Available variables
-Following variables are available for plotting (by setting the value to `@` + name
-of the variable):
+
+Following variables are available for plotting (by setting the value to `@` + name of the variable):
 
 - track -- All valid points of the track.
 - fitness -- Fitness value of the best solution.
@@ -800,18 +850,20 @@ of the variable):
 - tcandidate -- Control points of the best solution in Matryoshka space.
 - result -- Optimized trajectory (interpolation of rcandidate).
 - figure -- Currently used figure for plotting.
-- + any variable defined in the current loop from the configuration file.
+- \+ any variable defined in the current loop from the configuration file.
 
 
 ### Matplotlib wrapper
+
 In addition, it is possible to call literally any function related to `pyplot` or
-`figure` from the matplotlib. To do this, call function `_pyplot`/`_figure`
-with argument `function` with the name of the required function.
+`figure` from the matplotlib. To do this, call function `_pyplot`/`_figure` with argument `function` with the name of the required function.
 
 For example, to make the axis equal, one can use this:
 ```json
-"_figure": {
-    "function": "axis",
-    "_args": [ "equal" ]
+{
+	"_figure": {
+		"function": "axis",
+		"_args": [ "equal" ]
+	}
 }
 ```

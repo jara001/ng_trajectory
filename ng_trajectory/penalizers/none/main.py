@@ -1,16 +1,14 @@
 #!/usr/bin/env python3.6
 # main.py
-"""Penalize the incorrect solution by number of incorrectly placed points.
+"""Dummy penalizer.
 
-This counts the number of points placed outside of the valid area.
+Passes any candidate.
 """
 ######################
 # Imports & Globals
 ######################
 
 import numpy
-
-from ng_trajectory.penalizers.utils import eInvalidPoints
 
 
 # Global variables
@@ -50,14 +48,6 @@ def penalize(
     """
     global INVALID_POINTS
 
-    invalid = 0
     INVALID_POINTS.clear()
 
-    for _, _p in eInvalidPoints(points):
-        invalid += 1
-
-        # Store invalid point
-        INVALID_POINTS.append(_p)
-
-
-    return invalid * penalty
+    return 0.0

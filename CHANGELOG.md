@@ -4,11 +4,165 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.14.0 - 2024-08-22
+### Added
+- Criterions
+    - [**NEW**] _Manual_
+        - Criterion 'manual' requests user to specify fitness value for each candidate.
+- Interpolators
+    - [**NEW**] _None_
+        - Dummy interpolator that forwards given points.
+- Penalizers
+    - [**NEW**] _None_
+        - Dummy penalizer that allows any candidate.
+- Segmentators
+    - Function `filterPoints` to filter points outside of the map.
+- 'ng_generate_data': Save image of generated friction map when verbosity is higher.
+- 'ng_generate_data': Arguments `--prefix` and `--suffix` to change the output files' filenames.
+
+### Changed
+- Use sequential executor when only one worker is requested.
+
+### Fixed
+- Criterions
+    - _Profile_
+        - Filter out points that are outside of the map when building the friction map.
+
+## 1.13.4 - 2024-04-19
+### Changed
+- Interpolators
+    - `trajectoryClosestIndex()` now returns only positive indices.
+
+## 1.13.3 - 2024-03-26
+### Added
+- Optimizers
+    - _Matryoshka_
+        - Add argument 'allow_no_filter' to 'groupsBorderBeautify()' to use unfitered border data when filtration removes all of them.
+        - Add parameter 'border_allow_no_filter' to set 'allow_no_filter' from the configuration.
+
+### Changed
+- Criterions
+    - _Profile_
+        - Reference trajectory can have more fields, but only first three (x, y, k) are used.
+
+### Fixed
+- Criterions
+    - _Profile_
+        - Initial velocity should not be changed when computing the profile in the not closed paths.
+- Optimizers
+    - _Braghin_
+        - Run the segmentator before creating the transformation.
+
+## 1.13.2 - 2024-03-13
+### Changed
+- Selectors
+    - _Uniform distance_
+        - `trajectoryResample()`: Increase the number of points when concatenating parts of the trajectory.
+
+### Fixed
+- Interpolators
+    - Resolve zero divison and index overflow problems in `trajectoryClosestIndex()`.
+
+## 1.13.1 - 2024-03-04
+### Fixed
+- Install only `pandas<2.1` as newer ones are not compatible with older `numpy`.
+
+## 1.13.0 - 2024-03-04
+### Added
+- Criterions
+    - _Profile_
+        - Parameter 'friction_map_yaml' to specify the configuration of the original map.
+        - When 'friction_map_yaml' is passed, a friction map is also saved in the ROS-compatible (map_server) format.
+        - Parameter 'friction_map_plot' to plot the friction map (currently, both this and 'friction_map_save' have to be set).
+- Segmentators
+    - Functions `getMapOrigin` and `getMapGrid` to obtain parameters of the current internal map.
+- 'ng_generate_data': When using verbose logging, colors identified as wall/unkn/free and shown.
+- 'ng_generate_data': Parameter '--clean' that throws away track points that are outside of the track.
+- 'ng_plot': Parameters '--vmin' and '--vmax' to set the bounds of the velocity colormap.
+- 'ng_plot': Allow reversed colormaps.
+- 'ng_plot': Plotting of the friction map when 'friction_map_plot' is True.
+
+### Changed
+- Criterions
+    - _Profile_
+        - Saved friction map plot has fixed colormap range.
+- Optimizers
+    - "solution" and "final" values are logged with lower verbosity level.
+
+### Fixed
+- Criterions
+    - _Profile_
+        - Obtain friction from the map using correct index.
+- 'ng_generate_data': Copy the map to avoid read-only errors.
+- 'ng_plot': Generate segmentator map to support friction map for the profiler.
+
+## 1.12.1 - 2023-11-28
+### Added
+- Criterions
+    - _Profile_
+        - Parameter 'friction_map_expand' to fill the map with given friction map.
+        - Parameter 'friction_map_plot' to plot the used friction map.
+- File `.flake8` that describes flake8 error ignored in the repository.
+
+## 1.12.0 - 2023-11-27
+### Added
+- Global logging utility to maintain printing/logging from one place.
+- Git changes are stashed before building a wheel to avoid packing untested content.
+- Display progress bar when running the optimization while logging into a file.
+
+### Changed
+- Tweaked logging verbosity at various places.
+- 'ng_generate_data': Use inflated map for the creation of friction map.
+
+### Fixed
+- Plot documentation should display properly now.
+- Some lines that should be printed out only once are no longer repeated in the logfile.
+
+## 1.11.0 - 2023-11-21
+### Added
+- Criterions
+    - _Profile_
+        - Parameter 'friction_map' to load a friction map from '.npy' file.
+        - Use friction for computing maximum velocity from the friction map if available.
+        - Parameter 'friction_map_inverse' to invert the values in the friction map.
+        - Support for zero friction (impassable area).
+        - CSV file contains progress along the centerline [m].
+- Segmentators
+    - Function `getMap` to obtain current internal map used by the segmentators.
+- 'ng_generate_data'
+    - Parameter `--friction-map` to create a friction map from an image.
+    - Parameter `--fonly/--friction-map-only` to skip generating map data and generate only friction map data.
+    - Parameter `--friction-map-inverse` to inverse the colors in the friction map image.
+
+### Changed
+- Criterions
+    - _Profile_
+        - Time difference between points is constrained to 10s.
+        - Generated CSV file holds lap time and path length with the first trajectory point.
+
+### Fixed
+- Criterions
+    - _Profile_
+        - Avoid crashing when logfile is not given.
+- Segmentators
+    - Catch and handle OverflowError when identifying invalid points.
+
+## 1.10.0 - 2023-11-15
+### Changed
+- Update all files to mitigate majority of the flake8 errors.
+
+### Fixed
+- Plot documentation is now properly formatted.
+
+## 1.9.5 - 2023-11-14
 ### Added
 - Criterions
     - _Profile_
         - Parameter `favor_overtaking` that is added as a penalty to the lap time when overtaking does not occur.
         - Parameter `reference_laptime` to set the lap time of the reference instead of estimating it.
+- Optimizers
+    - _Matryoshka_
+        - Experimental parameter '_experimental_mm_max' that limits mapping to only first 'n' segments.
 - Segmentators
     - Function `pointsToWorld` to convert coordinates of multiple cells at once.
 - Expose all parameters in plotter for `figureSave`, `trackPlot`, `bordersPlot` and `indicesPlot`.
@@ -24,6 +178,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Properly detect overtaking points when crossing "0" progress.
         - Return correct lap time on non-closed path.
         - Reference is properly rotated, so the virtual car does not slow down at wrong places.
+        - Properly compute delta in the saved trajectory.
+        - Properly compute heading in the saved trajectory.
 - Bound version of `bayesian-optimization<=1.4.0` to resolve import errors.
 
 ## 1.9.4 - 2023-06-29

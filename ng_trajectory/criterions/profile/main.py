@@ -1,23 +1,49 @@
 #!/usr/bin/env python3.6
 # main.py
 """Compute criterion using speed profile and lap time.
+
+[1] N. R. Kapania, J. Subosits, and J. Christian Gerdes, ‘A Sequential
+Two-Step Algorithm for Fast Generation of Vehicle Racing Trajectories’,
+Journal of Dynamic Systems, Measurement, and Control, vol. 138, no. 9,
+p. 091005, Sep. 2016, doi: 10.1115/1.4033311.
 """
 ######################
 # Imports & Globals
 ######################
 
-import sys, numpy
+import sys
+import os
+import numpy
 
 from . import profiler
 
-from ng_trajectory.interpolators.utils import pointDistance, trajectoryClosestIndex
-from ng_trajectory.segmentators.utils import pointToMap, validCheck, pointInBounds
+from ng_trajectory.interpolators.utils import (
+    pointDistance,
+    trajectoryClosestIndex
+)
+
+from ng_trajectory.segmentators.utils import (
+    filterPoints,
+    pointInBounds,
+    pointsToMap,
+    pointsToWorld,
+    getMap, getMapOrigin, getMapGrid,
+    validCheck
+)
+
+from ng_trajectory.log import (
+    logfileName,
+    log, logvv,
+    print0
+)
 
 import ng_trajectory.plot as ngplot
 
+from ng_trajectory.parameter import ParameterList
+
 from multiprocessing import Queue
 
-from itertools import chain # Join generators
+from itertools import chain  # Join generators
 
 from scipy import spatial
 import math
@@ -32,7 +58,6 @@ MAP_INSIDE = None
 MAP_OUTSIDE = None
 
 # Parameters
-from ng_trajectory.parameter import *
 P = ParameterList()
 P.createAdd("overlap", 0, int, "Size of the trajectory overlap. 0 disables this.", "")
 P.createAdd("_mu", 0.2, float, "Friction coeficient", "init")
@@ -61,14 +86,255 @@ P.createAdd("plot_timelines_size", 1, float, "Size of the points of the timeline
 P.createAdd("plot_timelines_width", 0.6, float, "Linewidth of the timelines. 0 = disabled", "init (viz.)")
 P.createAdd("plot_overtaking", True, bool, "Whether to plot places where an overtaking occurs. (Has to be supported by optimizer.)", "init (viz.)")
 P.createAdd("favor_overtaking", 0, float, "Penalty value to add to the lap time when overtaking does not occur.", "init")
+P.createAdd("friction_map", None, str, "Name of the file to load (x, y, mu*100) with friction map.", "init")
+P.createAdd("friction_map_inverse", False, bool, "When True, invert the values in the friction map.", "init")
+P.createAdd("friction_map_expand", False, bool, "When True, values from the friction map are expanded over the whole map using flood fill.", "init")
+P.createAdd("friction_map_plot", False, bool, "When True, friction map is plotted.", "init")
+P.createAdd("friction_map_save", False, bool, "When True, friction map is saved alongside the log files.", "init")
+P.createAdd("friction_map_yaml", None, str, "(Requires pyyaml) Name of the yaml configuration of the original map that was used to create '.npy' files. Map file specified in the configuration has to exist.")
 P.createAdd("car_width", 0.3, float, "Width of the car when using rectangle vehicle shape.", "")
 P.createAdd("car_length", 0.55, float, "Length of the car when using rectangle vehicle shape.", "")
 P.createAdd("car_shape", "rectangle", str, "Vehicle shape to use when calculating collisions during overtaking. ['circle', 'rectangle']", "")
 P.createAdd("ego_dist_overtake", 0.1, float, "How much in front of opponent ego car needs to be to have a right of way.", "")
 P.createAdd("use_safe_zone_seconds", 10.0, float, "How many seconds after crash EGO cannot enter safety zone.", "")
 
-# Temporary constants - if it works we can add them later to the config file
 
+######################
+# Utilities
+######################
+
+def fmap_expand(friction_map, known_values):
+    """Expand the known values over the whole friction map.
+
+    Arguments:
+    friction_map -- map of the environment with friction, numpy.ndarray
+    known_values -- known values of the friction, used for expansion,
+                    nx3 numpy.ndarray
+
+    Returns:
+    updated friction_map
+    """
+    cxy = pointsToMap(known_values[:, :2])
+    help_map = numpy.ones_like(friction_map, dtype = bool)
+
+    help_map[cxy[:, 0], cxy[:, 1]] = False
+
+
+    queue = cxy.tolist()
+
+    while len(queue) > 0:
+        cell_x, cell_y = queue.pop(0)
+
+        for _a, _b in [(-1, -1), (-1, 0), (-1, 1),
+                       (+0, -1),          (+0, 1),   # noqa: E241
+                       (+1, -1), (+1, 0), (+1, 1)]:
+
+            # Try does catch larger values but not negative
+            if cell_x + _a < 0 or cell_y + _b < 0:
+                continue
+
+            try:
+                _cell = help_map[cell_x + _a, cell_y + _b]
+                _cx = cell_x + _a
+                _cy = cell_y + _b
+            except IndexError:
+                continue
+
+            # Expand the value if not yet done
+            if _cell:
+                friction_map[_cx, _cy] = friction_map[cell_x, cell_y]
+                help_map[_cx, _cy] = False
+
+                queue.append((_cx, _cy))
+
+    return friction_map
+
+
+def saveMap(filename: str, map_data: numpy.ndarray):
+    """Save the map into a file as npy.
+
+    Arguments:
+    filename -- name of the file to save map into (no extension), str
+    map_data -- map to save, nx(>=2) numpy.ndarray
+
+    Note: We expect that the map is a derivation of segmentator internal map,
+          and their parameters are the same.
+
+    Note: Requires pyyaml.
+
+    Raises:
+    ImportError -- when pyyaml is not available
+
+    Source:
+    https://stackoverflow.com/questions/49720605/pixel-coordinates-vs-drawing-coordinates
+    """
+    param_name = "friction_map_yaml"
+    yaml_filename = P.getValue(param_name)
+
+    def perr(*args, **kwargs):
+        """Print an error message."""
+        print0 (
+            "profile: Unable to save friction_map:",
+            *args, file = sys.stderr, **kwargs
+        )
+
+    # Try to import pyyaml
+    try:
+        from yaml import safe_load, dump
+    except ImportError as e:
+        perr (str(e))
+        return
+
+    # Check that we have the configuration file
+    if yaml_filename is None:
+        perr ("parameter '%s' is empty" % param_name)
+        return
+
+    if not os.access(yaml_filename, os.R_OK):
+        perr (
+            "%s '%s'" % (
+                "permission denied"
+                if os.access(yaml_filename, os.F_OK)
+                else "no such file",
+                filename
+            )
+        )
+        return
+
+    # Open the configuration
+    try:
+        with open(yaml_filename, "r") as f:
+            conf = safe_load(f)
+            logvv (
+                "Loaded map configuration '%s': %s"
+                % (yaml_filename, conf)
+            )
+    except Exception as e:
+        perr ("configuration loading: %s" % str(e))
+        return
+
+
+    # Check fields in the configuration
+    REQUIRED = {"image": str, "origin": list}
+
+    for field, field_type in REQUIRED.items():
+        if field not in conf:
+            perr ("field '%s' is not in the configuration" % field)
+            return
+
+        if not isinstance(conf[field], field_type):
+            perr (
+                "field '%s' is type %s but should be %s"
+                % (field, type(conf[field]), field_type)
+            )
+            return
+
+
+    # Check that image exists
+    if not os.access(conf["image"], os.R_OK):
+        perr (
+            "%s '%s'" % (
+                "permission denied"
+                if os.access(conf["image"], os.F_OK)
+                else "no such file",
+                conf["image"]
+            )
+        )
+        return
+
+
+    # # Process the map # #
+    from PIL import Image
+
+    # Load the original image in 'xy' format
+    """
+               X
+        +------------>
+        |
+        |  0,0   1,0
+      Y |
+        |  0,1   1,1
+        |
+        v
+    """
+    im = Image.open(conf["image"])
+
+    # Convert it into 'yx' numpy ndarray
+    """
+               Y
+        +------------>
+        |
+        |  0,0   0,1
+      X |
+        |  1,0   1,1
+        |
+        v
+    """
+    nd = numpy.array(im)
+    # Clear the map -- we just need the size.
+    # Which is transposed now; im.size = nd.shape.T
+    nd[:] = 0
+    height = nd.shape[0]
+
+
+    # Compute origin difference
+    """
+    The real map has origin in the left bottom corner.
+    In addition, as we shrink the map (data) during creation,
+    we have no idea, where is the real origin.
+
+    That information is extracted from the yaml file, so we
+    just have to compute the translation.
+
+        ^           ^
+     Y  |           |
+     (  |  0,4      |  0,1   1,1
+     o  |         Y |
+     r  |  0,3      |  0,0   1,0
+     i  |           |
+     g  |  0,2      +----------->
+     i  |                 X
+     n  |  0,1   1,1
+     a  |
+     l  |  0,0   1,0   2,0   3,0
+     )  |
+        +----------------------->
+               X(original)
+    """
+    trans = ((getMapOrigin() - conf["origin"][:2]) / getMapGrid()).astype(int)
+
+
+    # Color the map; use inverted colors to represent the friction
+    for (cx, cy), value in numpy.ndenumerate(map_data):
+        # Shift the coordinates
+        cxo, cyo = [cx, cy] + trans
+
+        # Now we perform multiple steps at once to properly create the map;
+        #   - to workaround 'xy' -> 'yx' we reverse the coordinates
+        #     (x, y) = (y, x)
+        #   - to get around the origin placement, we say that
+        #     (y, x) = (0, 0) = (height, 0)
+        nd[height - cyo, cxo] = 255 - value
+
+
+    # Save the image
+    try:
+        Image.fromarray(nd).save(filename + ".pgm")
+    except Exception as e:
+        perr (str(e))
+        return
+
+    # Save the YAML
+    conf["image"] = filename + ".pgm"
+    conf["negate"] = 1
+    conf["mode"] = "raw"
+
+    try:
+        with open(filename + ".yaml", "w") as f:
+            dump(conf, f)
+    except Exception as e:
+        perr (str(e))
+        return
 
 
 ######################
@@ -171,27 +437,37 @@ def init(**kwargs) -> None:
 
     # Recreating the Queue here makes the parent process use
     # different Queue than the ProcessPool.
-    #OVERTAKING_POINTS = Queue()
+    # OVERTAKING_POINTS = Queue()
 
     if P.getValue("save_solution_csv") == "":
         P.update("save_solution_csv", None)
     elif P.getValue("save_solution_csv") == "$":
-        P.update("save_solution_csv", kwargs.get("logfile").name + ".csv")
+        P.update(
+            "save_solution_csv",
+            logfileName() + ".csv"
+        )
 
     LOGFILE_NAME = kwargs.get("logfile").name
 
     if P.getValue("reference") is not None:
-        REFERENCE = numpy.load(P.getValue("reference"))
-        #REFERENCE = numpy.hstack((numpy.roll(REFERENCE[:, :2], -P.getValue("reference_rotate"), axis=0), REFERENCE[:, 2:]))
+        REFERENCE = numpy.load(P.getValue("reference"))[:, :3]
+        # REFERENCE = numpy.hstack((numpy.roll(REFERENCE[:, :2], -P.getValue("reference_rotate"), axis=0), REFERENCE[:, 2:]))
         # TODO: Lap time should be given, not estimated like this.
         lap_time = P.getValue("reference_laptime")
 
         if lap_time == 0.0:
             # Lap time estimate
-            lap_time = REFERENCE[-1, 2] + numpy.mean([REFERENCE[-1, 2] - REFERENCE[-2, 2], REFERENCE[1, 2] - REFERENCE[0, 2]])
+            lap_time = REFERENCE[-1, 2] + numpy.mean([
+                REFERENCE[-1, 2] - REFERENCE[-2, 2],
+                REFERENCE[1, 2] - REFERENCE[0, 2]
+            ])
 
         # roll trajectory and correct time stamps
-        REFERENCE = numpy.roll(REFERENCE, - P.getValue("reference_rotate"), axis=0)
+        REFERENCE = numpy.roll(
+            REFERENCE,
+            -P.getValue("reference_rotate"),
+            axis = 0
+        )
         REFERENCE[:, 2] = REFERENCE[:, 2] - REFERENCE[0, 2]
         REFERENCE[REFERENCE[:, 2] < 0, 2] += lap_time
 
@@ -243,18 +519,119 @@ def init(**kwargs) -> None:
         # inflate outer wall
         MAP_OUTSIDE = 100 - morphology.grey_dilation(100 - MAP_OUTSIDE, footprint=mask)
 
-        print ("Loaded reference with '%d' points, lap time %fs." % (len(REFERENCE), lap_time), file = kwargs.get("logfile", sys.stdout))
+        log (
+            "Loaded reference with '%d' points, lap time %fs."
+            % (len(REFERENCE), lap_time)
+        )
     else:
         REFERENCE = None
 
+    if P.getValue("friction_map") is not None:
+        fmap = numpy.load(P.getValue("friction_map"))
 
-def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, **overflown) -> float:
+        # Filter out points outside of the map
+        """
+        This can happen when the friction map is slightly different, e.g.,
+        it is built for non-inflated map of the track.
+        """
+        fmap = filterPoints(fmap)
+
+        if P.getValue("friction_map_inverse"):
+            fmap[:, 2] = 255 - fmap[:, 2]
+
+        FRICTION_MAP = getMap().copy()
+
+        # Set default value to the _mu parameter.
+        FRICTION_MAP[:] = profiler._mu * 100
+
+        # Set all obtained values.
+        cxy = pointsToMap(fmap[:, :2])
+        FRICTION_MAP[cxy[:, 0], cxy[:, 1]] = fmap[:, 2]
+
+        # Expand the fmap is required
+        if P.getValue("friction_map_expand"):
+            FRICTION_MAP = fmap_expand(FRICTION_MAP, fmap)
+
+        profiler.FRICTION_MAP = FRICTION_MAP
+
+        # Save and plot the map
+        if P.getValue("friction_map_save"):
+
+            saveMap(logfileName() + ".fmap", FRICTION_MAP)
+
+        if P.getValue("friction_map_save") and P.getValue("friction_map_plot"):
+            fig = ngplot.figureCreate()
+            ngplot.axisEqual(figure = fig)
+
+            if False:
+                # Plot everything
+                _sc = ngplot.pointsScatter(
+                    pointsToWorld(
+                        numpy.asarray(list(numpy.ndindex(FRICTION_MAP.shape)))
+                    ),
+                    s = 0.5,
+                    c = FRICTION_MAP.flatten() / 100.0,
+                    cmap = "gray_r",
+                    vmin = 0.0,
+                    figure = fig
+                )
+
+            # Points to plot
+            _ptp = numpy.asarray(numpy.where(getMap() == 100)).T
+
+            _sc = ngplot.pointsScatter(
+                pointsToWorld(_ptp),
+                s = 0.5,
+                c = FRICTION_MAP[_ptp[:, 0], _ptp[:, 1]] / 100.0,
+                cmap = "gray_r",
+                vmin = 0.0,
+                vmax = 1.0,
+                figure = fig
+            )
+
+            ngplot._pyplot(
+                _sc,
+                function = "colorbar",
+                figure = fig
+            )
+
+            ngplot.figureSave(
+                filename = logfileName() + ".fmap.png",
+                figure = fig
+            )
+
+            ngplot.figureClose(figure = fig)
+
+        log (
+            "Loaded friction map from '%s'."
+            % P.getValue("friction_map")
+        )
+
+        uqs, cnt = numpy.unique(fmap[:, 2], return_counts = True)
+
+        log (
+            "\n".join([
+                "\t%.2f: %3.2f%%" % (_u, _r)
+                for _u, _r in zip(
+                    uqs / 100.0,
+                    (cnt / (float(sum(cnt)))) * 100.0
+                )
+            ])
+        )
+
+
+def compute(
+        points: numpy.ndarray,
+        overlap: int = None,
+        penalty: float = 100.0,
+        **overflown) -> float:
     """Compute the speed profile using overlap.
 
     Arguments:
     points -- points of a trajectory with curvature, nx3 numpy.ndarray
     overlap -- size of trajectory overlap, int, default None/0 (disabled)
-    penalty -- penalty value applied to the incorrect solutions, float, default 100.0
+    penalty -- penalty value applied to the incorrect solutions,
+               float, default 100.0
     **overflown -- arguments not caught by previous parts
 
     Returns:
@@ -267,10 +644,21 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
     if overlap is None:
         overlap = P.getValue("overlap")
 
+    profiler.CENTERLINE = CENTERLINE
+  
     # ---------------[Create trajectory from path]---------------
     # points (x, y) --> trajectory (_v, _a, _t), _v -> speed, _a -> acceleration, _t -> time
-    _v, _a, _t = profiler.profileCompute(points, overlap, lap_time = True,
-        save = P.getValue("save_solution_csv") if not overflown.get("optimization", True) and P.getValue("save_solution_csv") is not None else None
+    _v, _a, _t = profiler.profileCompute(
+        points,
+        overlap,
+        lap_time = True,
+        save = (
+            P.getValue("save_solution_csv")
+            if (
+                not overflown.get("optimization", True)
+                and P.getValue("save_solution_csv") is not None
+            ) else None
+        )
     )
     criterion = _t[-1]  # default criterion of the optimization is a lap time
 
@@ -381,27 +769,39 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
             ts = int(_t[-1]) - 1
 
             if P.getValue("plot_timelines"):
-                for ts in (range(int(_t[-1])) if overlap > 0 else chain(range(int(_t[-1])+1), _t[-1])):
-                    _closest = numpy.abs(numpy.subtract(REFERENCE[:, 2], ts)).argmin()
+                for ts in (
+                    range(int(_t[-1])) if overlap > 0
+                    else chain(range(int(_t[-1]) + 1), _t[-1])
+                ):
+                    _closest = numpy.abs(
+                        numpy.subtract(REFERENCE[:, 2], ts)
+                    ).argmin()
 
                     if _closest >= len(REFERENCE) - 1:
                         ts = ts - 1
                         break
 
                     ngplot.pointsScatter(
-                        REFERENCE[_closest, None, :2], # Trick to force 2D array.
+                        # Trick to force 2D array.
+                        REFERENCE[_closest, None, :2],
                         s = P.getValue("plot_timelines_size"),
                         color = "black"
                     )
 
                     if ts % 4 == 0:
-                        ngplot.labelText(REFERENCE[_closest, :2], ts,
+                        ngplot.labelText(
+                            REFERENCE[_closest, :2],
+                            ts,
                             verticalalignment = "top",
                             horizontalalignment = "left",
                             fontsize = 6
                         )
 
-                    _closest_p = closest_indices[_closest] # numpy.abs(numpy.subtract(_t[:-1], ts)).argmin()
+                    # PR @jara001: This used to be closest to ego, but is changed to reference.
+                    # _closest_p = numpy.abs(
+                    #     numpy.subtract(_t[:-1], ts)
+                    # ).argmin()
+                    _closest_p = closest_indices[_closest]
 
                     ngplot.pointsScatter(
                         points[_closest_p, None, :2],
@@ -410,7 +810,9 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
                     )
 
                     if ts % 4 == 0:
-                        ngplot.labelText(points[_closest_p, :2], ts,
+                        ngplot.labelText(
+                            points[_closest_p, :2],
+                            ts,
                             verticalalignment = "bottom",
                             horizontalalignment = "right",
                             fontsize = 6,
@@ -437,36 +839,66 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
                                             color="red")
 
                     ngplot.pointsPlot(
-                        numpy.vstack((points[_closest_p , :2], REFERENCE[_closest , :2])),
+                        numpy.vstack(
+                            (points[_closest_p, :2], REFERENCE[_closest, :2])
+                        ),
+                        #color = "red",
                         color = "green",
                         linewidth = P.getValue("plot_timelines_width"),
                         linestyle = (
-                            "--" if pointDistance(points[_closest_p , :2], REFERENCE[_closest , :2]) < 5.0 else " "
+                            "--" if pointDistance(
+                                points[_closest_p, :2], REFERENCE[_closest, :2]
+                            ) < 5.0 else " "
                         )
                     )
 
             if P.getValue("plot_reference"):
                 # Plot only to the last time point
                 # That is specified by ts, which can be altered by previous if.
-                _closest = numpy.abs(numpy.subtract(REFERENCE[:, 2], ts)).argmin()
+                _closest = numpy.abs(
+                    numpy.subtract(REFERENCE[:, 2], ts)
+                ).argmin()
                 _closest_p = numpy.abs(numpy.subtract(_t[:-1], ts)).argmin()
 
-                ngplot.pointsPlot(REFERENCE[:, :2], color="black", linewidth = P.getValue("plot_reference_width"))
+                ngplot.pointsPlot(
+                    # PR @jara001: This used to plot only REFERENCE[:_closest, :2].
+                    # TODO: Add parameter to control this.
+                    REFERENCE[:, :2],
+                    color = "black",
+                    linewidth = P.getValue("plot_reference_width")
+                )
 
                 if P.getValue("plot_solution"):
-                    ngplot.pointsPlot(points[:, :2], color="orange", linewidth = P.getValue("plot_reference_width"))
+                    ngplot.pointsPlot(
+                        # PR @jara001: This used to plot only points[:_closest_p, :2].
+                        # TODO: Add parameter to control this.
+                        points[:, :2],
+                        color="orange",
+                        linewidth = P.getValue("plot_reference_width")
+                    )
 
             # print invalid points (colision points)
             if len(invalid_points) > 0:
-                ngplot.pointsScatter(numpy.asarray(invalid_points), color="blue", marker="x", s = 1)
+                ngplot.pointsScatter(
+                    numpy.asarray(invalid_points),
+                    color = "blue",
+                    marker = "x",
+                    s = 1
+                )
 
 
 
     # Locate points where overtaking occurs
-    # Centerline is used to obtain track progression.  2 x 910
-    # Do not do this when not optimizing; just to avoid having duplicate marker(s).
-    if P.getValue("plot_overtaking") and REFERENCE is not None and CENTERLINE is not None:
-        # It does not actually plot, just sends the data via Queue to the parent process.
+    # Centerline is used to obtain track progression.
+    # Do not do this when not optimizing; just to avoid
+    # having duplicate marker(s).
+    if (P.getValue("plot_overtaking")
+            and REFERENCE is not None
+            and CENTERLINE is not None):
+        # PR @jara001: This is currently run even when not optimizing.
+        #    and overflown.get("optimization", True)):
+        # It does not actually plot, just sends the data via Queue
+        # to the parent process.
         # That said, plotting has to be handled by the optimizer.
         if REFERENCE_PROGRESS is None:
             REFERENCE_PROGRESS = [
@@ -479,6 +911,10 @@ def compute(points: numpy.ndarray, overlap: int = None, penalty: float = 100.0, 
         crash_side = 0  # 0 -> none, 1 -> left, 2 -> right 
         data_to_save = []
         overtaken = False
+
+        # PR @jara001: There are two important changes here.
+        #  1) It does not work with indices but meters now.
+        #  2) REFERENCE has 4 columns instead of 3.
         average_opponent_dist = 0.0
         num_runs = 0
 

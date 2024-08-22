@@ -9,4 +9,4 @@ Following algorithms are used:
 - 'cubic_spline' interpolator for smoothing the input,
 - 'uniform_distance' selector for resampling the input.
 """
-from .main import init, select
+from .main import init, select  # noqa: F401

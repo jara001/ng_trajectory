@@ -1,12 +1,18 @@
 #!/usr/bin/env python3.6
 # utils.py3
 """Various utilities for interpolators.
+
+Used mostly for the interpolators, but can be used
+by other algorithms.
 """
 ######################
 # Imports & Globals
 ######################
 
-import math, numpy
+import math
+import numpy
+
+from ng_trajectory.log import print0
 
 
 ######################
@@ -14,7 +20,7 @@ import math, numpy
 ######################
 
 def pointDistance(a: list, b: list) -> float:
-    """Computes distance between two points in 2D.
+    """Compute distance between two points in 2D.
 
     Arguments:
     a -- first point, n-list of numbers
@@ -28,13 +34,13 @@ def pointDistance(a: list, b: list) -> float:
         We are using n-list instead od geometry_msgs.msg/Point.
         Number of coordinates is dynamic.
     """
-    return math.sqrt(sum(
-            [ pow(b[i] - a[i], 2) for i in range( min(len(a), len(b)) ) ]
-        ))
+    return math.sqrt(sum([
+        pow(b[i] - a[i], 2) for i in range(min(len(a), len(b)))
+    ]))
 
 
 def pointsDistance(points: numpy.ndarray) -> numpy.ndarray:
-    """Computes distances points in array of points in 2D.
+    """Compute distances points in array of points in 2D.
 
     Arguments:
     points -- set of points, nx(>=2) numpy.ndarray
@@ -45,23 +51,27 @@ def pointsDistance(points: numpy.ndarray) -> numpy.ndarray:
     Note: Taken from 'length' criterion.
     """
     return numpy.sqrt(
-                numpy.sum(
-                    numpy.power(
-                        numpy.subtract(
-                            numpy.roll(points[:, :2], 1, axis=0),
-                            points[:, :2]
-                        ),
-                    2),
-                axis=1)
-            )
+        numpy.sum(
+            numpy.power(
+                numpy.subtract(
+                    numpy.roll(points[:, :2], 1, axis = 0),
+                    points[:, :2]
+                ),
+                2
+            ),
+            axis = 1
+        )
+    )
 
 
 ######################
 # Utilities (Trajectory)
 ######################
 
-def trajectorySort(points: numpy.ndarray, verify_sort: bool = False) -> numpy.ndarray:
-    """Sorts a trajectory (array of points) to be "in order".
+def trajectorySort(
+        points: numpy.ndarray,
+        verify_sort: bool = False) -> numpy.ndarray:
+    """Sort a trajectory (array of points) to be "in order".
 
     Arguments:
     points -- list of points, nx2 numpy.ndarray
@@ -78,7 +88,6 @@ def trajectorySort(points: numpy.ndarray, verify_sort: bool = False) -> numpy.nd
         In here, we are working with numpy.ndarray!
         We are starting to sort from index 0.
     """
-
     _points = points.tolist()
 
     sorted_points = []
@@ -109,15 +118,17 @@ def trajectorySort(points: numpy.ndarray, verify_sort: bool = False) -> numpy.nd
     if verify_sort:
         # Obtain grid size
         _grid = numpy.min(
-                [
-                    numpy.abs(
-                        numpy.min( numpy.subtract(spoints[1:], spoints[:-1]) )
-                    ) for u in
-                            [
-                                numpy.unique( spoints[:, d] ) for d in range(spoints.shape[1])
-                            ]
+            [
+                numpy.abs(
+                    numpy.min(
+                        numpy.subtract(spoints[1:], spoints[:-1])
+                    )
+                ) for u in [
+                    numpy.unique(spoints[:, d])
+                    for d in range(spoints.shape[1])
                 ]
-            )
+            ]
+        )
 
         # FIXME: We are currently deleting outliers, one by one.
         # TODO: Remake this with reconnection.
@@ -130,14 +141,17 @@ def trajectorySort(points: numpy.ndarray, verify_sort: bool = False) -> numpy.nd
             _outliers = _dists[_dists > numpy.sqrt(2) * _grid]
 
 
-            # In case that there is only one, there is probably some larger problem.
+            # In case that there is only one, there is probably
+            # some larger problem.
             # TODO: Investigate whether this can happen.
             # FIXME: Raise an Exception?
             if len(_outliers) == 1:
-                print ("trajectorySort: Only one large jump in the trajectory found.")
-                print ("trajectorySort: points = %s" % spoints.tolist())
-                print ("trajectorySort: dists = %s" % _dists.tolist())
-                print ("trajectorySort: Continuing without dealing with outliers.")
+                print0("trajectorySort: Only one large jump "
+                       "in the trajectory found.")
+                print0("trajectorySort: points = %s" % spoints.tolist())
+                print0("trajectorySort: dists = %s" % _dists.tolist())
+                print0("trajectorySort: Continuing without "
+                       "dealing with outliers.")
                 break
 
             # Continue only if outliers found
@@ -147,15 +161,29 @@ def trajectorySort(points: numpy.ndarray, verify_sort: bool = False) -> numpy.nd
 
                 # Find group sizes
                 _groups = (
-                    [ (_oi[_i]+1, _oi[_i+1], _oi[_i+1] - _oi[_i]) for _i in range(len(_oi) - 1) ] + [ (_oi[-1]+1, _oi[0], _oi[0] + len(spoints) - _oi[-1]) ]
-                ) # start id, end id (both inclusive), size of the group
+                    [
+                        (_oi[_i] + 1, _oi[_i + 1], _oi[_i + 1] - _oi[_i])
+                        for _i in range(len(_oi) - 1)
+                    ]
+                    + [
+                        (_oi[-1] + 1, _oi[0], _oi[0] + len(spoints) - _oi[-1])
+                    ]
+                )  # start id, end id (both inclusive), size of the group
 
                 # Sort the groups in order to find the largest group
-                _groups = sorted(_groups, key = lambda x: x[-1], reverse = True)
+                _groups = sorted(
+                    _groups,
+                    key = lambda x: x[-1],
+                    reverse = True
+                )
 
                 # TODO: Do a reconnection here.
                 # Delete outlier
-                spoints = numpy.delete(spoints, ( _groups[0][1] ) % len(spoints), axis = 0)
+                spoints = numpy.delete(
+                    spoints,
+                    (_groups[0][1]) % len(spoints),
+                    axis = 0
+                )
 
             else:
                 break
@@ -163,8 +191,10 @@ def trajectorySort(points: numpy.ndarray, verify_sort: bool = False) -> numpy.nd
     return spoints
 
 
-def trajectoryReduce(points: numpy.ndarray, remain: int) -> numpy.ndarray:
-    """Selects 'remain' points from 'points' equally.
+def trajectoryReduce(
+        points: numpy.ndarray,
+        remain: int) -> numpy.ndarray:
+    """Select 'remain' points from 'points' equally.
 
     Arguments:
     points -- list of points, nx2 numpy.ndarray
@@ -173,24 +203,39 @@ def trajectoryReduce(points: numpy.ndarray, remain: int) -> numpy.ndarray:
     Returns:
     rpoints -- list of points, remainx2 numpy.ndarray
     """
-    return points[numpy.linspace(0, len(points)-1, remain, dtype=int, endpoint=False), :]
+    return points[
+        numpy.linspace(
+            0, len(points) - 1, remain, dtype = numpy.int, endpoint = False
+        ), :
+    ]
 
 
-def trajectoryClosest(points: numpy.ndarray, reference: numpy.ndarray, *, from_left: bool = False) -> numpy.ndarray:
-    """Finds the closest point on the trajectory to the 'reference'.
+def trajectoryClosest(
+        points: numpy.ndarray,
+        reference: numpy.ndarray,
+        *,
+        from_left: bool = False) -> numpy.ndarray:
+    """Find the closest point on the trajectory to the 'reference'.
 
     Arguments:
     points -- list of points, nx(>=2) numpy.ndarray
     reference -- point closest to the trajectory, 1x(>=2) numpy.ndarray
 
     Returns:
-    closest -- point on the trajectory closest to the reference, 1x(>=2) numpy.ndarray
+    closest -- point on the trajectory closest to the reference,
+               1x(>=2) numpy.ndarray
     """
-    return points[trajectoryClosestIndex(points, reference, from_left = from_left), :]
+    return points[
+        trajectoryClosestIndex(points, reference, from_left = from_left), :
+    ]
 
 
-def trajectoryClosestIndex(points: numpy.ndarray, reference: numpy.ndarray, *, from_left: bool = False) -> int:
-    """Finds the index of the closest point on the trajectory to the 'reference'.
+def trajectoryClosestIndex(
+        points: numpy.ndarray,
+        reference: numpy.ndarray,
+        *,
+        from_left: bool = False) -> int:
+    """Find the index of the closest point on the trajectory to the 'reference'.
 
     Arguments:
     points -- list of points, nx(>=2) numpy.ndarray
@@ -198,8 +243,10 @@ def trajectoryClosestIndex(points: numpy.ndarray, reference: numpy.ndarray, *, f
 
     Returns:
     index -- index of the point on the trajectory closest to the reference, int
-    """
 
+    Note:
+    Since v1.13.4 this returns only positive indices.
+    """
     _distances = numpy.subtract(points[:, :2], reference[:2])
 
     index = numpy.hypot(_distances[:, 0], _distances[:, 1]).argmin()
@@ -231,50 +278,69 @@ def trajectoryClosestIndex(points: numpy.ndarray, reference: numpy.ndarray, *, f
         that R is on the side closer to C.
 
         Note: Isn't it easier to use just dA and dC?
-        """
-        d1 = numpy.hypot(_distances[index, 0], _distances[index, 1])
+        """  # noqa: W605
+        d1 = numpy.hypot(
+            _distances[index, 0],
+            _distances[index, 1]
+        )
 
         if d1 == 0.0:
             return index
 
-        corrected_index = (index + 1) % len(points)
-        d2 = numpy.hypot(_distances[corrected_index, 0], _distances[corrected_index, 1])
-        ds = pointDistance(points[index, :2], points[corrected_index, :2])
+        d2 = numpy.hypot(
+            _distances[(index + 1) % len(points), 0],
+            _distances[(index + 1) % len(points), 1]
+        )
+        ds = pointDistance(
+            points[index, :2], points[(index + 1) % len(points), :2]
+        )
 
-        return index if (d1**2 - d2**2 + ds**2) / (2 * d1 * ds) > 0 else (index - 1) % len(points)
+        return (
+            index
+            if (d1**2 - d2**2 + ds**2) / (2 * d1 * ds) > 0
+            else (index - 1) % len(points)  # Return positive number everytime
+        )
 
 
-def trajectoryFarthest(points: numpy.ndarray, reference: numpy.ndarray) -> numpy.ndarray:
-    """Finds the farthest point on the trajectory to the 'reference'.
+def trajectoryFarthest(
+        points: numpy.ndarray,
+        reference: numpy.ndarray) -> numpy.ndarray:
+    """Find the farthest point on the trajectory to the 'reference'.
 
     Arguments:
     points -- list of points, nx(>=2) numpy.ndarray
     reference -- point farthest to the trajectory, 1x(>=2) numpy.ndarray
 
     Returns:
-    farthest -- point on the trajectory farthest to the reference, 1x(>=2) numpy.ndarray
+    farthest -- point on the trajectory farthest to the reference,
+                1x(>=2) numpy.ndarray
     """
     return points[trajectoryFarthestIndex(points, reference), :]
 
 
-def trajectoryFarthestIndex(points: numpy.ndarray, reference: numpy.ndarray) -> int:
-    """Finds the index of the farthest point on the trajectory to the 'reference'.
+def trajectoryFarthestIndex(
+        points: numpy.ndarray,
+        reference: numpy.ndarray) -> int:
+    """Find the index of the farthest point on the trajectory to the 'reference'.
 
     Arguments:
     points -- list of points, nx(>=2) numpy.ndarray
     reference -- point farthest to the trajectory, 1x(>=2) numpy.ndarray
 
     Returns:
-    index -- index of the point on the trajectory farthest to the reference, int
+    index -- index of the point on the trajectory farthest to the reference,
+             int
     """
-
     _distances = numpy.subtract(points[:, :2], reference[:2])
 
     return numpy.hypot(_distances[:, 0], _distances[:, 1]).argmax()
 
 
-def trajectoryRotate(points: numpy.ndarray, next_point_index: int, rotation: float = 0.0) -> numpy.ndarray:
-    """Rotates the closed trajectory, moving the first point along it.
+def trajectoryRotate(
+        points: numpy.ndarray,
+        next_point_index: int,
+        rotation: float = 0.0) -> numpy.ndarray:
+    """Rotate the closed trajectory, moving the first point along it.
 
     Basically, we have the trajectory 'points', point A (index 0) and
     point B (index 'next_point_index'). This function moves point A

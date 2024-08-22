@@ -4,4 +4,4 @@
 This selector uniformly samples the input path. It
 is not equidistant, but rather index-equidistant.
 """
-from .main import init, select
+from .main import init, select  # noqa: F401
