@@ -281,9 +281,6 @@ def groupsBorderBeautify(
                     "file."
                 )
 
-        if len(border_filtered) == 0:
-            border_filtered = border
-
         border_sorted = trajectorySort(border_filtered, verify_sort = True)
 
         border_interpolated = trajectoryInterpolate(
