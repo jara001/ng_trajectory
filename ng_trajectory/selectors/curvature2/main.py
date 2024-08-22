@@ -210,7 +210,7 @@ def peaksFill(
                     _peaks[i + 1],
                     int(_distance / max_distance) + 1,
                     endpoint = False,
-                    dtype = int
+                    dtype = numpy.int
                 )
             )[1:]
 

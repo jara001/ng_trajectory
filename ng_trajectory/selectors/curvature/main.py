@@ -91,7 +91,7 @@ def mergePeaks(
         for _p in nearby:
             _indices.remove(_p)
 
-    return np.asarray(merged_peaks, dtype = int)
+    return np.asarray(merged_peaks, dtype = np.int)
 
 
 ######################
@@ -237,7 +237,7 @@ def select(
                             / P.getValue("peaks_filling")
                         ) + 1,
                         endpoint = False,
-                        dtype = int
+                        dtype = np.int
                     )
                 )[1:]
 
