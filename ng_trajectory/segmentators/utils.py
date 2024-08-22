@@ -135,6 +135,29 @@ def getMapGrid() -> float:
     return MAP_GRID
 
 
+def filterPoints(points: numpy.ndarray) -> numpy.ndarray:
+    """Filter out points that are outside of the map.
+
+    Note: It filters out points in the world coordinates.
+
+    Arguments:
+    points -- points to filter, nx(>=2) numpy.ndarray
+
+    Returns:
+    filtered_points -- filtered points, mx(>=2) numpy.ndarray
+    """
+    global MAP_BOUNDS
+
+    _x_min, _x_max = MAP_BOUNDS[0]
+    _y_min, _y_max = MAP_BOUNDS[1]
+
+    return points[
+        (_x_min <= points[:, 0]) & (points[:, 0] <= _x_max)
+        & (_y_min <= points[:, 1]) & (points[:, 1] <= _y_max),
+        :
+    ]
+
+
 def pointInBounds(point: list) -> bool:
     """Check whether a point is inside the map bounds.
 

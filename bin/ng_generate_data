@@ -196,6 +196,23 @@ PARSER.add_argument(
     action = "store_true",
 )
 
+PARSER.add_argument(
+    "--prefix",
+
+    dest = "prefix",
+    help = "Name prefixed to the output files, %%s",
+    default = "",
+    type = str,
+)
+
+PARSER.add_argument(
+    "--suffix",
+
+    dest = "suffix",
+    help = "Name suffixed to the output files, %%s",
+    default = "",
+    type = str,
+)
 
 ######################
 # Utilities
@@ -207,6 +224,23 @@ def printv(*a, **kw) -> None:
         print (*a, **kw)
 
 
+def generate_filename(filename: str) -> str:
+    """Generate a filename with proper prefix and suffix."""
+    _filename = ".".join(filename.split(".")[:-1])
+    _extension = filename.split(".")[-1]
+    return "%s%s%s.%s" % (args.prefix, _filename, args.suffix, _extension)
+
+
+def save(nd, filename: str) -> None:
+    """Save a numpy array into a file."""
+    numpy.save(generate_filename(filename), nd)
+
+
+def saveim(im, filename: str) -> None:
+    """Save an image into a file."""
+    im.save(generate_filename(filename))
+
+
 def savev(im, filename: str) -> None:
     """Save an image when verbose is set to >=2."""
     if args.verbose >= 2:
@@ -216,7 +250,7 @@ def savev(im, filename: str) -> None:
             _image = P.fromarray(numpy.asarray(im, dtype = numpy.uint8).copy())
 
         _image.convert("L")
-        _image.save(filename)
+        saveim(_image, filename)
 
 
 def pointsFilter(points: numpy.ndarray, grid: float = None) -> numpy.ndarray:
@@ -778,7 +812,7 @@ def processImage(im: Image) -> None:
         pass
 
     nndi = P.fromarray(nnd)
-    nndi.save("generated_data.png")
+    saveim(nndi, "generated_data.png")
 
 
     # # Save into npy # #
@@ -800,7 +834,7 @@ def processImage(im: Image) -> None:
     # Swap yx
     start_points = numpy.vstack((start_points[:, 1], start_points[:, 0])).T
 
-    numpy.save("start_points.npy", start_points)
+    save(start_points, "start_points.npy")
 
     valid_points = numpy.asarray(im, dtype = int)
     valid_points = numpy.argwhere(
@@ -822,7 +856,7 @@ def processImage(im: Image) -> None:
     # Swap yx
     valid_points = numpy.vstack((valid_points[:, 1], valid_points[:, 0])).T
 
-    numpy.save("valid_points.npy", valid_points)
+    save(valid_points, "valid_points.npy")
 
     print (" - DONE")
 
@@ -1022,6 +1056,16 @@ def createFrictionMap(im: Image, filename: str) -> None:
         (friction_map.T, nd2[friction_map[:, 0], friction_map[:, 1]][None])
     ).T.astype(float)
 
+    if args.verbose >= 2:
+        fmap2 = numpy.asarray(im.copy(), dtype = int)
+
+        for _row in range(len(friction_map)):
+            fmap2[
+                int(friction_map[_row, 0]), int(friction_map[_row, 1])
+            ] = int(friction_map[_row, 2])
+
+        savev(fmap2, "generated_friction_map.png")
+
     # Invert colors
     if args.friction_map_inverse:
         friction_map[:, 2] = 255.0 - friction_map[:, 2]
@@ -1043,7 +1087,7 @@ def createFrictionMap(im: Image, filename: str) -> None:
         (friction_map[:, 1], friction_map[:, 0], friction_map[:, 2])
     ).T
 
-    numpy.save("friction_map.npy", friction_map)
+    save(friction_map, "friction_map.npy")
 
 
 ######################

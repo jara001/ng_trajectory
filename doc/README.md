@@ -168,6 +168,7 @@ _ng_trajectory.criterions.*_
 - _jazar_model_  Model simulation according to the simplified model from Jazar [1].
 - _length_       Length criterion for fitness evaluation.
 - _profile_      Profile criterion for fitness evaluation.
+- _manual_       Manual criterion for fitness evaluation.
 
 
 #### Curvature
@@ -290,6 +291,16 @@ plot_overtaking (bool) = True [Whether to plot places where an overtaking occurs
 ```
 
 
+#### Manual
+_criterions.manual_
+
+Manual criterion for fitness evaluation.
+
+Upon calling 'compute()' the criterion prints out current candidate and waits for the user to specify the fitness value.
+
+Note: This is usable only when a single worker is used.
+
+
 ### Interpolators
 
 Interpolators are used for interpolating the waypoints / path subsets in order to get full (continuous) path.
@@ -297,7 +308,22 @@ Interpolators are used for interpolating the waypoints / path subsets in order t
 
 _ng_trajectory.interpolators.*_
 
+- _none_          Dummy interpolator.
 - _cubic_spline_  Cubic spline interpolator.
+
+
+#### None
+_interpolators.none_
+
+Dummy interpolator.
+
+It does not interpolate, just forwards the points.
+
+
+```html
+Init parameters:
+closed_loop (bool) = True [When set, interpolation creates a closed loop.]
+```
 
 
 #### Cubic Spline
@@ -593,6 +619,7 @@ _ng_trajectory.penalizers.*_
 - _curvature_    Curvature penalizer.
 - _centerline_   Centerline penalizer.
 - _count_        Count penalizer.
+- _none_         Dummy penalizer.
 - _borderlines_  Borderlines penalizer.
 
 
@@ -670,6 +697,14 @@ _penalizers.count_
 Count penalizer.
 
 This penalizer simply counts all invalid points (outside of the valid area) and returns their count.
+
+
+#### None
+_penalizers.none_
+
+Dummy penalizer.
+
+This effectively disables the penalizer, as it passes any candidate.
 
 
 #### Borderlines

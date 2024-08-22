@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.14.0 - 2024-08-22
+### Added
+- Criterions
+    - [**NEW**] _Manual_
+        - Criterion 'manual' requests user to specify fitness value for each candidate.
+- Interpolators
+    - [**NEW**] _None_
+        - Dummy interpolator that forwards given points.
+- Penalizers
+    - [**NEW**] _None_
+        - Dummy penalizer that allows any candidate.
+- Segmentators
+    - Function `filterPoints` to filter points outside of the map.
+- 'ng_generate_data': Save image of generated friction map when verbosity is higher.
+- 'ng_generate_data': Arguments `--prefix` and `--suffix` to change the output files' filenames.
+
+### Changed
+- Use sequential executor when only one worker is requested.
+
+### Fixed
+- Criterions
+    - _Profile_
+        - Filter out points that are outside of the map when building the friction map.
+
 ## 1.13.4 - 2024-04-19
 ### Changed
 - Interpolators

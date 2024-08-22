@@ -529,7 +529,7 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     ) as executor:
         recommendation = OPTIMIZER.minimize(
             _opt,
-            executor = executor,
+            executor = executor if OPTIMIZER.num_workers > 1 else None,
             batch_mode = False
         )
 
