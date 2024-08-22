@@ -133,6 +133,8 @@ from ng_trajectory import PLOT_AVAILABLE  # noqa: F401
 
 from typing import List, Dict
 
+from ng_trajectory.segmentators.utils import mapToPoint
+
 
 # Global variables
 CANVAS = None
@@ -401,6 +403,50 @@ def pointsPlot(
         figure = pyplot.gcf()
 
     return figure.axes[0].plot(points[:, 0], points[:, 1], **kwargs)
+
+
+@plot_only
+def imgPlotMetric(image: numpy.ndarray, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+    """
+    """
+    print(f"Image shape: {numpy.shape(image)}")
+    if figure is None:
+        figure = pyplot.gcf()
+    points = []
+    for w in range(numpy.shape(image)[0]):
+        for h in range(numpy.shape(image)[1]):
+            if image[w, h] == 0:
+                points.append(mapToPoint(numpy.array([w, h])))
+    pointsScatter(numpy.array(points), **kwargs)
+
+
+@plot_only
+def circlePlot(centre: numpy.ndarray, radius: numpy.double, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+    """
+    """
+    if figure is None:
+        figure = pyplot.gcf()
+    
+    circle = pyplot.Circle((centre[0], centre[1]), radius, **kwargs)
+   
+    figure.axes[0].add_patch(circle)
+
+
+@plot_only
+def rectanglePlot(centre: numpy.ndarray, width: numpy.double, height: numpy.double, angle: numpy.double, figure: matplotlib.figure.Figure = None, **kwargs) -> None:
+    """
+    :      +------------------+
+    :      |                  |
+    :    height    (xy)       |
+    :      |                  |
+    :      +------ width -----+
+    """
+    if figure is None:
+        figure = pyplot.gcf()
+    
+    rectangle = pyplot.Rectangle((centre[0] - width/2, centre[1] - height/2), width, height, angle/3.14*180.0, rotation_point='center', **kwargs)
+   
+    figure.axes[0].add_patch(rectangle)
 
 
 @plot_only

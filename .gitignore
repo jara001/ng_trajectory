@@ -9,3 +9,18 @@ __pycache__
 
 # Source files
 *.npy
+
+# CLion
+.idea/*
+
+# input data
+input_files/*
+
+# version info
+VERSION
+ng_trajectory/version.py
+
+# INFO
+*.egg-info
+
+*.gitignore

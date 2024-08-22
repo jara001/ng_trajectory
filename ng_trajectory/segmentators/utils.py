@@ -194,6 +194,15 @@ def pointToMap(point: list) -> numpy.ndarray:
     ).astype(numpy.uint64)
 
 
+def mapToPoint(point: numpy.ndarray) -> numpy.ndarray:
+    """
+    """
+    global MAP_ORIGIN, MAP_GRID
+
+    # return numpy.round( numpy.subtract(numpy.asarray(point)[:2], MAP_ORIGIN) / MAP_GRID).astype(numpy.uint64)
+    return point[:2] * MAP_GRID + MAP_ORIGIN
+
+
 def pointsToMap(points: numpy.ndarray) -> numpy.ndarray:
     """Convert real coordinates of the points to cell coordinates.
 
@@ -303,6 +312,16 @@ def hood8Obtain(cpoint: numpy.ndarray) -> numpy.ndarray:
         & (_hood[:, 1] < MAP.shape[1])
     ].astype(numpy.int)
 
+def validChecks(cpoints: numpy.ndarray) -> numpy.ndarray:
+    """Check whether map points are within the map borders.
+
+    Arguments:
+    cpoint -- cell coordinates of the point, nx2 numpy.ndarray
+
+    Returns:
+    valid -- True when valid point, else False, bool
+    """
+    return MAP[cpoints[:, 0], cpoints[:, 1]] != 0
 
 def validCheck(cpoint: numpy.ndarray) -> bool:
     """Check whether the map point is on border.
