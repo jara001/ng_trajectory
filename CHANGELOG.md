@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.14.0 - 2024-08-22
 ### Added
 - Criterions
     - [**NEW**] _Manual_
