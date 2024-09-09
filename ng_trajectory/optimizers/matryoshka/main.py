@@ -243,8 +243,16 @@ def init(
 
     P.updateAll(kwargs)
 
-    # Load Matryoshka
-    if MATRYOSHKA is None and P.getValue("load_matryoshka") is not None:
+    # Load Matryoshka if:
+    #  - There is no transformation.
+    #  - Current transformation does not work for selected number of segments.
+    if (
+        P.getValue("load_matryoshka") is not None
+        and (
+            MATRYOSHKA is None
+            or (groups > 0 and groups != len(MATRYOSHKA))
+        )
+    ):
         try:
             _data = numpy.load(
                 P.getValue("load_matryoshka"),
