@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.15.0 - 2024-09-09
+### Added
+- Criterions
+    - [**NEW**] _Profile2_
+        - Modified criterion to create overtaking heat maps.
+- Optimizers
+    - _Matryoshka_
+        - Parameter 'force_load_matryoshka' to load the saved transformation every time.
+- Segmentators
+    - Function `validChecks` to validate multiple map points at once.
+- 'plot'
+    - Functions `imgPlotMetric`, `circlePlot` and `rectanglePlot` used by `profile2`.
+
+### Changed
+- Optimizers
+    - _Matryoshka_
+        - When not optimizing, a plot is produced even for unsuccessful attempts.
+        - Transformation is loaded when the current one is not usable.
+
 ## 1.14.0 - 2024-08-22
 ### Added
 - Criterions

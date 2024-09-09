@@ -85,6 +85,7 @@ hold_matryoshka (bool) = False [Whether the transformation should be created onl
 grid (list) = computed by default [X-size and y-size of the grid used for points discretization.]
 save_matryoshka (str) = None [Name of the file to save Matryoshka mapping. When unset, do not save.]
 load_matryoshka (str) = None [Name of the file to load Matryoshka from. When unset, do not load.]
+force_load_matryoshka (bool) = False [Whether the transformation should be loaded every time.]
 
 Init (general) parameters:
 budget (int) = 100 [Budget parameter for the genetic algorithm.]
@@ -168,6 +169,7 @@ _ng_trajectory.criterions.*_
 - _jazar_model_  Model simulation according to the simplified model from Jazar [1].
 - _length_       Length criterion for fitness evaluation.
 - _profile_      Profile criterion for fitness evaluation.
+- _profile2_     Profile criterion for fitness evaluation.
 - _manual_       Manual criterion for fitness evaluation.
 
 
@@ -268,6 +270,67 @@ a_break_max (float) = 4.5 [Maximum longitudal decceleration [m.s^-2]]
 _lf (float) = 0.191 [Distance from center of mass to the front axle [m]]
 _lr (float) = 0.139 [Distance from center of mass to the rear axle [m]]
 reference (str) = None [Name of the file to load (x, y, t) reference path that cannot be close.]
+reference_dist (float) = 1.0 [Minimum allowed distance from the reference at given time [m].]
+reference_rotate (int) = 0 [Number of points to rotate the reference trajectory.]
+reference_laptime (float) = 0 [Lap time of the given reference. 0 = estimated from data]
+save_solution_csv (str) = $ [When non-empty, save final trajectory to this file as CSV. Use '$' to use log name instead.]
+favor_overtaking (float) = 0 [Penalty value to add to the lap time when overtaking does not occur.]
+friction_map (str) = None [Name of the file to load (x, y, mu*100) with friction map.]
+friction_map_inverse (bool) = False [When True, invert the values in the friction map.]
+friction_map_expand (bool) = False [When True, values from the friction map are expanded over the whole map using flood fill.]
+friction_map_plot (bool) = False [When True, friction map is plotted.]
+friction_map_save (bool) = False [When True, friction map is saved alongside the log files.]
+
+Init (viz.) parameters:
+plot (bool) = False [Whether a graphical representation should be created.]
+plot_reference (bool) = False [Whether the reference trajectory should be plotted.]
+plot_reference_width (float) = 0.4 [Linewidth of the reference trajectory. 0 = disabled]
+plot_solution (bool) = False [Whether the optimized solution should be plotted. (Using 'plot_reference_width'.)]
+plot_timelines (bool) = False [Whether the lines between points in the same time should be plotted.]
+plot_timelines_size (float) = 1 [Size of the points of the timelines endpoints. 0 = disabled]
+plot_timelines_width (float) = 0.6 [Linewidth of the timelines. 0 = disabled]
+plot_overtaking (bool) = True [Whether to plot places where an overtaking occurs. (Has to be supported by optimizer.)]
+```
+
+
+#### Profile2
+_criterions.profile2_
+
+Profile criterion for fitness evaluation.
+
+This criterion computes fitness value by simulating the vehicle over the input path. There are various parameters to be set. But mostly, we focus on a simple vehicle model and simple environment interaction by friction coefficient, air density, etc.
+
+Note: The parameters shown below are not synced with the algorithm itself. Therefore, pay attention to any updates.
+
+This is a version developed by Tomas Nagy in his Master thesis.
+
+This tool was used to identify possible overtaking zones on a given track when the opponent's racing line is known. Moreover, we assume that the opponent cannot perform a blocking move (F1TENTH vehicles do not have a rear-facing sensor).
+
+
+```html
+Parameters:
+overlap (int) = 0 [Size of the trajectory overlap. 0 disables this.]
+friction_map_yaml (str) = None [(Requires pyyaml) Name of the yaml configuration of the original map that was used to create '.npy' files. Map file specified in the configuration has to exist.]
+car_width (float) = 0.3 [Width of the car when using rectangle vehicle shape.]
+car_length (float) = 0.55 [Length of the car when using rectangle vehicle shape.]
+car_shape (str) = rectangle [Vehicle shape to use when calculating collisions during overtaking. ['circle', 'rectangle']]
+ego_dist_overtake (float) = 0.1 [How much in front of opponent ego car needs to be to have a right of way.]
+use_safe_zone_seconds (float) = 10.0 [How many seconds after crash EGO cannot enter safety zone.]
+
+Init parameters:
+_mu (float) = 0.2 [Friction coeficient]
+_g (float) = 9.81 [Gravity acceleration coeficient]
+_m (float) = 3.68 [Vehicle mass]
+_ro (float) = 1.2 [Air density]
+_A (float) = 0.3 [Frontal reference aerodynamic area]
+_cl (float) = 1 [Drag coeficient]
+v_0 (float) = 0 [Initial speed [m.s^-1]]
+v_lim (float) = 4.5 [Maximum forward speed [m.s^-1]]
+a_acc_max (float) = 0.8 [Maximum longitudal acceleration [m.s^-2]]
+a_break_max (float) = 4.5 [Maximum longitudal decceleration [m.s^-2]]
+_lf (float) = 0.191 [Distance from center of mass to the front axle [m]]
+_lr (float) = 0.139 [Distance from center of mass to the rear axle [m]]
+reference (str) = None [Name of the file to load (x, y, t, v) reference path that cannot be close. Currently, the only supported type is .npy]
 reference_dist (float) = 1.0 [Minimum allowed distance from the reference at given time [m].]
 reference_rotate (int) = 0 [Number of points to rotate the reference trajectory.]
 reference_laptime (float) = 0 [Lap time of the given reference. 0 = estimated from data]

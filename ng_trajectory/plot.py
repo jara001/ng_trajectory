@@ -133,6 +133,8 @@ from ng_trajectory import PLOT_AVAILABLE  # noqa: F401
 
 from typing import List, Dict
 
+from ng_trajectory.segmentators.utils import pointToWorld
+
 
 # Global variables
 CANVAS = None
@@ -401,6 +403,96 @@ def pointsPlot(
         figure = pyplot.gcf()
 
     return figure.axes[0].plot(points[:, 0], points[:, 1], **kwargs)
+
+
+@plot_only
+def imgPlotMetric(
+        image: numpy.ndarray,
+        figure: matplotlib.figure.Figure = None,
+        **kwargs) -> None:
+    """Plot an image of the map onto the figure.
+
+    Arguments:
+    image -- bitmap image to plot, wxh numpy.ndarray
+    figure -- figure to plot to,
+              matplotlib.figure.Figure, default 'current figure'
+    **kwargs -- keyword arguments to be passed to plot
+    """
+    print(f"Image shape: {numpy.shape(image)}")
+
+    points = []
+    for w in range(numpy.shape(image)[0]):
+        for h in range(numpy.shape(image)[1]):
+            if image[w, h] == 0:
+                points.append(pointToWorld(numpy.array([w, h])))
+
+    pointsScatter(numpy.array(points), figure, **kwargs)
+
+
+@plot_only
+def circlePlot(
+        centre: numpy.ndarray,
+        radius: float,
+        figure: matplotlib.figure.Figure = None,
+        **kwargs) -> None:
+    """Plot a circle with a given radius.
+
+    This is used to plot a position of a car as a circle obstacle.
+
+    Arguments:
+    centre -- center position of the object, nx2 numpy.ndarray
+    radius -- radius of the circle, float
+    figure -- figure to plot to,
+              matplotlib.figure.Figure, default 'current figure'
+    **kwargs -- keyword arguments to be passed to `pyplot.Circle`
+    """
+    if figure is None:
+        figure = pyplot.gcf()
+
+    circle = pyplot.Circle((centre[0], centre[1]), radius, **kwargs)
+
+    figure.axes[0].add_patch(circle)
+
+
+@plot_only
+def rectanglePlot(
+        centre: numpy.ndarray,
+        width: numpy.double,
+        height: numpy.double,
+        angle: numpy.double,
+        figure: matplotlib.figure.Figure = None,
+        **kwargs) -> None:
+    """Plot a rectangle with a given size and rotation.
+
+    This is used to plot a position of a car as a rectangular obstacle.
+
+          +------------------+
+          |                  |
+        height    (xy)       |
+          |                  |
+          +------ width -----+
+
+    Arguments:
+    centre -- center position of the object, nx2 numpy.ndarray
+    width -- width of the rectangle, float
+    height -- height of the rectangle, float
+    angle -- rotation of the rectangle, [rad], float
+    figure -- figure to plot to,
+              matplotlib.figure.Figure, default 'current figure'
+    **kwargs -- keyword arguments to be passed to `pyplot.Circle`
+
+
+    """
+    if figure is None:
+        figure = pyplot.gcf()
+
+    rectangle = pyplot.Rectangle(
+        (centre[0] - (width / 2), centre[1] - (height / 2)),
+        width, height, numpy.degrees(angle), rotation_point = 'center',
+        **kwargs
+    )
+
+    figure.axes[0].add_patch(rectangle)
 
 
 @plot_only
