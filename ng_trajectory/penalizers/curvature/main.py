@@ -89,5 +89,4 @@ def penalize(
 
     # print(points[(points[:, 2] > _k_max) | (points[:, 2] < -_k_max), 2])
 
-    # PR @jara001: This was increased from 10 to 10000.
-    return invalid * penalty * 10000
+    return invalid * penalty * 10
