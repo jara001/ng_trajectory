@@ -671,7 +671,9 @@ def _opt(points: numpy.ndarray) -> float:
             logvvv ("pointsT:%s" % str(_points.tolist()), level = VERBOSITY)
             logvv ("penalty:%f" % penalty, level = VERBOSITY)
             logfileFlush()
-            
+
+        # When not optimizing, continue to plot trajectories as well and
+        # not just penalty points.
         if CRITERION_ARGS.get("optimization", True):
             return penalty
 

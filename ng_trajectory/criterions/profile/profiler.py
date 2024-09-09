@@ -471,10 +471,15 @@ def saveState(
                         )
                     ]}
             })
-            
-    arr_to_save = numpy.vstack([x[:len(points)], y[:len(points)], t[:len(points)], v[:len(points)]]).T
-    data = numpy.save("optimal_trajectory_ego.npy", arr_to_save)
-    numpy.save("optimal_trajectory_ego_ds.npy", arr_to_save[0::2])  # down-scaled by 2
+
+    arr_to_save = numpy.vstack(
+        [x[:len(points)], y[:len(points)], t[:len(points)], v[:len(points)]]
+    ).T
+
+    numpy.save("optimal_trajectory_ego.npy", arr_to_save)
+
+    # down-scaled by 2
+    numpy.save("optimal_trajectory_ego_ds.npy", arr_to_save[0::2])
 
 
 def profileCompute(
