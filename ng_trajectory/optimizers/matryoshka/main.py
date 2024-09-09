@@ -91,6 +91,7 @@ P.createAdd("grid", "computed by default", list, "X-size and y-size of the grid 
 P.createAdd("plot_mapping", False, bool, "Whether a grid should be mapped onto the track (to show the mapping).", "init (viz.)")
 P.createAdd("save_matryoshka", None, str, "Name of the file to save Matryoshka mapping. When unset, do not save.", "init (Matryoshka)")
 P.createAdd("load_matryoshka", None, str, "Name of the file to load Matryoshka from. When unset, do not load.", "init (Matryoshka)")
+P.createAdd("force_load_matryoshka", False, bool, "Whether the transformation should be loaded every time.", "init (Matryoshka)")
 P.createAdd("plot_group_indices", True, bool, "Whether group indices should be shown on the track.", "init (viz.)")
 P.createAdd("plot_group_borders", True, bool, "Whether group borders should be shown on the track.", "init (viz.)")
 P.createAdd("fixed_segments", [], list, "Points to be used instead their corresponding segment.", "init")
@@ -246,11 +247,13 @@ def init(
     # Load Matryoshka if:
     #  - There is no transformation.
     #  - Current transformation does not work for selected number of segments.
+    #  - We want to load the transformation (param 'force_load_matryoshka').
     if (
         P.getValue("load_matryoshka") is not None
         and (
             MATRYOSHKA is None
             or (groups > 0 and groups != len(MATRYOSHKA))
+            or P.getValue("force_load_matryoshka")
         )
     ):
         try:
