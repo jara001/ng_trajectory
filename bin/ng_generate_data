@@ -111,6 +111,16 @@ PARSER.add_argument(
 )
 
 PARSER.add_argument(
+    "-s",
+    "--scale",
+
+    dest = "scale",
+    help = "Ratio to scale the source image resolution, %%f",
+    default = 1.0,
+    type = float,
+)
+
+PARSER.add_argument(
     "--resolution",
 
     dest = "resolution",
@@ -824,8 +834,8 @@ def processImage(im: Image) -> None:
     start_points[:, 0] = numpy.abs(start_points[:, 0])
 
     # Convert to real units (if required)
-    if args.resolution != 1.0:  # or args.resize != 1.0:
-        start_points *= args.resolution / args.resize
+    if args.resolution != 1.0 or args.scale != 1.0:  # or args.resize != 1.0:
+        start_points *= (args.resolution * args.scale) / args.resize
 
     # Move the origin (if required)
     if args.originx != 0.0 or args.originy != 0.0:
@@ -846,8 +856,8 @@ def processImage(im: Image) -> None:
     valid_points[:, 0] = numpy.abs(valid_points[:, 0])
 
     # Convert to real units (if required)
-    if args.resolution != 1.0:  # or args.resize != 1.0:
-        valid_points *= args.resolution / args.resize
+    if args.resolution != 1.0 or args.scale != 1.0:  # or args.resize != 1.0:
+        valid_points *= (args.resolution * args.scale) / args.resize
 
     # Move the origin (if required)
     if args.originx != 0.0 or args.originy != 0.0:
@@ -1075,8 +1085,8 @@ def createFrictionMap(im: Image, filename: str) -> None:
     friction_map[:, 0] = numpy.abs(friction_map[:, 0])
 
     # Convert to real units (if required)
-    if args.resolution != 1.0:  # or args.resize != 1.0:
-        friction_map[:, :2] *= args.resolution / args.resize
+    if args.resolution != 1.0 or args.scale != 1.0:  # or args.resize != 1.0:
+        friction_map[:, :2] *= (args.resolution * args.scale) / args.resize
 
     # Move the origin (if required)
     if args.originx != 0.0 or args.originy != 0.0:

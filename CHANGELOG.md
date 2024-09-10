@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.15.1 - 2024-09-10
+### Added
+- Optimizers
+    - _Braghin_
+        - When logging into a file, display progress bar (similarly to Matryoshka).
+- 'ng_generate_data': Argument `--scale` to change the resolution of the output data.
+
+### Changed
+- Optimizers
+    - _Braghin_
+        - Use sequential executor when number of workers is set to 1.
+
 ## 1.15.0 - 2024-09-09
 ### Added
 - Criterions

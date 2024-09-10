@@ -14,7 +14,7 @@ from ng_trajectory.parameter import ParameterList
 from ng_trajectory.log import (
     print0,
     log, logv, logvv, logvvv,
-    logfileFlush
+    logfileGet, logfileFlush,
 )
 
 from . import transform
@@ -24,9 +24,10 @@ import nevergrad
 import sys
 import os
 import numpy
+import tqdm
 
-# Parallel computing of genetic algorithm
-from concurrent import futures
+# Parallel computing of genetic algorithm (with TQDM)
+from ng_trajectory.optimizers.matryoshka.main import PPETQDM
 
 # Thread lock for log file
 from threading import Lock
@@ -57,6 +58,7 @@ GRID = None
 PENALTY = None
 FIGURE = None
 PLOT = None
+PROGRESS_BAR = None
 
 
 # Parameters
@@ -169,6 +171,7 @@ def init(
     global CRITERION, CRITERION_ARGS, INTERPOLATOR, INTERPOLATOR_ARGS
     global SEGMENTATOR, SEGMENTATOR_ARGS, SELECTOR, SELECTOR_ARGS, PENALIZER
     global PENALIZER_INIT, PENALIZER_ARGS
+    global PROGRESS_BAR
 
     # Local to global variables
     CRITERION = criterion
@@ -288,6 +291,10 @@ def init(
         budget = budget,
         num_workers = workers
     )
+    PROGRESS_BAR = tqdm.tqdm(
+        total = budget,
+        disable = logfileGet() == sys.stdout
+    )
 
 
 def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
@@ -308,11 +315,13 @@ def optimize() -> Tuple[float, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
 
     overtaking = []
 
-    with futures.ProcessPoolExecutor(
-            max_workers=OPTIMIZER.num_workers) as executor:
+    with PPETQDM(
+            max_workers = OPTIMIZER.num_workers,
+            progress_bar = PROGRESS_BAR,
+    ) as executor:
         recommendation = OPTIMIZER.minimize(
             _opt,
-            executor = executor,
+            executor = executor if OPTIMIZER.num_workers > 1 else None,
             batch_mode = False
         )
 
