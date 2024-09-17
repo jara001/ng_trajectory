@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+# ng_eval.py
+"""Script for evaluating potential candidates using ng_trajectory algorithms.
+
+This script should make comparison with other approaches easier, as you can
+simply take their solution and obtain our fitness value.
+"""
+######################
+# Imports & Globals
+######################
+
+import argparse
+import csv
+import numpy
+
+from ng_trajectory.criterions import profile
+from ng_trajectory.interpolators import cubic_spline
+
+from typing import TextIO
+
+# Global variables
+_PROFILE_SETTINGS = {
+    "overlap": 100,
+    "_mu": 0.3,
+    "v_lim": 8.0,
+    "a_acc_max": 10.0,
+    "a_break_max": 1.8
+}
+
+
+######################
+# Argparse
+######################
+
+PARSER = argparse.ArgumentParser(
+    prog = "ng_eval",
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description = """
+Script for evaluating candidates using ng_trajectory.
+    """,
+)
+
+PARSER.add_argument(
+    "input_file",
+
+    help = "File with the data to evaluate.",
+    type = argparse.FileType("r"),
+)
+
+PARSER.add_argument(
+    "-v",
+
+    dest = "verbose",
+    help = "Give more output.",
+    default = 0,
+    action = "count",
+)
+
+PROFILER_GROUP = PARSER.add_argument_group(
+    "profiler arguments",
+    "Parameters used for the profiler."
+)
+
+for name, parameter in profile.main.P.parameters.items():
+    PROFILER_GROUP.add_argument(
+        "--" + name,
+
+        dest = name,
+        help = parameter.description + " (%(type)s, default: %(default)s)",
+        default = parameter.default,
+        type = parameter.type,
+        metavar = "VALUE",
+    )
+
+    if name not in _PROFILE_SETTINGS:
+        _PROFILE_SETTINGS.setdefault(name, parameter.default)
+
+
+######################
+# Utilities
+######################
+
+def handle_input(f: TextIO) -> numpy.ndarray:
+    """Parse the given file and obtain data to evaluate.
+
+    Arguments:
+    f -- file to parse, TextIO
+
+    Returns:
+    points -- data to evaluate, nx3 numpy.ndarray
+    """
+    return handle_input_csv_label(f)[:, :]
+
+
+def handle_input_csv(f: TextIO) -> numpy.ndarray:
+    """Parse the given file as csv.
+
+    Arguments:
+    f -- file to parse, TextIO
+
+    Returns:
+    data -- data inside the csv file, nxm numpy.ndarray
+    """
+    data = []
+
+    for line in csv.reader(f):
+        data.append([
+            float(value) for value in line
+        ])
+
+    return cubic_spline.interpolate(numpy.asarray(data))
+
+
+def handle_input_csv_label(f: TextIO) -> numpy.ndarray:
+    """Parse the given file as csv with labels.
+
+    Arguments:
+    f -- file to parse, TextIO
+
+    Returns:
+    data -- data inside the csv file, nxm numpy.ndarray
+    """
+    data = []
+
+    for line in csv.DictReader(f):
+        data.append([
+            float(value)
+            for value in [line["x_m"], line["y_m"], line["k_radpm"]]
+        ])
+
+    return numpy.asarray(data)
+
+
+######################
+# Main
+######################
+
+if __name__ == "__main__":
+
+    # Obtain arguments
+    args = PARSER.parse_args()
+
+    if args.verbose:
+        print ("Received arguments:")
+        print (
+            "\n".join([
+                "\t%s: %s"
+                % (key, value) for key, value in args._get_kwargs()
+            ])
+        )
+
+    data = handle_input(args.input_file)
+
+    for param in _PROFILE_SETTINGS.keys():
+        _PROFILE_SETTINGS[param] = getattr(args, param)
+
+    if args.verbose:
+        print ("Setting profiler to:")
+        print (_PROFILE_SETTINGS)
+
+    profile.init(**_PROFILE_SETTINGS)
+
+    print(profile.compute(data))

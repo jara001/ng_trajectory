@@ -86,6 +86,7 @@ setup(
         'bin/ng_help',
         'bin/ng_curvature_gui',
         'bin/ng_graph',
-        'bin/ng_plot'
+        'bin/ng_plot',
+        'bin/ng_eval',
     ],
 )
