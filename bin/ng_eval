@@ -67,7 +67,10 @@ for name, parameter in profile.main.P.parameters.items():
 
         dest = name,
         help = parameter.description + " (%(type)s, default: %(default)s)",
-        default = parameter.default,
+        default = (
+            _PROFILE_SETTINGS.get(name) if name in _PROFILE_SETTINGS
+            else parameter.default
+        ),
         type = parameter.type,
         metavar = "VALUE",
     )
