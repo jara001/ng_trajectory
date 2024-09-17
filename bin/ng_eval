@@ -56,6 +56,13 @@ PARSER.add_argument(
     action = "count",
 )
 
+PARSER.add_argument(
+    "--interpolate",
+
+    help = "Force point interpolation on the loaded data.",
+    action = "store_true",
+)
+
 PROFILER_GROUP = PARSER.add_argument_group(
     "profiler arguments",
     "Parameters used for the profiler."
@@ -168,5 +175,8 @@ if __name__ == "__main__":
         print (_PROFILE_SETTINGS)
 
     profile.init(**_PROFILE_SETTINGS)
+
+    if args.interpolate:
+        data = cubic_spline.interpolate(data[:, :2])
 
     print(profile.compute(data))
