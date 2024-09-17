@@ -131,6 +131,12 @@ def handle_input_csv_label(f: TextIO) -> numpy.ndarray:
             for value in [line["x_m"], line["y_m"], line["k_radpm"]]
         ])
 
+    if (
+        numpy.isclose(data[0][0], data[-1][0])
+        and numpy.isclose(data[0][1], data[-1][1])
+    ):
+        del data[-1]
+
     return numpy.asarray(data)
 
 
