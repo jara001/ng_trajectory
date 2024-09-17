@@ -132,10 +132,15 @@ def handle_input_csv_label(f: TextIO) -> numpy.ndarray:
     """
     data = []
 
-    for line in csv.DictReader(f):
+    reader = csv.DictReader(f)
+    fields_to_read = ["x_m", "y_m"]
+    fields_to_read += [
+        field for field in ["k_radpm"] if field in reader.fieldnames
+    ]
+
+    for line in reader:
         data.append([
-            float(value)
-            for value in [line["x_m"], line["y_m"], line["k_radpm"]]
+            float(line[field]) for field in fields_to_read
         ])
 
     if (
@@ -176,7 +181,7 @@ if __name__ == "__main__":
 
     profile.init(**_PROFILE_SETTINGS)
 
-    if args.interpolate:
+    if args.interpolate or data.shape[1] == 2:
         data = cubic_spline.interpolate(data[:, :2])
 
     print(profile.compute(data))
