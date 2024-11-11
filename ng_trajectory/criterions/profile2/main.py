@@ -25,6 +25,7 @@ from ng_trajectory.interpolators.utils import (
 from ng_trajectory.segmentators.utils import (
     filterPoints,
     pointInBounds,
+    pointToMap,
     pointsToMap,
     pointsToWorld,
     getMap, getMapOrigin, getMapGrid,
