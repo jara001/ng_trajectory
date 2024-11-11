@@ -47,6 +47,14 @@ PARSER.add_argument(
     type = argparse.FileType("r"),
 )
 
+# TODO: Use this map to determine invalid points.
+PARSER.add_argument(
+    "--map",
+
+    help = "File with the map data (.npy).",
+    type = argparse.FileType("r"),
+)
+
 PARSER.add_argument(
     "-v",
 
