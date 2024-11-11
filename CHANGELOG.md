@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Criterions
     - _Profile_
         - `saveState()` now also saves backward nad maximum speeds that are computed within the speed profiler.
+    - _Profile2_
+        - Remove majority of flake8 warnings.
 - 'ng_generate_data'
     - Generated `start_points.npy` contains additional two columns with distances to the walls.
 - 'plot'
