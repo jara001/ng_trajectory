@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- 'ng_generate_data'
+    - Another file, 'start_points.csv' is generated. It contains positions of the centerline along with the distances to the walls.
+
 ### Changed
 - Criterions
     - _Profile_

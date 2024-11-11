@@ -862,6 +862,12 @@ def processImage(im: Image) -> None:
     ))
     save(start_points, "start_points.npy")
 
+    with open(generate_filename("start_points.csv"), "w") as f:
+        f.write("x_m,y_m,d1_m,d2_m\n")
+        for _sp in start_points:
+            m = [_sp[0], _sp[1], _sp[3], _sp[2]]
+            f.write(",".join(["%f" % v for v in m]) + "\n")
+
     valid_points = numpy.asarray(im, dtype = int)
     valid_points = numpy.argwhere(
         (valid_points == FREE) & (~invalid)
