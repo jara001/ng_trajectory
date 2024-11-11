@@ -29,8 +29,6 @@ from ng_trajectory.segmentators.utils import (
     pointsToMap,
     pointsToWorld,
     getMap, getMapOrigin, getMapGrid,
-    MAP_GRID,
-    MAP
 )
 
 from ng_trajectory.log import (
@@ -513,7 +511,7 @@ def init(**kwargs) -> None:
         # - valid points to create other track representations
 
         # create a new map
-        map_ = copy.copy(MAP)
+        map_ = copy.copy(getMap())
 
         # create proper borders on the map
         map_[0:, 0] = 0
@@ -524,7 +522,7 @@ def init(**kwargs) -> None:
 
         # calc robot mask
         car_width = 0.4  # with safety region
-        robot_radius_grid = int(numpy.round(car_width / MAP_GRID))
+        robot_radius_grid = int(numpy.round(car_width / getMapGrid()))
         y, x = numpy.ogrid[
             -robot_radius_grid:robot_radius_grid + 1,
             -robot_radius_grid:robot_radius_grid + 1
