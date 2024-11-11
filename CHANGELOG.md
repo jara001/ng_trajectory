@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Criterions
     - _Profile_
         - `saveState()` now also saves backward nad maximum speeds that are computed within the speed profiler.
+- 'plot'
+    - Support older matplotlib versions in `rectanglePlot()`.
 
 ## 1.15.1 - 2024-09-10
 ### Added
