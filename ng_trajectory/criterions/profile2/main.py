@@ -447,7 +447,7 @@ def init(**kwargs) -> None:
         )
 
     if P.getValue("reference") is not None:
-        REFERENCE = numpy.load(P.getValue("reference"))[:, :3]
+        REFERENCE = numpy.load(P.getValue("reference"))[:, :4]
         # REFERENCE = numpy.hstack((numpy.roll(REFERENCE[:, :2], -P.getValue("reference_rotate"), axis=0), REFERENCE[:, 2:]))
         # TODO: Lap time should be given, not estimated like this.
         lap_time = P.getValue("reference_laptime")

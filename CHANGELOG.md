@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Criterions
     - _Profile2_
         - Properly obtain logfile name.
+        - Load first four columns of the reference instead of just three.
 
 ## 1.15.1 - 2024-09-10
 ### Added
