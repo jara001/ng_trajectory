@@ -52,7 +52,6 @@ import math
 CENTERLINE = None
 REFERENCE_PROGRESS = None
 OVERTAKING_POINTS = Queue()
-LOGFILE_NAME = None
 
 MAP_INSIDE = None
 MAP_OUTSIDE = None
@@ -429,7 +428,7 @@ def get_rect_points(center: numpy.ndarray, dims: numpy.ndarray, angle: float) ->
 
 def init(**kwargs) -> None:
     """Initialize criterion."""
-    global REFERENCE, CENTERLINE, OVERTAKING_POINTS, MAP_OUTSIDE, MAP_INSIDE, LOGFILE_NAME
+    global REFERENCE, CENTERLINE, OVERTAKING_POINTS, MAP_OUTSIDE, MAP_INSIDE
 
     profiler.parametersSet(**kwargs)
 
@@ -446,8 +445,6 @@ def init(**kwargs) -> None:
             "save_solution_csv",
             logfileName() + ".csv"
         )
-
-    LOGFILE_NAME = kwargs.get("logfile").name
 
     if P.getValue("reference") is not None:
         REFERENCE = numpy.load(P.getValue("reference"))[:, :3]
@@ -638,7 +635,7 @@ def compute(
     t -- time of reaching the last point of the trajectory, [s], float
          minimization criterion
     """
-    global REFERENCE, CENTERLINE, REFERENCE_PROGRESS, OVERTAKING_POINTS, MAP_OUTSIDE, MAP_INSIDE, LOGFILE_NAME
+    global REFERENCE, CENTERLINE, REFERENCE_PROGRESS, OVERTAKING_POINTS, MAP_OUTSIDE, MAP_INSIDE
 
     # Get overlap parameter
     if overlap is None:
@@ -1073,7 +1070,8 @@ def compute(
 
         # data collection
         if not overflown.get("optimization", True):
-            file_name = LOGFILE_NAME.replace("matryoshka.log", "save.npy")
+            # FIXME: This probably fails at some occasions.
+            file_name = logfileName().replace("matryoshka.log", "save.npy")
             numpy.save(file_name, data_to_save)
 
     return float(criterion)

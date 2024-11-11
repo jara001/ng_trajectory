@@ -17,6 +17,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - 'plot'
     - Support older matplotlib versions in `rectanglePlot()`.
 
+### Fixed
+- Criterions
+    - _Profile2_
+        - Properly obtain logfile name.
+
 ## 1.15.1 - 2024-09-10
 ### Added
 - Optimizers
