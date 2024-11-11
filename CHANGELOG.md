@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Changed
+- Criterions
+    - _Profile_
+        - `saveState()` now also saves backward nad maximum speeds that are computed within the speed profiler.
+
 ## 1.15.1 - 2024-09-10
 ### Added
 - Optimizers
