@@ -21,10 +21,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Fixed
 - Criterions
+    - _Profile_
+        - Properly construct conditional-based dictionary is `saveState()`.
     - _Profile2_
         - Properly obtain logfile name.
         - Load first four columns of the reference instead of just three.
         - Add missing import of `pointToMap()`.
+        - Properly construct conditional-based dictionary is `saveState()`.
 
 ## 1.15.1 - 2024-09-10
 ### Added

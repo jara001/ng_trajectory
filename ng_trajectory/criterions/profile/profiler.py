@@ -482,23 +482,23 @@ def saveState(
                     "a_mps2": a[_i],
                     "omega_radps": v[_i] * math.cos(_beta) * k[_i],
                     "delta_rad": math.atan((_lf + _lr) * k[_i])
-                }, **{
-                    [] if CENTERLINE is None
-                    else "s_m": cd[
+                }, **(
+                    {} if CENTERLINE is None
+                    else {"s_m": cd[
                         trajectoryClosestIndex(
                             CENTERLINE,
                             numpy.asarray([x[_i], y[_i]])
                         )
-                    ]
-                }, **{
+                    ]}
+                ), **{
                     "vfwd_mps": v[_i]
-                }, **{
-                    [] if bwd is None
-                    else "vbwd_mps": bwd[_i]
-                }, **{
-                    [] if mx is None
-                    else "vmax_mps": mx[_i]
-                }
+                }, **(
+                    {} if bwd is None
+                    else {"vbwd_mps": bwd[_i]}
+                ), **(
+                    {} if mx is None
+                    else {"vmax_mps": mx[_i]}
+                )
             })
 
 
