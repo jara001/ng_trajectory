@@ -43,6 +43,12 @@ from multiprocessing import Queue
 
 from itertools import chain  # Join generators
 
+from typing import (
+    Any,
+    Dict,
+    Optional,
+)
+
 
 # Global variables
 CENTERLINE = None
@@ -329,7 +335,7 @@ def saveMap(filename: str, map_data: numpy.ndarray):
 # Functions
 ######################
 
-def init(**kwargs) -> None:
+def init(**kwargs) -> Optional[Dict[str, Any]]:
     """Initialize criterion."""
     global REFERENCE, CENTERLINE, OVERTAKING_POINTS
 

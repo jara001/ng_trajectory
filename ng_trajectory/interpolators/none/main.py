@@ -12,6 +12,12 @@ import numpy
 
 from ng_trajectory.parameter import ParameterList
 
+from typing import (
+    Any,
+    Dict,
+    Optional,
+)
+
 
 # Parameters
 P = ParameterList()
@@ -25,7 +31,7 @@ P.createAdd(
 # Functions
 ######################
 
-def init(**kwargs) -> None:
+def init(**kwargs) -> Optional[Dict[str, Any]]:
     """Initialize interpolator."""
     P.updateAll(kwargs)
 

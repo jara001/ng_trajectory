@@ -10,12 +10,18 @@ Optimize using sum( (k_i)^2 ).
 
 import numpy
 
+from typing import (
+    Any,
+    Dict,
+    Optional,
+)
+
 
 ######################
 # Functions
 ######################
 
-def init(**kwargs) -> None:
+def init(**kwargs) -> Optional[Dict[str, Any]]:
     """Initialize criterion."""
     pass
 

@@ -32,6 +32,12 @@ from ng_trajectory.log import print0
 # Resampling for rotation required GCD
 import fractions
 
+from typing import (
+    Any,
+    Dict,
+    Optional,
+)
+
 
 # Global variables
 INTERPOLATOR = cubic_spline
@@ -261,7 +267,7 @@ def trajectoryResample(points, remain):
 # Functions
 ######################
 
-def init(**kwargs) -> None:
+def init(**kwargs) -> Optional[Dict[str, Any]]:
     """Initialize selector."""
     # Check value for rotate
     if "rotate" in kwargs:

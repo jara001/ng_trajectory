@@ -12,6 +12,12 @@ Publishing, 2019. doi: 10.1007/978-3-030-13062-6.
 import numpy
 import math
 
+from typing import (
+    Any,
+    Dict,
+    Optional,
+)
+
 
 # Parameters
 from ng_trajectory.parameter import ParameterList
@@ -383,7 +389,7 @@ def computeProfile(points):
 # General functions
 ######################
 
-def init(**kwargs) -> None:
+def init(**kwargs) -> Optional[Dict[str, Any]]:
     """Initialize criterion."""
     P.updateAll(kwargs, reset = False)
 

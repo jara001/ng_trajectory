@@ -53,7 +53,12 @@ import math
 from skimage.segmentation import flood_fill
 import copy
 
-from typing import Tuple
+from typing import (
+    Any,
+    Dict,
+    Tuple,
+    Optional,
+)
 
 
 # Global variables
@@ -465,7 +470,7 @@ def get_rect_points(
     return corners.T  # n x 2
 
 
-def init(**kwargs) -> None:
+def init(**kwargs) -> Optional[Dict[str, Any]]:
     """Initialize criterion."""
     global REFERENCE, CENTERLINE, OVERTAKING_POINTS, MAP_OUTSIDE, MAP_INSIDE
 

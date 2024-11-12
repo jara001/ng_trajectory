@@ -37,7 +37,15 @@ from concurrent import futures
 from threading import Lock
 
 # Typing
-from typing import Tuple, Dict, TextIO, List, types
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+    TextIO,
+    Tuple,
+    types,
+)
 
 
 # Global variables
@@ -173,7 +181,7 @@ def init(
         plot: bool = False,
         grid: List[float] = [],
         figure: ngplot.matplotlib.figure.Figure = None,
-        **kwargs):
+        **kwargs) -> Optional[Dict[str, Any]]:
     """Initialize variables for Matryoshka transformation.
 
     Arguments:

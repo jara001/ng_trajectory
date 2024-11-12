@@ -15,6 +15,12 @@ from scipy.interpolate import interp1d
 from ng_trajectory.parameter import ParameterList
 from ng_trajectory.selectors.curvature import curve_fitting as cf
 
+from typing import (
+    Any,
+    Dict,
+    Optional,
+)
+
 
 # Parameters
 P = ParameterList()
@@ -25,7 +31,7 @@ P.createAdd("interpolation_size", 100, int, "Number of points used for interpola
 # Functions
 ######################
 
-def init(**kwargs) -> None:
+def init(**kwargs) -> Optional[Dict[str, Any]]:
     """Initialize selector.
 
     Arguments:

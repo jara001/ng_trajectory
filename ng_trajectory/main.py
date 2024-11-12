@@ -450,38 +450,49 @@ def cascadeRun(
         )
 
     # Initialize parts
-    sel.init(
+    _sel_dict = sel.init(
         **{
             **_alg,
             **_alg.get("selector_init", {})
         }
     )
-    itp.init(
+    if _sel_dict is not None:
+        _alg = {**_alg, **_sel_dict}
+
+    _itp_dict = itp.init(
         **{
             **_alg,
             **_alg.get("interpolator_init", {})
         }
     )
-    seg.init(
+    if _itp_dict is not None:
+        _alg = {**_alg, **_itp_dict}
+
+    _seg_dict = seg.init(
         track,
         **{
             **_alg,
             **_alg.get("segmentator_init", {})
         }
     )
-    cri.init(
+    if _seg_dict is not None:
+        _alg = {**_alg, **_seg_dict}
+
+    _cri_dict = cri.init(
         **{
             **_alg,
             **_alg.get("criterion_init", {})
         }
     )
+    if _cri_dict is not None:
+        _alg = {**_alg, **_cri_dict}
 
     # Note: This passes the initial line (which is usually centerline).
     # TODO: Actually pass centerline.
     if not hasattr(cri.main, "CENTERLINE") or cri.main.CENTERLINE is None:
         cri.main.CENTERLINE = result.copy()
 
-    opt.init(
+    _opt_dict = opt.init(
         track,
         rcandidate,
         result,
@@ -494,6 +505,9 @@ def cascadeRun(
             **{"penalizer": pen}
         }
     )
+    if _opt_dict is not None:
+        _alg = {**_alg, **_opt_dict}
+
     logfileFlush()
 
     # # Optimization # #

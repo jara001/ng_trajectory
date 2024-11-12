@@ -17,7 +17,12 @@ import numpy
 from ng_trajectory.interpolators.utils import pointDistance
 from ng_trajectory.parameter import ParameterList
 
-from typing import List
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+)
 
 
 # Parameters
@@ -29,7 +34,7 @@ P.createAdd("range_limit", 0, float, "Maximum distance from the center of the se
 # Functions
 ######################
 
-def init(track: numpy.ndarray, **kwargs) -> None:
+def init(track: numpy.ndarray, **kwargs) -> Optional[Dict[str, Any]]:
     """Initialize segmentator."""
     pass
 

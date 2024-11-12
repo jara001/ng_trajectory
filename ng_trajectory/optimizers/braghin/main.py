@@ -33,7 +33,15 @@ from ng_trajectory.optimizers.matryoshka.main import PPETQDM
 from threading import Lock
 
 # Typing
-from typing import Tuple, Dict, TextIO, List, types
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+    TextIO,
+    Tuple,
+    types,
+)
 
 
 # Global variables
@@ -122,7 +130,7 @@ def init(
         line_reduction: float = 3,
         grid: List[float] = [],
         figure: ngplot.matplotlib.figure.Figure = None,
-        **kwargs):
+        **kwargs) -> Optional[Dict[str, Any]]:
     """Initialize variables for Braghin's transformation.
 
     Arguments:

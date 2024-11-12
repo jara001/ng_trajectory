@@ -15,6 +15,12 @@ from scipy.interpolate import CubicSpline
 
 from ng_trajectory.parameter import ParameterList
 
+from typing import (
+    Any,
+    Dict,
+    Optional,
+)
+
 
 # Parameters
 P = ParameterList()
@@ -26,7 +32,7 @@ P.createAdd("closed_loop", True, bool, "When set, interpolation creates a closed
 # Functions
 ######################
 
-def init(**kwargs) -> None:
+def init(**kwargs) -> Optional[Dict[str, Any]]:
     """Initialize interpolator."""
     P.updateAll(kwargs)
 
