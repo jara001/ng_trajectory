@@ -16,7 +16,7 @@ from ng_trajectory.interpolators.utils import (
 
 from ng_trajectory.segmentators.utils import pointToMap
 
-from typing import List, Tuple, TextIO
+from typing import List, Tuple, TextIO, Optional
 
 
 _mu = 0.2           # Friction coeficient
@@ -339,7 +339,10 @@ def saveState(
         points: numpy.ndarray,
         t: numpy.ndarray,
         v: numpy.ndarray,
-        a: numpy.ndarray) -> bool:
+        a: numpy.ndarray,
+        *,
+        bwd: Optional[numpy.ndarray] = None,
+        mx: Optional[numpy.ndarray] = None) -> bool:
     """Save the computed profile into a CSV file.
 
     Arguments:
@@ -349,6 +352,11 @@ def saveState(
     a -- acceleration profile of the trajectory, [m.s^-2], nx1 numpy.ndarray
     t -- time of reaching the points of the trajectory,
          [s], nx1 or (n+1)x1 numpy.ndarray
+    *
+    bwd -- speed profile after the backward pass, [m.s^-1],
+           optional, nx1 numpy.ndarray
+    mx -- maximum permissible speed, [m.s^-1],
+          optional, nx1 numpy.ndarray
 
     Returns:
     success -- True if saved, otherwise False
@@ -407,6 +415,12 @@ def saveState(
     x, y, k = points[:, :3].T
     t, v, a = t.flatten(), v.flatten(), a.flatten()
 
+    if bwd is not None:
+        bwd = bwd.flatten()
+
+    if mx is not None:
+        mx = mx.flatten()
+
     # Line distance (d) !! NOT TRACK PROGRESS !!
     d = pointsDistance(points)
     _d = d[0]
@@ -436,12 +450,18 @@ def saveState(
     with open(filename, "w", newline = "") as f:
         writer = csv.DictWriter(
             f,
-            fieldnames = [
-                "t_s", "d_m", "x_m", "y_m",
-                "psi_rad", "k_radpm",
-                "vx_mps", "vy_mps", "a_mps2",
-                "omega_radps", "delta_rad"
-            ] + ([] if CENTERLINE is None else ["s_m"])
+            fieldnames = (
+                [
+                    "t_s", "d_m", "x_m", "y_m",
+                    "psi_rad", "k_radpm",
+                    "vx_mps", "vy_mps", "a_mps2",
+                    "omega_radps", "delta_rad"
+                ]
+                + ([] if CENTERLINE is None else ["s_m"])
+                + ["vfwd_mps"]
+                + ([] if bwd is None else ["vbwd_mps"])
+                + ([] if mx is None else ["vmax_mps"])
+            )
         )
 
         writer.writeheader()
@@ -462,14 +482,23 @@ def saveState(
                     "a_mps2": a[_i],
                     "omega_radps": v[_i] * math.cos(_beta) * k[_i],
                     "delta_rad": math.atan((_lf + _lr) * k[_i])
-                }, **{
-                    [] if CENTERLINE is None
-                    else "s_m": cd[
+                }, **(
+                    {} if CENTERLINE is None
+                    else {"s_m": cd[
                         trajectoryClosestIndex(
                             CENTERLINE,
                             numpy.asarray([x[_i], y[_i]])
                         )
                     ]}
+                ), **{
+                    "vfwd_mps": v[_i]
+                }, **(
+                    {} if bwd is None
+                    else {"vbwd_mps": bwd[_i]}
+                ), **(
+                    {} if mx is None
+                    else {"vmax_mps": mx[_i]}
+                )
             })
 
 
@@ -591,6 +620,6 @@ def profileCompute(
         _t[0] = 0
 
     if save is not None:
-        saveState(save, points, _t, _v, _a)
+        saveState(save, points, _t, _v, _a, bwd = bwd, mx = mx)
 
     return _v, _a, _t

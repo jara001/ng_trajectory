@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.15.2 - 2024-11-12
+### Added
+- 'ng_generate_data'
+    - Another file, 'start_points.csv' is generated. It contains positions of the centerline along with the distances to the walls.
+
+### Changed
+- Criterions
+    - _Profile_
+        - `saveState()` now also saves backward nad maximum speeds that are computed within the speed profiler.
+    - _Profile2_
+        - Remove majority of flake8 warnings.
+- 'ng_generate_data'
+    - Generated `start_points.npy` contains additional two columns with distances to the walls.
+- 'plot'
+    - Support older matplotlib versions in `rectanglePlot()`.
+
+### Fixed
+- Criterions
+    - _Profile_
+        - Properly construct conditional-based dictionary is `saveState()`.
+    - _Profile2_
+        - Properly obtain logfile name.
+        - Load first four columns of the reference instead of just three.
+        - Add missing import of `pointToMap()`.
+        - Properly construct conditional-based dictionary is `saveState()`.
+
 ## 1.15.1 - 2024-09-10
 ### Added
 - Optimizers

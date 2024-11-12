@@ -602,7 +602,7 @@ def loopCascadeRun(
         **{**conf, "loop_output": (fitness, rcandidate, tcandidate, result)}
     )
 
-
+    # TODO: Do not do this when all cascade parts / loops were skipped.
     if fileformat:
         with open(fileformat % (loop_i + 1) + ".log", "w") as logfile:
             log ("timeA:%f" % (time.time() - cascade_time), logfile=logfile)

@@ -825,6 +825,19 @@ def processImage(im: Image) -> None:
     saveim(nndi, "generated_data.png")
 
 
+    # # Compute distances to the walls # #
+    dists = []
+
+    walls = getWalls(im)
+    for wall in walls:
+        dists.append([
+            numpy.hypot(
+                wall[:, 0] - sorted_points[i][0],
+                wall[:, 1] - sorted_points[i][1]
+            ).min() for i in range(len(sorted_points))
+        ])
+
+
     # # Save into npy # #
 
     start_points = numpy.asarray(sorted_points).astype(float)
@@ -832,6 +845,7 @@ def processImage(im: Image) -> None:
     # Flip y-axis
     start_points -= [im.size[1], 0]
     start_points[:, 0] = numpy.abs(start_points[:, 0])
+    start_points = numpy.hstack((start_points, numpy.asarray(dists).T))
 
     # Convert to real units (if required)
     if args.resolution != 1.0 or args.scale != 1.0:  # or args.resize != 1.0:
@@ -839,12 +853,20 @@ def processImage(im: Image) -> None:
 
     # Move the origin (if required)
     if args.originx != 0.0 or args.originy != 0.0:
-        start_points += [args.originy, args.originx]
+        start_points += [args.originy, args.originx, 0, 0]
 
     # Swap yx
-    start_points = numpy.vstack((start_points[:, 1], start_points[:, 0])).T
-
+    start_points = numpy.hstack((
+        numpy.vstack((start_points[:, 1], start_points[:, 0])).T,
+        start_points[:, 2:]
+    ))
     save(start_points, "start_points.npy")
+
+    with open(generate_filename("start_points.csv"), "w") as f:
+        f.write("x_m,y_m,d1_m,d2_m\n")
+        for _sp in start_points:
+            m = [_sp[0], _sp[1], _sp[3], _sp[2]]
+            f.write(",".join(["%f" % v for v in m]) + "\n")
 
     valid_points = numpy.asarray(im, dtype = int)
     valid_points = numpy.argwhere(

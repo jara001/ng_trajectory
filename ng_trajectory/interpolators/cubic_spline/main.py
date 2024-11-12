@@ -33,7 +33,7 @@ def init(**kwargs) -> None:
 
 def interpolate(
         points: numpy.ndarray,
-        int_size: int = 400,
+        int_size: int = 400,  # TODO: THIS CANNOT BE CHANGED?
         **overflown) -> numpy.ndarray:
     """Interpolate points using cubic spline.
 
