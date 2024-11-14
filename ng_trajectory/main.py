@@ -246,14 +246,14 @@ def configurationAppend(conf: Dict[str, any]) -> bool:
     return True
 
 
-def configurationMerge(conf: Dict[str, any]) -> bool:
-    """Merge configuration with the global settings.
+def dictMerge(dict1: Dict[str, any], dict2: Dict[str, any]) -> Dict[str, any]:
+    """Merge two dictionaries in a 'true merge'.
 
     Arguments:
-    conf -- configuration to merge, dict
+    dict1, dict2 -- dictionaries to merge, dict[str, any]
 
     Returns:
-    success -- True when loaded, otherwise False
+    merged dictionary, dict[str, any]
 
     Note: This crawls through the dicts and performs
     a 'true merge'; merging values in the subdicts.
@@ -261,8 +261,6 @@ def configurationMerge(conf: Dict[str, any]) -> bool:
     Sources:
     https://stackoverflow.com/a/7205672
     """
-    global CONFIGURATION
-
     def mergedicts(dict1, dict2):
         for k in set(dict1.keys()).union(dict2.keys()):
             if k in dict1 and k in dict2:
@@ -280,7 +278,21 @@ def configurationMerge(conf: Dict[str, any]) -> bool:
             else:
                 yield (k, dict2[k])
 
-    CONFIGURATION = dict(mergedicts(CONFIGURATION, conf))
+    return dict(mergedicts(dict1, dict2))
+
+
+def configurationMerge(conf: Dict[str, any]) -> bool:
+    """Merge configuration with the global settings.
+
+    Arguments:
+    conf -- configuration to merge, dict
+
+    Returns:
+    success -- True when loaded, otherwise False
+    """
+    global CONFIGURATION
+
+    CONFIGURATION = dictMerge(CONFIGURATION, conf)
 
     verbositySet(CONFIGURATION.get("logging_verbosity", 1))
 
@@ -457,7 +469,7 @@ def cascadeRun(
         }
     )
     if _sel_dict is not None:
-        _alg = {**_alg, **_sel_dict}
+        _alg = dictMerge(_alg, _sel_dict)
 
     _itp_dict = itp.init(
         **{
@@ -466,7 +478,7 @@ def cascadeRun(
         }
     )
     if _itp_dict is not None:
-        _alg = {**_alg, **_itp_dict}
+        _alg = dictMerge(_alg, _itp_dict)
 
     _seg_dict = seg.init(
         track,
@@ -476,7 +488,7 @@ def cascadeRun(
         }
     )
     if _seg_dict is not None:
-        _alg = {**_alg, **_seg_dict}
+        _alg = dictMerge(_alg, _seg_dict)
 
     _cri_dict = cri.init(
         **{
@@ -485,7 +497,7 @@ def cascadeRun(
         }
     )
     if _cri_dict is not None:
-        _alg = {**_alg, **_cri_dict}
+        _alg = dictMerge(_alg, _cri_dict)
 
     # Note: This passes the initial line (which is usually centerline).
     # TODO: Actually pass centerline.
@@ -506,7 +518,7 @@ def cascadeRun(
         }
     )
     if _opt_dict is not None:
-        _alg = {**_alg, **_opt_dict}
+        _alg = dictMerge(_alg, _opt_dict)
 
     logfileFlush()
 
