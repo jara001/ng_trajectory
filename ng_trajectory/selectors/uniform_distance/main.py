@@ -48,7 +48,7 @@ P = ParameterList()
 P.createAdd("sampling_distance", 1.0, float, "[m] Distance of super-sampling before the interpolation, skipped when 0.", "init")
 P.createAdd("distance", 0, float, "[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.", "init")
 P.createAdd("rotate", 0, float, "Parameter for rotating the input path. 0 is not rotated. <0, 1)", "init")
-P.createAdd("fixed_points", [], list, "Points to be used in the selection upon calling 'select'.", "init")
+P.createAdd("fixed_points", [], list, "Points to be used in the selection upon calling 'select'.", "")
 
 
 ######################
@@ -327,6 +327,9 @@ def select(points: numpy.ndarray, remain: int, **overflown) -> numpy.ndarray:
             "Negative selection requires set 'distance' parameter "
             "for 'uniform_distance' selector."
         )
+
+    if "fixed_points" in overflown:
+        P.update("fixed_points", overflown["fixed_points"])
 
     rpoints = trajectoryResample(points, remain)
 

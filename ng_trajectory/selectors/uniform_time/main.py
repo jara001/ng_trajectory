@@ -149,6 +149,9 @@ def select(points: numpy.ndarray, remain: int, **overflown) -> numpy.ndarray:
             file = sys.stderr
         )
 
+    if "fixed_points" in overflown:
+        P.update("fixed_points", overflown["fixed_points"])
+
     # Resample the trajectory (even with the super sampling!)
     resampled_trajectory = trajectoryResample(points, -1)
 
