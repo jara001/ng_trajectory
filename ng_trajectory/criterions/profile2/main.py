@@ -33,7 +33,7 @@ from ng_trajectory.segmentators.utils import (
 
 from ng_trajectory.log import (
     logfileName,
-    log, logvv,
+    log, logv, logvv,
     print0
 )
 
@@ -88,6 +88,8 @@ P.createAdd("reference", None, str, "Name of the file to load (x, y, t, v) refer
 P.createAdd("reference_dist", 1.0, float, "Minimum allowed distance from the reference at given time [m].", "init")
 P.createAdd("reference_rotate", 0, int, "Number of points to rotate the reference trajectory.", "init")
 P.createAdd("reference_laptime", 0, float, "Lap time of the given reference. 0 = estimated from data", "init")
+P.createAdd("reference_obtain_start", False, bool, "When given, initial speed and initial position of the vehicle is computed.", "init")
+P.createAdd("reference_obtain_start_td", 0.0, float, "Time distance behind the reference [s].", "init")
 P.createAdd("save_solution_csv", "$", str, "When non-empty, save final trajectory to this file as CSV. Use '$' to use log name instead.", "init")
 P.createAdd("plot", False, bool, "Whether a graphical representation should be created.", "init (viz.)")
 P.createAdd("plot_reference", False, bool, "Whether the reference trajectory should be plotted.", "init (viz.)")
@@ -474,6 +476,8 @@ def init(**kwargs) -> Optional[Dict[str, Any]]:
     """Initialize criterion."""
     global REFERENCE, CENTERLINE, OVERTAKING_POINTS, MAP_OUTSIDE, MAP_INSIDE
 
+    cri_dict = {}
+
     profiler.parametersSet(**kwargs)
 
     P.updateAll(kwargs)
@@ -489,6 +493,8 @@ def init(**kwargs) -> Optional[Dict[str, Any]]:
             "save_solution_csv",
             logfileName() + ".csv"
         )
+
+    lap_time = 0.0
 
     if P.getValue("reference") is not None:
         REFERENCE = numpy.load(P.getValue("reference"))[:, :4]
@@ -564,6 +570,58 @@ def init(**kwargs) -> Optional[Dict[str, Any]]:
         )
     else:
         REFERENCE = None
+
+    if P.getValue("reference_obtain_start") and REFERENCE is not None:
+        """
+        This section is used to compute starting location of the ego car,
+        to properly set-up the environment for overtaking maneuvers.
+        """
+        # 1. Obtain the starting position.
+        _start_time = lap_time - P.getValue("reference_obtain_start_td")
+        _start_time %= lap_time
+
+        _start_id = numpy.argmin(
+            numpy.sqrt(
+                numpy.power(REFERENCE[:, 2] - _start_time, 2)
+            )
+        )
+
+        # 2. Obtain the initial speed.
+        profiler.parametersSet(v_0 = REFERENCE[_start_id, 3])
+        cri_dict["v_0"] = REFERENCE[_start_id, 3]
+
+        # 3. Obtain the positions of fixed points / segments.
+        #    This will enforce starting position of the ego car, as well as
+        #    its initial heading.
+        # Note: In the original work, the distance between the two points
+        #       was actually 1 -- X -- 2 from the reference. So we use that.
+        # Side note: There is a limit how close the points can be. If they
+        #            are too close, then the selector/segmentator/optimizer
+        #            will fuse them together/associate with the same segment.
+        #            And that is something we don't want.
+        _second_id = (_start_id + 2) % len(REFERENCE)
+
+        # Note: As a workaround, we have to push this into 'selector_args'.
+        # Currently, optimizers do not pass the whole configuration, but only
+        # selected parts.
+        cri_dict["selector_args"] = {
+            "fixed_points": [
+                [REFERENCE[_start_id, 0], REFERENCE[_start_id, 1]],
+                [REFERENCE[_second_id, 0], REFERENCE[_second_id, 1]]
+            ]
+        }
+        cri_dict["fixed_segments"] = [
+            [REFERENCE[_start_id, 0], REFERENCE[_start_id, 1]],
+            [REFERENCE[_second_id, 0], REFERENCE[_second_id, 1]]
+        ]
+
+        log (
+            "Computed ego start location, td = %fs (requested %fs)"
+            % (
+                lap_time - REFERENCE[_start_id, 2],
+                P.getValue("reference_obtain_start_td")
+            )
+        )
 
     if P.getValue("friction_map") is not None:
         fmap = numpy.load(P.getValue("friction_map"))
@@ -657,6 +715,8 @@ def init(**kwargs) -> Optional[Dict[str, Any]]:
                 )
             ])
         )
+
+    return cri_dict if len(cri_dict) > 0 else None
 
 
 def compute(
