@@ -334,6 +334,8 @@ reference (str) = None [Name of the file to load (x, y, t, v) reference path tha
 reference_dist (float) = 1.0 [Minimum allowed distance from the reference at given time [m].]
 reference_rotate (int) = 0 [Number of points to rotate the reference trajectory.]
 reference_laptime (float) = 0 [Lap time of the given reference. 0 = estimated from data]
+reference_obtain_start (bool) = False [When given, initial speed and initial position of the vehicle is computed.]
+reference_obtain_start_td (float) = 0.0 [Time distance behind the reference [s].]
 save_solution_csv (str) = $ [When non-empty, save final trajectory to this file as CSV. Use '$' to use log name instead.]
 favor_overtaking (float) = 0 [Penalty value to add to the lap time when overtaking does not occur.]
 friction_map (str) = None [Name of the file to load (x, y, mu*100) with friction map.]
@@ -553,11 +555,13 @@ This selector uniformly samples the input path so that the selected points are e
 
 
 ```html
+Parameters:
+fixed_points (list) = [] [Points to be used in the selection upon calling 'select'.]
+
 Init parameters:
 sampling_distance (float) = 1.0 [[m] Distance of super-sampling before the interpolation, skipped when 0.]
 distance (float) = 0 [[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.]
 rotate (float) = 0 [Parameter for rotating the input path. 0 is not rotated. <0, 1)]
-fixed_points (list) = [] [Points to be used in the selection upon calling 'select'.]
 ```
 
 
@@ -592,6 +596,7 @@ Following algorithms are used:
 Parameters:
 overlap (int) = 0 [Size of the trajectory overlap. 0 disables this.]
 friction_map_yaml (str) = None [(Requires pyyaml) Name of the yaml configuration of the original map that was used to create '.npy' files. Map file specified in the configuration has to exist.]
+fixed_points (list) = [] [Points to be used in the selection upon calling 'select'.]
 
 Init parameters:
 rotate (float) = 0 [Parameter for rotating the input path. 0 is not rotated. <0, 1)]
@@ -620,7 +625,6 @@ friction_map_plot (bool) = False [When True, friction map is plotted.]
 friction_map_save (bool) = False [When True, friction map is saved alongside the log files.]
 sampling_distance (float) = 1.0 [[m] Distance of super-sampling before the interpolation, skipped when 0.]
 distance (float) = 0 [[m] Distance between the individual points, ignored when 0, used when requesting negative number of points.]
-fixed_points (list) = [] [Points to be used in the selection upon calling 'select'.]
 
 Init (viz.) parameters:
 plot (bool) = False [Whether a graphical representation should be created.]

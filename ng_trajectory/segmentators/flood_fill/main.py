@@ -25,7 +25,12 @@ from ng_trajectory.segmentators.utils import (
 # Parallel execution of flood fill
 from concurrent import futures
 
-from typing import List
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+)
 
 
 # Global variables
@@ -135,7 +140,7 @@ def segmentDistance(p: List[float], a: List[float], b: List[float]) -> float:
 # Functions
 ######################
 
-def init(track: numpy.ndarray, **kwargs) -> None:
+def init(track: numpy.ndarray, **kwargs) -> Optional[Dict[str, Any]]:
     """Initialize segmentator by creating map."""
     global MAP, MAP_ORIGIN, MAP_GRID
 

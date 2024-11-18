@@ -17,7 +17,12 @@ from ng_trajectory.segmentators.utils import (
     pointToMap
 )
 
-from typing import List, Dict
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+)
 
 
 # Global variables
@@ -118,7 +123,7 @@ def init(
         map_grid: float,
         map_last: numpy.ndarray,
         group_centers: numpy.ndarray,
-        **kwargs) -> None:
+        **kwargs) -> Optional[Dict[str, Any]]:
     """Initialize penalizer.
 
     Arguments:

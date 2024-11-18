@@ -33,7 +33,12 @@ from ng_trajectory.parameter import ParameterList
 from ng_trajectory.log import print0
 
 # Typing
-from typing import List
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+)
 
 
 # Global variables
@@ -101,7 +106,7 @@ def timeSample(
 # Functions
 ######################
 
-def init(**kwargs) -> None:
+def init(**kwargs) -> Optional[Dict[str, Any]]:
     """Initialize selector."""
     P.updateAll(kwargs)
 
@@ -143,6 +148,9 @@ def select(points: numpy.ndarray, remain: int, **overflown) -> numpy.ndarray:
             "the initial conditions affect the results.",
             file = sys.stderr
         )
+
+    if "fixed_points" in overflown:
+        P.update("fixed_points", overflown["fixed_points"])
 
     # Resample the trajectory (even with the super sampling!)
     resampled_trajectory = trajectoryResample(points, -1)

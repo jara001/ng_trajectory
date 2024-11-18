@@ -28,7 +28,12 @@ import ng_trajectory.plot as ngplot
 from ng_trajectory.plot import PLOT_AVAILABLE
 
 # Typing
-from typing import List
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+)
 
 
 # Parameters
@@ -285,7 +290,7 @@ def peaksMerge(
 # Functions
 ######################
 
-def init(**kwargs) -> None:
+def init(**kwargs) -> Optional[Dict[str, Any]]:
     """Initialize selector.
 
     Arguments:

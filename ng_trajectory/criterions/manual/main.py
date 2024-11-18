@@ -11,6 +11,12 @@ import numpy
 
 from threading import Lock
 
+from typing import (
+    Any,
+    Dict,
+    Optional,
+)
+
 
 # Global variables
 INPUT_LOCK = Lock()
@@ -20,7 +26,7 @@ INPUT_LOCK = Lock()
 # Functions
 ######################
 
-def init(**kwargs):
+def init(**kwargs) -> Optional[Dict[str, Any]]:
     """Initialize criterion."""
     return None
 

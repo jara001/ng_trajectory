@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.15.3 - 2024-11-18
+### Added
+- Criterions
+    - _Profile2_
+        - Parameters `reference_obtain_start` and `reference_obtain_start_td` to prepare the criterion and whole pipeline to generate overtaking maneuvers. Using this generates following parameters that overwrite values in the configuration: `v_0`, `fixed_points` and `fixed_segments`.
+
+### Changed
+- Selectors
+    - _Uniform_distance_
+        - Parameter `fixed_points` can be now set from `selector_args` as well.
+    - _Uniform_time_
+        - Parameter `fixed_points` can be now set from `selector_args` as well.
+- Initialization (`init()`) of all algorithms may now return an optional dictionary. When returned, it is fused together with the configuration of the current cascade step (except penalizers as they are handled by the optimizers).
+
+### Fixed
+- Criterions
+    - _Profile2_
+        - Properly save npy data without raising ragged array 'VisibleDeprecationWarning'.
+
 ## 1.15.2 - 2024-11-12
 ### Added
 - 'ng_generate_data'

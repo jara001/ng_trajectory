@@ -14,6 +14,12 @@ import numpy
 from ng_trajectory.parameter import ParameterList
 from ng_trajectory.penalizers.utils import eInvalidPoints
 
+from typing import (
+    Any,
+    Dict,
+    Optional,
+)
+
 
 # Global variables
 INVALID_POINTS = []
@@ -28,7 +34,7 @@ P.createAdd("k_max", 1.5, float, "Maximum allowed curvature in abs [m^-1]", "")
 # Functions
 ######################
 
-def init(**kwargs) -> None:
+def init(**kwargs) -> Optional[Dict[str, Any]]:
     """Initialize penalizer."""
     # Update parameters
     P.updateAll(kwargs)

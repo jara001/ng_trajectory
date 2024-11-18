@@ -19,7 +19,11 @@ from scipy.interpolate import interp1d
 from scipy.signal import find_peaks
 from . import curve_fitting as cf
 
-from typing import Dict
+from typing import (
+    Any,
+    Dict,
+    Optional,
+)
 
 
 # Parameters
@@ -98,7 +102,7 @@ def mergePeaks(
 # Functions
 ######################
 
-def init(**kwargs) -> None:
+def init(**kwargs) -> Optional[Dict[str, Any]]:
     """Initialize selector.
 
     Arguments:

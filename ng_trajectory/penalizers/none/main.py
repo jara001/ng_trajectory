@@ -10,6 +10,12 @@ Passes any candidate.
 
 import numpy
 
+from typing import (
+    Any,
+    Dict,
+    Optional,
+)
+
 
 # Global variables
 INVALID_POINTS = []
@@ -19,7 +25,7 @@ INVALID_POINTS = []
 # Functions
 ######################
 
-def init(**kwargs) -> None:
+def init(**kwargs) -> Optional[Dict[str, Any]]:
     """Initialize penalizer."""
     pass
 

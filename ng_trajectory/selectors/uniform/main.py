@@ -18,6 +18,12 @@ from ng_trajectory.log import print0
 
 from ng_trajectory.parameter import ParameterList
 
+from typing import (
+    Any,
+    Dict,
+    Optional,
+)
+
 # Global variables
 ROTATE = 0
 
@@ -33,7 +39,7 @@ P.createAdd("rotate", 0, float, "Parameter for rotating the subset selection. 0 
 
 def init(
         rotate: float = 0,
-        **kwargs) -> None:
+        **kwargs) -> Optional[Dict[str, Any]]:
     """Initialize selector.
 
     Arguments:

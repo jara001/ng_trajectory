@@ -14,7 +14,12 @@ import numpy
 from ng_trajectory.parameter import ParameterList
 from ng_trajectory.penalizers.utils import eInvalidPoints
 
-from typing import List
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+)
 
 
 # Global variables
@@ -76,7 +81,7 @@ HUBER_DELTA = 0.0
 # Functions
 ######################
 
-def init(start_points: numpy.ndarray, **kwargs) -> None:
+def init(start_points: numpy.ndarray, **kwargs) -> Optional[Dict[str, Any]]:
     """Initialize penalizer.
 
     Arguments:

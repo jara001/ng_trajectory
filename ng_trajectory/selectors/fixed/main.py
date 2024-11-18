@@ -12,7 +12,12 @@ import numpy
 
 from ng_trajectory.parameter import ParameterList
 
-from typing import List
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+)
 
 
 # Global variables
@@ -30,7 +35,7 @@ P.createAdd("points", "", list, "Points to be returned upon calling 'select', li
 
 def init(
         points: List[List[float]] = "",
-        **kwargs) -> None:
+        **kwargs) -> Optional[Dict[str, Any]]:
     """Initialize selector.
 
     Arguments:

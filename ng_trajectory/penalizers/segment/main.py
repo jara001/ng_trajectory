@@ -34,7 +34,12 @@ from ng_trajectory.segmentators.utils import (
 # Optimization methods
 from ng_trajectory.penalizers import utils
 
-from typing import List
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+)
 
 
 # Global variables
@@ -92,7 +97,7 @@ def init(
         map_origin: numpy.ndarray,
         map_grid: float,
         map_last: numpy.ndarray,
-        **kwargs) -> None:
+        **kwargs) -> Optional[Dict[str, Any]]:
     """Initialize penalizer.
 
     Arguments:
