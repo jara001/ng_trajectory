@@ -20,6 +20,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
         - Parameter `fixed_points` can be now set from `selector_args` as well.
 - Initialization (`init()`) of all algorithms may now return an optional dictionary. When returned, it is fused together with the configuration of the current cascade step (except penalizers as they are handled by the optimizers).
 
+### Fixed
+- Criterions
+    - _Profile2_
+        - Properly save npy data without raising ragged array 'VisibleDeprecationWarning'.
+
 ## 1.15.2 - 2024-11-12
 ### Added
 - 'ng_generate_data'

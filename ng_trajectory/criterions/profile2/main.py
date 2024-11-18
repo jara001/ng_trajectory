@@ -1350,6 +1350,9 @@ def compute(
         if not overflown.get("optimization", True):
             # FIXME: This probably fails at some occasions.
             file_name = logfileName().replace("matryoshka.log", "save.npy")
-            numpy.save(file_name, data_to_save)
+            numpy.save(
+                file_name,
+                numpy.asarray(data_to_save, dtype = object)
+            )
 
     return float(criterion)
