@@ -6,11 +6,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ## Unreleased
 ### Added
 - Criterions
-    - _Profile_
-        - Print out a message when setting global variable that does not exist in `profiler.parametersSet`.
     - _Profile2_
         - Parameters `reference_obtain_start` and `reference_obtain_start_td` to prepare the criterion and whole pipeline to generate overtaking maneuvers. Using this generates following parameters that overwrite values in the configuration: `v_0`, `fixed_points` and `fixed_segments`.
-        - Print out a message when setting global variable that does not exist in `profiler.parametersSet`.
 
 ### Changed
 - Selectors

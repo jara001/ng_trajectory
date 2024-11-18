@@ -16,8 +16,6 @@ from ng_trajectory.interpolators.utils import (
 
 from ng_trajectory.segmentators.utils import pointToMap
 
-from ng_trajectory.log import print0
-
 from typing import List, Tuple, TextIO, Optional
 
 
@@ -43,15 +41,7 @@ FRICTION_MAP = None
 
 def parametersSet(**kwargs) -> None:
     """Set parameters of the profiler."""
-    _gls = globals()
-
     for _parameter, _value in kwargs.items():
-        if _parameter not in _gls:
-            print0(
-                "profiler2: Setting global variable '%s' that does not exist."
-                % _parameter
-            )
-
         globals()[_parameter] = _value
 
 
