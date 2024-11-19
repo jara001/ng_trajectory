@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- Configuration parameter `_ng_version` that defines allowed versions of 'ng_trajectory'.
+
 ### Changed
 - Criterions
     - _Profile_, _Profile2_
