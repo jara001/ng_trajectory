@@ -87,7 +87,7 @@ P.createAdd("_lr", 0.139, float, "Distance from center of mass to the rear axle 
 P.createAdd("reference", None, str, "Name of the file to load (x, y, t, v) reference path that cannot be close. Currently, the only supported type is .npy", "init")
 P.createAdd("reference_dist", 1.0, float, "Minimum allowed distance from the reference at given time [m].", "init")
 P.createAdd("reference_rotate", 0, int, "Number of points to rotate the reference trajectory.", "init")
-P.createAdd("reference_laptime", 0, float, "Lap time of the given reference. 0 = estimated from data", "init")
+P.createAdd("reference_laptime", 0, float, "Lap time of the given reference. 0 = estimated from data, or taken from the reference file (index 0)", "init")
 P.createAdd("reference_obtain_start", False, bool, "When given, initial speed and initial position of the vehicle is computed.", "init")
 P.createAdd("reference_obtain_start_td", 0.0, float, "Time distance behind the reference [s].", "init")
 P.createAdd("save_solution_csv", "$", str, "When non-empty, save final trajectory to this file as CSV. Use '$' to use log name instead.", "init")
@@ -499,11 +499,15 @@ def init(**kwargs) -> Optional[Dict[str, Any]]:
     if P.getValue("reference") is not None:
         REFERENCE = numpy.load(P.getValue("reference"))[:, :4]
 
-        # TODO: Lap time should be given, not estimated like this.
         lap_time = P.getValue("reference_laptime")
 
+        # Use lap time from the reference, if not given explicitly
+        if lap_time == 0.0 and not numpy.isclose(REFERENCE[0, 2], 0.0):
+            lap_time = REFERENCE[0, 2]
+            REFERENCE[0, 2] = 0.0
+
+        # Otherwise estimate it from the data
         if lap_time == 0.0:
-            # Lap time estimate
             lap_time = REFERENCE[-1, 2] + numpy.mean([
                 REFERENCE[-1, 2] - REFERENCE[-2, 2],
                 REFERENCE[1, 2] - REFERENCE[0, 2]

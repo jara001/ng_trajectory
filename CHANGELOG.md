@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+### Changed
+- Criterions
+    - _Profile_, _Profile2_
+        - When first time of reference is not zero, use it as lap time.
+
+### Fixed
+- Criterions
+    - _Profile_, _Profile2_
+        - Do not estimate lap time of the reference when the first time is not zero.
+
 ## 1.15.3 - 2024-11-18
 ### Added
 - Criterions
