@@ -219,7 +219,7 @@ def configurationLoad(filename: str) -> bool:
                 CONFIGURATION = {**CONFIGURATION, **conf}
 
             spec = specifiers.SpecifierSet(
-                CONFIGURATION.get("_ng_version", "")
+                CONFIGURATION.get("_ng_version", ""), prereleases = True
             )
 
             if ng_trajectory.__version__ not in spec:
