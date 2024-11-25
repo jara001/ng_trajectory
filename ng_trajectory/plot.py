@@ -488,11 +488,15 @@ def rectanglePlot(
 
     # Support older matplotlib
     import matplotlib.transforms as tr
-    tra= tr.Affine2D().rotate_deg_around(centre[0], centre[1], numpy.degrees(angle))
+    # Note: For some reason, adding transformation directly to the patch,
+    #       makes it unable to render.
+    tra = tr.Affine2D().rotate_deg_around(
+        centre[0], centre[1], numpy.degrees(angle)
+    )
 
     rectangle = pyplot.Rectangle(
-        (centre[0] - (width / 2), centre[1] - (height / 2)),
-        width, height, transform = tra,#numpy.degrees(angle), rotation_point = 'center',
+        tra.transform((centre[0] - (width / 2), centre[1] - (height / 2))),
+        width, height, numpy.degrees(angle),  # rotation_point = 'center',
         **kwargs
     )
 

@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Criterions
     - _Profile_, _Profile2_
         - Do not estimate lap time of the reference when the first time is not zero.
+- 'plot'
+    - `rectanglePlot()` now actually displays rectangles.
 
 ## 1.15.3 - 2024-11-18
 ### Added
