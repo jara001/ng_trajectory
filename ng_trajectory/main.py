@@ -72,6 +72,7 @@ import sys
 import numpy
 import json
 import time
+from packaging import specifiers  # SpecifierSet
 
 # from ng_trajectory.configuration import configurationLoad
 # from ng_trajectory.configuration import CONFIGURATION
@@ -110,6 +111,7 @@ P = ParameterList()
 # FIXME: Actually, the default values do not work here as it was not adapted for ParameterList.
 P.createAdd("_version", None, int, "Version of the configuration.", "General")
 P.createAdd("_comment", None, str, "Commentary of the configuration file.", "General")
+P.createAdd("_ng_version", "", str, "Specifier for supported ng_trajectory versions with the configuration file.", "General")
 P.createAdd("loops", None, int, "Number of repetitions.", "Optimization")
 P.createAdd("groups", None, int, "Number of segments on the track.", "Optimization")
 P.createAdd("variate", None, str, "Name of the field that contains multiple values. Its values are varied, run loop-cascade times.", "Optimization")
@@ -215,6 +217,17 @@ def configurationLoad(filename: str) -> bool:
                 )
             else:
                 CONFIGURATION = {**CONFIGURATION, **conf}
+
+            spec = specifiers.SpecifierSet(
+                CONFIGURATION.get("_ng_version", ""), prereleases = True
+            )
+
+            if ng_trajectory.__version__ not in spec:
+                raise ValueError (
+                    "Unsupported version of ng_trajectory == %s. "
+                    "Configuration requires: %s"
+                    % (ng_trajectory.__version__, spec)
+                )
     except Exception as e:
         print (e)
         return False

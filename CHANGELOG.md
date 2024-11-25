@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.15.4 - 2024-11-25
+### Added
+- Configuration parameter `_ng_version` that defines allowed versions of 'ng_trajectory'.
+
+### Changed
+- Criterions
+    - _Profile_, _Profile2_
+        - When first time of reference is not zero, use it as lap time.
+
+### Fixed
+- Criterions
+    - _Profile_, _Profile2_
+        - Do not estimate lap time of the reference when the first time is not zero.
+- 'plot'
+    - `rectanglePlot()` now actually displays rectangles.
+
 ## 1.15.3 - 2024-11-18
 ### Added
 - Criterions
