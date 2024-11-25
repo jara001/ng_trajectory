@@ -773,6 +773,10 @@ def compute(
             _a[i] > P.getValue("a_acc_max")
             or _a[i] < -P.getValue("a_break_max")
         ):
+            # TODO: This negatively affects the optimization. In some cases,
+            #       a lot of attempts fail here. This also means (as a side
+            #       effect) that an empty plot is generated.
+            # FIXME: Resolve what to do properly when this occurs.
             return float(penalty * abs(_a[i]))
 
     invalid_points = []
