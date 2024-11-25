@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
+## 1.15.4 - 2024-11-25
 ### Added
 - Configuration parameter `_ng_version` that defines allowed versions of 'ng_trajectory'.
 
