@@ -3,4 +3,4 @@
 
 It does not interpolate, just forwards the points.
 """  # noqa: W191
-from .main import init, interpolate  # noqa: F401
+from .main import NoneInterpolator as Interpolator  # noqa: F401

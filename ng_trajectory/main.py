@@ -432,7 +432,7 @@ def cascadeRun(
         else Stub(name, _alg.get("silent_stub", False))
     opt = obtain(optimizers, "algorithm")
     cri = obtain(criterions, "criterion").Criterion()
-    itp = obtain(interpolators, "interpolator")
+    itp = obtain(interpolators, "interpolator").Interpolator()
     seg = obtain(segmentators, "segmentator")
     sel = obtain(selectors, "selector")
     # Set default penalizer. Not used in 'ParameterList' as it has no effect.
