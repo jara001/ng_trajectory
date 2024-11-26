@@ -11,6 +11,8 @@ two subsequent points.
 
 import numpy
 
+from ng_trajectory.abc.criterions import CriterionABC
+
 from typing import (
     Any,
     Dict,
@@ -22,34 +24,36 @@ from typing import (
 # Functions
 ######################
 
-def init(**kwargs) -> Optional[Dict[str, Any]]:
-    """Initialize criterion."""
-    pass
+class LengthCriterion(CriterionABC):
+
+    def init(self, **kwargs) -> Optional[Dict[str, Any]]:
+        """Initialize criterion."""
+        pass
 
 
-def compute(points: numpy.ndarray, **overflown) -> float:
-    """Compute length of the trajectory.
+    def compute(self, points: numpy.ndarray, **overflown) -> float:
+        """Compute length of the trajectory.
 
-    Arguments:
-    points -- points of a trajectory with curvature, nx3 numpy.ndarray
-    **overflown -- arguments not caught by previous parts
+        Arguments:
+        points -- points of a trajectory with curvature, nx3 numpy.ndarray
+        **overflown -- arguments not caught by previous parts
 
-    Returns:
-    l -- length of the trajectory, [m], float
-         minimization criterion
-    """
-    return float(
-        numpy.sum(
-            numpy.sqrt(
-                numpy.sum(
-                    numpy.power(
-                        numpy.subtract(
-                            numpy.roll(points[:, :2], 1, axis=0),
-                            points[:, :2]
-                        ),
-                        2
-                    ), axis=1
+        Returns:
+        l -- length of the trajectory, [m], float
+             minimization criterion
+        """
+        return float(
+            numpy.sum(
+                numpy.sqrt(
+                    numpy.sum(
+                        numpy.power(
+                            numpy.subtract(
+                                numpy.roll(points[:, :2], 1, axis=0),
+                                points[:, :2]
+                            ),
+                            2
+                        ), axis=1
+                    )
                 )
             )
         )
-    )

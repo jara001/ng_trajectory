@@ -10,6 +10,8 @@ Optimize using sum( (k_i)^2 ).
 
 import numpy
 
+from ng_trajectory.abc.criterions import CriterionABC
+
 from typing import (
     Any,
     Dict,
@@ -21,22 +23,24 @@ from typing import (
 # Functions
 ######################
 
-def init(**kwargs) -> Optional[Dict[str, Any]]:
-    """Initialize criterion."""
-    pass
+class CurvatureCriterion(CriterionABC):
+
+    def init(self, **kwargs) -> Optional[Dict[str, Any]]:
+        """Initialize criterion."""
+        pass
 
 
-def compute(points: numpy.ndarray, **overflown) -> float:
-    """Compute curvature criterion.
+    def compute(self, points: numpy.ndarray, **overflown) -> float:
+        """Compute curvature criterion.
 
-    Arguments:
-    points -- points of a trajectory with curvature, nx3 numpy.ndarray
-    **overflown -- arguments not caught by previous parts
+        Arguments:
+        points -- points of a trajectory with curvature, nx3 numpy.ndarray
+        **overflown -- arguments not caught by previous parts
 
-    Returns:
-    k -- curvature criterion of the trajectory, [m^-2], float
-         minimization criterion
-    """
-    return numpy.sum(
-        numpy.power(points[:, -1], 2)
-    )
+        Returns:
+        k -- curvature criterion of the trajectory, [m^-2], float
+             minimization criterion
+        """
+        return numpy.sum(
+            numpy.power(points[:, -1], 2)
+        )

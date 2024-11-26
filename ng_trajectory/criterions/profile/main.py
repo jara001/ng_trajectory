@@ -17,6 +17,8 @@ import numpy
 
 from . import profiler
 
+from ng_trajectory.abc.criterions import CriterionABC
+
 from ng_trajectory.interpolators.utils import (
     pointDistance,
     trajectoryClosestIndex
@@ -335,399 +337,402 @@ def saveMap(filename: str, map_data: numpy.ndarray):
 # Functions
 ######################
 
-def init(**kwargs) -> Optional[Dict[str, Any]]:
-    """Initialize criterion."""
-    global REFERENCE, CENTERLINE, OVERTAKING_POINTS
+class ProfileCriterion(CriterionABC):
 
-    profiler.parametersSet(**kwargs)
+    def init(self, **kwargs) -> Optional[Dict[str, Any]]:
+        """Initialize criterion."""
+        global REFERENCE, CENTERLINE, OVERTAKING_POINTS
 
-    P.updateAll(kwargs)
+        profiler.parametersSet(**kwargs)
 
-    # Recreating the Queue here makes the parent process use
-    # different Queue than the ProcessPool.
-    # OVERTAKING_POINTS = Queue()
+        P.updateAll(kwargs)
 
-    if P.getValue("save_solution_csv") == "":
-        P.update("save_solution_csv", None)
-    elif P.getValue("save_solution_csv") == "$":
-        P.update(
-            "save_solution_csv",
-            logfileName() + ".csv"
-        )
+        # Recreating the Queue here makes the parent process use
+        # different Queue than the ProcessPool.
+        # OVERTAKING_POINTS = Queue()
 
-    if P.getValue("reference") is not None:
-        REFERENCE = numpy.load(P.getValue("reference"))[:, :3]
-        # REFERENCE = numpy.hstack((numpy.roll(REFERENCE[:, :2], -P.getValue("reference_rotate"), axis=0), REFERENCE[:, 2:]))
-        lap_time = P.getValue("reference_laptime")
+        if P.getValue("save_solution_csv") == "":
+            P.update("save_solution_csv", None)
+        elif P.getValue("save_solution_csv") == "$":
+            P.update(
+                "save_solution_csv",
+                logfileName() + ".csv"
+            )
 
-        # Use lap time from the reference, if not given explicitly
-        if lap_time == 0.0 and not numpy.isclose(REFERENCE[0, 2], 0.0):
-            lap_time = REFERENCE[0, 2]
-            REFERENCE[0, 2] = 0.0
+        if P.getValue("reference") is not None:
+            REFERENCE = numpy.load(P.getValue("reference"))[:, :3]
+            # REFERENCE = numpy.hstack((numpy.roll(REFERENCE[:, :2], -P.getValue("reference_rotate"), axis=0), REFERENCE[:, 2:]))
+            lap_time = P.getValue("reference_laptime")
 
-        # Otherwise estimate it from the data
-        if lap_time == 0.0:
-            lap_time = REFERENCE[-1, 2] + numpy.mean([
-                REFERENCE[-1, 2] - REFERENCE[-2, 2],
-                REFERENCE[1, 2] - REFERENCE[0, 2]
-            ])
+            # Use lap time from the reference, if not given explicitly
+            if lap_time == 0.0 and not numpy.isclose(REFERENCE[0, 2], 0.0):
+                lap_time = REFERENCE[0, 2]
+                REFERENCE[0, 2] = 0.0
 
-        REFERENCE = numpy.roll(
-            REFERENCE,
-            -P.getValue("reference_rotate"),
-            axis = 0
-        )
-        REFERENCE[:, 2] = REFERENCE[:, 2] - REFERENCE[0, 2]
-        REFERENCE[REFERENCE[:, 2] < 0, 2] += lap_time
-        log (
-            "Loaded reference with '%d' points, lap time %fs."
-            % (len(REFERENCE), lap_time)
-        )
-    else:
-        REFERENCE = None
+            # Otherwise estimate it from the data
+            if lap_time == 0.0:
+                lap_time = REFERENCE[-1, 2] + numpy.mean([
+                    REFERENCE[-1, 2] - REFERENCE[-2, 2],
+                    REFERENCE[1, 2] - REFERENCE[0, 2]
+                ])
 
-    if P.getValue("friction_map") is not None:
-        fmap = numpy.load(P.getValue("friction_map"))
+            REFERENCE = numpy.roll(
+                REFERENCE,
+                -P.getValue("reference_rotate"),
+                axis = 0
+            )
+            REFERENCE[:, 2] = REFERENCE[:, 2] - REFERENCE[0, 2]
+            REFERENCE[REFERENCE[:, 2] < 0, 2] += lap_time
+            log (
+                "Loaded reference with '%d' points, lap time %fs."
+                % (len(REFERENCE), lap_time)
+            )
+        else:
+            REFERENCE = None
 
-        # Filter out points outside of the map
-        """
-        This can happen when the friction map is slightly different, e.g.,
-        it is built for non-inflated map of the track.
-        """
-        fmap = filterPoints(fmap)
+        if P.getValue("friction_map") is not None:
+            fmap = numpy.load(P.getValue("friction_map"))
 
-        if P.getValue("friction_map_inverse"):
-            fmap[:, 2] = 255 - fmap[:, 2]
+            # Filter out points outside of the map
+            """
+            This can happen when the friction map is slightly different, e.g.,
+            it is built for non-inflated map of the track.
+            """
+            fmap = filterPoints(fmap)
 
-        FRICTION_MAP = getMap().copy()
+            if P.getValue("friction_map_inverse"):
+                fmap[:, 2] = 255 - fmap[:, 2]
 
-        # Set default value to the _mu parameter.
-        FRICTION_MAP[:] = profiler._mu * 100
+            FRICTION_MAP = getMap().copy()
 
-        # Set all obtained values.
-        cxy = pointsToMap(fmap[:, :2])
-        FRICTION_MAP[cxy[:, 0], cxy[:, 1]] = fmap[:, 2]
+            # Set default value to the _mu parameter.
+            FRICTION_MAP[:] = profiler._mu * 100
 
-        # Expand the fmap is required
-        if P.getValue("friction_map_expand"):
-            FRICTION_MAP = fmap_expand(FRICTION_MAP, fmap)
+            # Set all obtained values.
+            cxy = pointsToMap(fmap[:, :2])
+            FRICTION_MAP[cxy[:, 0], cxy[:, 1]] = fmap[:, 2]
 
-        profiler.FRICTION_MAP = FRICTION_MAP
+            # Expand the fmap is required
+            if P.getValue("friction_map_expand"):
+                FRICTION_MAP = fmap_expand(FRICTION_MAP, fmap)
 
-        # Save and plot the map
-        if P.getValue("friction_map_save"):
+            profiler.FRICTION_MAP = FRICTION_MAP
 
-            saveMap(logfileName() + ".fmap", FRICTION_MAP)
+            # Save and plot the map
+            if P.getValue("friction_map_save"):
 
-        if P.getValue("friction_map_save") and P.getValue("friction_map_plot"):
-            fig = ngplot.figureCreate()
-            ngplot.axisEqual(figure = fig)
+                saveMap(logfileName() + ".fmap", FRICTION_MAP)
 
-            if False:
-                # Plot everything
+            if P.getValue("friction_map_save") and P.getValue("friction_map_plot"):
+                fig = ngplot.figureCreate()
+                ngplot.axisEqual(figure = fig)
+
+                if False:
+                    # Plot everything
+                    _sc = ngplot.pointsScatter(
+                        pointsToWorld(
+                            numpy.asarray(list(numpy.ndindex(FRICTION_MAP.shape)))
+                        ),
+                        s = 0.5,
+                        c = FRICTION_MAP.flatten() / 100.0,
+                        cmap = "gray_r",
+                        vmin = 0.0,
+                        figure = fig
+                    )
+
+                # Points to plot
+                _ptp = numpy.asarray(numpy.where(getMap() == 100)).T
+
                 _sc = ngplot.pointsScatter(
-                    pointsToWorld(
-                        numpy.asarray(list(numpy.ndindex(FRICTION_MAP.shape)))
-                    ),
+                    pointsToWorld(_ptp),
                     s = 0.5,
-                    c = FRICTION_MAP.flatten() / 100.0,
+                    c = FRICTION_MAP[_ptp[:, 0], _ptp[:, 1]] / 100.0,
                     cmap = "gray_r",
                     vmin = 0.0,
+                    vmax = 1.0,
                     figure = fig
                 )
 
-            # Points to plot
-            _ptp = numpy.asarray(numpy.where(getMap() == 100)).T
-
-            _sc = ngplot.pointsScatter(
-                pointsToWorld(_ptp),
-                s = 0.5,
-                c = FRICTION_MAP[_ptp[:, 0], _ptp[:, 1]] / 100.0,
-                cmap = "gray_r",
-                vmin = 0.0,
-                vmax = 1.0,
-                figure = fig
-            )
-
-            ngplot._pyplot(
-                _sc,
-                function = "colorbar",
-                figure = fig
-            )
-
-            ngplot.figureSave(
-                filename = logfileName() + ".fmap.png",
-                figure = fig
-            )
-
-            ngplot.figureClose(figure = fig)
-
-        log (
-            "Loaded friction map from '%s'."
-            % P.getValue("friction_map")
-        )
-
-        uqs, cnt = numpy.unique(fmap[:, 2], return_counts = True)
-
-        log (
-            "\n".join([
-                "\t%.2f: %3.2f%%" % (_u, _r)
-                for _u, _r in zip(
-                    uqs / 100.0,
-                    (cnt / (float(sum(cnt)))) * 100.0
+                ngplot._pyplot(
+                    _sc,
+                    function = "colorbar",
+                    figure = fig
                 )
-            ])
+
+                ngplot.figureSave(
+                    filename = logfileName() + ".fmap.png",
+                    figure = fig
+                )
+
+                ngplot.figureClose(figure = fig)
+
+            log (
+                "Loaded friction map from '%s'."
+                % P.getValue("friction_map")
+            )
+
+            uqs, cnt = numpy.unique(fmap[:, 2], return_counts = True)
+
+            log (
+                "\n".join([
+                    "\t%.2f: %3.2f%%" % (_u, _r)
+                    for _u, _r in zip(
+                        uqs / 100.0,
+                        (cnt / (float(sum(cnt)))) * 100.0
+                    )
+                ])
+            )
+
+
+    def compute(
+            self,
+            points: numpy.ndarray,
+            overlap: int = None,
+            penalty: float = 100.0,
+            **overflown) -> float:
+        """Compute the speed profile using overlap.
+
+        Arguments:
+        points -- points of a trajectory with curvature, nx3 numpy.ndarray
+        overlap -- size of trajectory overlap, int, default None/0 (disabled)
+        penalty -- penalty value applied to the incorrect solutions,
+                   float, default 100.0
+        **overflown -- arguments not caught by previous parts
+
+        Returns:
+        t -- time of reaching the last point of the trajectory, [s], float
+             minimization criterion
+        """
+        global REFERENCE, CENTERLINE, REFERENCE_PROGRESS, OVERTAKING_POINTS
+
+        if overlap is None:
+            overlap = P.getValue("overlap")
+
+        profiler.CENTERLINE = CENTERLINE
+
+        _v, _a, _t = profiler.profileCompute(
+            points,
+            overlap,
+            lap_time = True,
+            save = (
+                P.getValue("save_solution_csv")
+                if (
+                    not overflown.get("optimization", True)
+                    and P.getValue("save_solution_csv") is not None
+                ) else None
+            )
         )
 
+        invalid_points = []
+        closest_indices = []
 
-def compute(
-        points: numpy.ndarray,
-        overlap: int = None,
-        penalty: float = 100.0,
-        **overflown) -> float:
-    """Compute the speed profile using overlap.
+        if REFERENCE is not None:
+            _d = P.getValue("reference_dist")
 
-    Arguments:
-    points -- points of a trajectory with curvature, nx3 numpy.ndarray
-    overlap -- size of trajectory overlap, int, default None/0 (disabled)
-    penalty -- penalty value applied to the incorrect solutions,
-               float, default 100.0
-    **overflown -- arguments not caught by previous parts
+            for rx, ry, rt in REFERENCE:
 
-    Returns:
-    t -- time of reaching the last point of the trajectory, [s], float
-         minimization criterion
-    """
-    global REFERENCE, CENTERLINE, REFERENCE_PROGRESS, OVERTAKING_POINTS
+                # Closest index
+                _ci = 0
+                __t = 0
 
-    if overlap is None:
-        overlap = P.getValue("overlap")
+                # Selected last
+                selected_last = False
 
-    profiler.CENTERLINE = CENTERLINE
+                while True:
+                    # Find closest point in time domain
+                    _ci = (abs(_t[:-1] + __t - rt)).argmin()
 
-    _v, _a, _t = profiler.profileCompute(
-        points,
-        overlap,
-        lap_time = True,
-        save = (
-            P.getValue("save_solution_csv")
-            if (
-                not overflown.get("optimization", True)
-                and P.getValue("save_solution_csv") is not None
-            ) else None
-        )
-    )
-
-    invalid_points = []
-    closest_indices = []
-
-    if REFERENCE is not None:
-        _d = P.getValue("reference_dist")
-
-        for rx, ry, rt in REFERENCE:
-
-            # Closest index
-            _ci = 0
-            __t = 0
-
-            # Selected last
-            selected_last = False
-
-            while True:
-                # Find closest point in time domain
-                _ci = (abs(_t[:-1] + __t - rt)).argmin()
-
-                # In case that we select the last point
-                # Do it again for next repetition of the trajectory
-                if _ci == len(_t) - 2:
-                    if selected_last:
-                        # Extra condition for non-closed paths.
+                    # In case that we select the last point
+                    # Do it again for next repetition of the trajectory
+                    if _ci == len(_t) - 2:
+                        if selected_last:
+                            # Extra condition for non-closed paths.
+                            break
+                        __t += _t[-1]
+                        selected_last = True
+                    else:
                         break
-                    __t += _t[-1]
-                    selected_last = True
-                else:
-                    break
 
-            closest_indices.append(_ci)
+                closest_indices.append(_ci)
 
-            # If the points are too close to each other, return penalty
-            if pointDistance([rx, ry], points[_ci, :]) < _d:
-                if overflown.get("optimization", True):
-                    return float(penalty)
-                else:
-                    invalid_points.append([rx, ry])
+                # If the points are too close to each other, return penalty
+                if pointDistance([rx, ry], points[_ci, :]) < _d:
+                    if overflown.get("optimization", True):
+                        return float(penalty)
+                    else:
+                        invalid_points.append([rx, ry])
 
-        # Visualization
-        if not overflown.get("optimization", True) and P.getValue("plot"):
+            # Visualization
+            if not overflown.get("optimization", True) and P.getValue("plot"):
 
-            # Last time sample
-            ts = int(_t[-1]) - 1
+                # Last time sample
+                ts = int(_t[-1]) - 1
 
-            if P.getValue("plot_timelines"):
-                for ts in (
-                    range(int(_t[-1])) if overlap > 0
-                    else chain(range(int(_t[-1]) + 1), _t[-1])
-                ):
+                if P.getValue("plot_timelines"):
+                    for ts in (
+                        range(int(_t[-1])) if overlap > 0
+                        else chain(range(int(_t[-1]) + 1), _t[-1])
+                    ):
+                        _closest = numpy.abs(
+                            numpy.subtract(REFERENCE[:, 2], ts)
+                        ).argmin()
+
+                        if _closest >= len(REFERENCE) - 1:
+                            ts = ts - 1
+                            break
+
+                        ngplot.pointsScatter(
+                            # Trick to force 2D array.
+                            REFERENCE[_closest, None, :2],
+                            s = P.getValue("plot_timelines_size"),
+                            color = "black"
+                        )
+
+                        if ts % 4 == 0:
+                            ngplot.labelText(
+                                REFERENCE[_closest, :2],
+                                ts,
+                                verticalalignment = "top",
+                                horizontalalignment = "left",
+                                fontsize = 6
+                            )
+
+                        _closest_p = numpy.abs(
+                            numpy.subtract(_t[:-1], ts)
+                        ).argmin()
+
+                        ngplot.pointsScatter(
+                            points[_closest_p, None, :2],
+                            s = P.getValue("plot_timelines_size"),
+                            color = "red"
+                        )
+
+                        if ts % 4 == 0:
+                            ngplot.labelText(
+                                points[_closest_p, :2],
+                                ts,
+                                verticalalignment = "bottom",
+                                horizontalalignment = "right",
+                                fontsize = 6,
+                                color = "red",
+                            )
+
+                        ngplot.pointsPlot(
+                            numpy.vstack(
+                                (points[_closest_p, :2], REFERENCE[_closest, :2])
+                            ),
+                            color = "red",
+                            linewidth = P.getValue("plot_timelines_width"),
+                            linestyle = (
+                                "--" if pointDistance(
+                                    points[_closest_p, :2], REFERENCE[_closest, :2]
+                                ) < 5.0 else " "
+                            )
+                        )
+
+                if P.getValue("plot_reference"):
+                    # Plot only to the last time point
+                    # That is specified by ts, which can be altered by previous if.
                     _closest = numpy.abs(
                         numpy.subtract(REFERENCE[:, 2], ts)
                     ).argmin()
-
-                    if _closest >= len(REFERENCE) - 1:
-                        ts = ts - 1
-                        break
-
-                    ngplot.pointsScatter(
-                        # Trick to force 2D array.
-                        REFERENCE[_closest, None, :2],
-                        s = P.getValue("plot_timelines_size"),
-                        color = "black"
-                    )
-
-                    if ts % 4 == 0:
-                        ngplot.labelText(
-                            REFERENCE[_closest, :2],
-                            ts,
-                            verticalalignment = "top",
-                            horizontalalignment = "left",
-                            fontsize = 6
-                        )
-
-                    _closest_p = numpy.abs(
-                        numpy.subtract(_t[:-1], ts)
-                    ).argmin()
-
-                    ngplot.pointsScatter(
-                        points[_closest_p, None, :2],
-                        s = P.getValue("plot_timelines_size"),
-                        color = "red"
-                    )
-
-                    if ts % 4 == 0:
-                        ngplot.labelText(
-                            points[_closest_p, :2],
-                            ts,
-                            verticalalignment = "bottom",
-                            horizontalalignment = "right",
-                            fontsize = 6,
-                            color = "red",
-                        )
+                    _closest_p = numpy.abs(numpy.subtract(_t[:-1], ts)).argmin()
 
                     ngplot.pointsPlot(
-                        numpy.vstack(
-                            (points[_closest_p, :2], REFERENCE[_closest, :2])
-                        ),
-                        color = "red",
-                        linewidth = P.getValue("plot_timelines_width"),
-                        linestyle = (
-                            "--" if pointDistance(
-                                points[_closest_p, :2], REFERENCE[_closest, :2]
-                            ) < 5.0 else " "
-                        )
-                    )
-
-            if P.getValue("plot_reference"):
-                # Plot only to the last time point
-                # That is specified by ts, which can be altered by previous if.
-                _closest = numpy.abs(
-                    numpy.subtract(REFERENCE[:, 2], ts)
-                ).argmin()
-                _closest_p = numpy.abs(numpy.subtract(_t[:-1], ts)).argmin()
-
-                ngplot.pointsPlot(
-                    REFERENCE[:_closest, :2],
-                    color = "black",
-                    linewidth = P.getValue("plot_reference_width")
-                )
-
-                if P.getValue("plot_solution"):
-                    ngplot.pointsPlot(
-                        points[:_closest_p, :2],
-                        color="orange",
+                        REFERENCE[:_closest, :2],
+                        color = "black",
                         linewidth = P.getValue("plot_reference_width")
                     )
 
-            if len(invalid_points) > 0:
-                ngplot.pointsScatter(
-                    numpy.asarray(invalid_points),
-                    color = "blue",
-                    marker = "x",
-                    s = 1
+                    if P.getValue("plot_solution"):
+                        ngplot.pointsPlot(
+                            points[:_closest_p, :2],
+                            color="orange",
+                            linewidth = P.getValue("plot_reference_width")
+                        )
+
+                if len(invalid_points) > 0:
+                    ngplot.pointsScatter(
+                        numpy.asarray(invalid_points),
+                        color = "blue",
+                        marker = "x",
+                        s = 1
+                    )
+
+
+        if len(invalid_points) > 0:
+            return float(penalty)
+
+
+        # Locate points where overtaking occurs
+        # Centerline is used to obtain track progression.
+        # Do not do this when not optimizing; just to avoid
+        # having duplicate marker(s).
+        if (P.getValue("plot_overtaking")
+                and REFERENCE is not None
+                and CENTERLINE is not None
+                and overflown.get("optimization", True)):
+            # It does not actually plot, just sends the data via Queue
+            # to the parent process.
+            # That said, plotting has to be handled by the optimizer.
+            if REFERENCE_PROGRESS is None:
+                REFERENCE_PROGRESS = [
+                    trajectoryClosestIndex(CENTERLINE, REFERENCE[_i, :2])
+                    for _i in range(len(REFERENCE))
+                ]
+
+            overtaken = False
+            prev_rd = REFERENCE_PROGRESS[0]
+            prev_pd = trajectoryClosestIndex(
+                CENTERLINE,
+                points[closest_indices[0], :2]
+            )
+            # reference_end = trajectoryClosestIndex(CENTERLINE, points[-1, :2])
+            for _i, (rx, ry, _) in enumerate(REFERENCE):
+                rd = REFERENCE_PROGRESS[_i]  # Closest reference in the same time
+                pd = trajectoryClosestIndex(
+                    CENTERLINE,
+                    points[closest_indices[_i], :2]
                 )
 
+                # This sequence should ensure that only correct overtaking
+                # points are selected and it should be comfortable with
+                # rotating the centerline (i.e., having the 0 points somewhere
+                # along the way).
+                # if rd > reference_end:
+                #     break
 
-    if len(invalid_points) > 0:
-        return float(penalty)
+                if prev_rd > rd:
+                    rd += len(CENTERLINE)
 
+                if prev_pd > pd:
+                    pd += len(CENTERLINE)
 
-    # Locate points where overtaking occurs
-    # Centerline is used to obtain track progression.
-    # Do not do this when not optimizing; just to avoid
-    # having duplicate marker(s).
-    if (P.getValue("plot_overtaking")
-            and REFERENCE is not None
-            and CENTERLINE is not None
-            and overflown.get("optimization", True)):
-        # It does not actually plot, just sends the data via Queue
-        # to the parent process.
-        # That said, plotting has to be handled by the optimizer.
-        if REFERENCE_PROGRESS is None:
-            REFERENCE_PROGRESS = [
-                trajectoryClosestIndex(CENTERLINE, REFERENCE[_i, :2])
-                for _i in range(len(REFERENCE))
-            ]
+                # This should apply only for non-closed paths.
+                if pd - prev_pd > 50:
+                    if overlap > 0:
+                        print0 (
+                            "WARNING: Detected jump in the trajectory "
+                            "track progress."
+                        )
+                        print0 (
+                            f"rx: {rx}\try: {ry}\trt: {_}\n"
+                            f"rd: {rd}\tpd: {pd}\n"
+                            f"prev_rd: {prev_rd}\tprev_pd: {prev_pd}"
+                        )
+                    break
 
-        overtaken = False
-        prev_rd = REFERENCE_PROGRESS[0]
-        prev_pd = trajectoryClosestIndex(
-            CENTERLINE,
-            points[closest_indices[0], :2]
-        )
-        # reference_end = trajectoryClosestIndex(CENTERLINE, points[-1, :2])
-        for _i, (rx, ry, _) in enumerate(REFERENCE):
-            rd = REFERENCE_PROGRESS[_i]  # Closest reference in the same time
-            pd = trajectoryClosestIndex(
-                CENTERLINE,
-                points[closest_indices[_i], :2]
-            )
+                # if rd > 50 and pd > rd and not overtaken:
+                if pd > rd and not overtaken:
+                    overtaken = True
+                    OVERTAKING_POINTS.put(points[closest_indices[_i], :2])
+                # elif pd < rd and overtaken:
+                #     overtaken = False
 
-            # This sequence should ensure that only correct overtaking
-            # points are selected and it should be comfortable with
-            # rotating the centerline (i.e., having the 0 points somewhere
-            # along the way).
-            # if rd > reference_end:
-            #     break
+                prev_rd = rd
+                prev_pd = pd
 
-            if prev_rd > rd:
-                rd += len(CENTERLINE)
+            if not overtaken:
+                _t[-1] += P.getValue("favor_overtaking")
 
-            if prev_pd > pd:
-                pd += len(CENTERLINE)
-
-            # This should apply only for non-closed paths.
-            if pd - prev_pd > 50:
-                if overlap > 0:
-                    print0 (
-                        "WARNING: Detected jump in the trajectory "
-                        "track progress."
-                    )
-                    print0 (
-                        f"rx: {rx}\try: {ry}\trt: {_}\n"
-                        f"rd: {rd}\tpd: {pd}\n"
-                        f"prev_rd: {prev_rd}\tprev_pd: {prev_pd}"
-                    )
-                break
-
-            # if rd > 50 and pd > rd and not overtaken:
-            if pd > rd and not overtaken:
-                overtaken = True
-                OVERTAKING_POINTS.put(points[closest_indices[_i], :2])
-            # elif pd < rd and overtaken:
-            #     overtaken = False
-
-            prev_rd = rd
-            prev_pd = pd
-
-        if not overtaken:
-            _t[-1] += P.getValue("favor_overtaking")
-
-    return float(_t[-1])
+        return float(_t[-1])

@@ -7,4 +7,4 @@ the fitness itself is computed as:
 
 	sum( (k_i)^2 )
 """  # noqa: W191
-from .main import init, compute  # noqa: F401
+from .main import CurvatureCriterion as Criterion  # noqa: F401

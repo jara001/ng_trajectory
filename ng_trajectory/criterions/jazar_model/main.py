@@ -12,6 +12,8 @@ Publishing, 2019. doi: 10.1007/978-3-030-13062-6.
 import numpy
 import math
 
+from ng_trajectory.abc.criterions import CriterionABC
+
 from typing import (
     Any,
     Dict,
@@ -389,24 +391,26 @@ def computeProfile(points):
 # General functions
 ######################
 
-def init(**kwargs) -> Optional[Dict[str, Any]]:
-    """Initialize criterion."""
-    P.updateAll(kwargs, reset = False)
+class JazarCriterion(CriterionABC):
+
+    def init(self, **kwargs) -> Optional[Dict[str, Any]]:
+        """Initialize criterion."""
+        P.updateAll(kwargs, reset = False)
 
 
-def compute(points: numpy.ndarray, **overflown) -> float:
-    """Compute the speed profile using overlap.
+    def compute(self, points: numpy.ndarray, **overflown) -> float:
+        """Compute the speed profile using overlap.
 
-    Arguments:
-    points -- points of a trajectory with curvature, nx3 numpy.ndarray
-    **overflown -- arguments not caught by previous parts
+        Arguments:
+        points -- points of a trajectory with curvature, nx3 numpy.ndarray
+        **overflown -- arguments not caught by previous parts
 
-    Returns:
-    t -- time of reaching the last point of the trajectory, [s], float
-         minimization criterion
-    """
-    P.updateAll(overflown, reset = False)
+        Returns:
+        t -- time of reaching the last point of the trajectory, [s], float
+             minimization criterion
+        """
+        P.updateAll(overflown, reset = False)
 
-    _, _, t = computeProfile(points)
+        _, _, t = computeProfile(points)
 
-    return float(t[-1])
+        return float(t[-1])

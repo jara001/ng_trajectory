@@ -17,6 +17,8 @@ import numpy
 
 from . import profiler
 
+from ng_trajectory.abc.criterions import CriterionABC
+
 from ng_trajectory.interpolators.utils import (
     pointDistance,
     trajectoryClosestIndex
@@ -472,430 +474,406 @@ def get_rect_points(
     return corners.T  # n x 2
 
 
-def init(**kwargs) -> Optional[Dict[str, Any]]:
-    """Initialize criterion."""
-    global REFERENCE, CENTERLINE, OVERTAKING_POINTS, MAP_OUTSIDE, MAP_INSIDE
+class Profile2Criterion(CriterionABC):
 
-    cri_dict = {}
+    def init(self, **kwargs) -> Optional[Dict[str, Any]]:
+        """Initialize criterion."""
+        global REFERENCE, CENTERLINE, OVERTAKING_POINTS, MAP_OUTSIDE, MAP_INSIDE
 
-    profiler.parametersSet(**kwargs)
+        cri_dict = {}
 
-    P.updateAll(kwargs)
+        profiler.parametersSet(**kwargs)
 
-    # Recreating the Queue here makes the parent process use
-    # different Queue than the ProcessPool.
-    # OVERTAKING_POINTS = Queue()
+        P.updateAll(kwargs)
 
-    if P.getValue("save_solution_csv") == "":
-        P.update("save_solution_csv", None)
-    elif P.getValue("save_solution_csv") == "$":
-        P.update(
-            "save_solution_csv",
-            logfileName() + ".csv"
-        )
+        # Recreating the Queue here makes the parent process use
+        # different Queue than the ProcessPool.
+        # OVERTAKING_POINTS = Queue()
 
-    lap_time = 0.0
-
-    if P.getValue("reference") is not None:
-        REFERENCE = numpy.load(P.getValue("reference"))[:, :4]
-
-        lap_time = P.getValue("reference_laptime")
-
-        # Use lap time from the reference, if not given explicitly
-        if lap_time == 0.0 and not numpy.isclose(REFERENCE[0, 2], 0.0):
-            lap_time = REFERENCE[0, 2]
-            REFERENCE[0, 2] = 0.0
-
-        # Otherwise estimate it from the data
-        if lap_time == 0.0:
-            lap_time = REFERENCE[-1, 2] + numpy.mean([
-                REFERENCE[-1, 2] - REFERENCE[-2, 2],
-                REFERENCE[1, 2] - REFERENCE[0, 2]
-            ])
-
-        # roll trajectory and correct time stamps
-        REFERENCE = numpy.roll(
-            REFERENCE,
-            -P.getValue("reference_rotate"),
-            axis = 0
-        )
-        REFERENCE[:, 2] = REFERENCE[:, 2] - REFERENCE[0, 2]
-        REFERENCE[REFERENCE[:, 2] < 0, 2] += lap_time
-
-        # TODO use REFERENCE (x, y, t, v) and VALID_POINTS (n x 2)
-        # - valid points to create other track representations
-
-        # create a new map
-        map_ = copy.copy(getMap())
-
-        # create proper borders on the map
-        map_[0:, 0] = 0
-        map_[0, 0:] = 0
-        map_[0:, -1] = 0
-        map_[-1, 0:] = 0
-        # default map is created
-
-        # calc robot mask
-        car_width = 0.4  # with safety region
-        robot_radius_grid = int(numpy.round(car_width / getMapGrid()))
-        y, x = numpy.ogrid[
-            -robot_radius_grid:robot_radius_grid + 1,
-            -robot_radius_grid:robot_radius_grid + 1
-        ]
-        mask = x ** 2 + y ** 2 <= robot_radius_grid ** 2
-
-        # ----- MAP INNER -----
-        # use floodfill on outer wall to delete it
-        MAP_INSIDE = copy.copy(map_)
-        MAP_INSIDE = flood_fill(MAP_INSIDE, (0, 0), 100)
-
-        # find inner wall and save some pixel position
-        inner_wall_pos = numpy.where(MAP_INSIDE == 0)
-        inner_wall_pos = (inner_wall_pos[0][0], inner_wall_pos[1][0])
-
-        # inflate inner wall
-        MAP_INSIDE = (
-            100 - morphology.grey_dilation(100 - MAP_INSIDE, footprint = mask)
-        )
-
-        # ----- MAP OUTER -----
-        # use floodfill on inner wall to delete it
-        MAP_OUTSIDE = copy.copy(map_)
-        MAP_OUTSIDE = flood_fill(MAP_OUTSIDE, inner_wall_pos, 100)
-
-        # inflate outer wall
-        MAP_OUTSIDE = (
-            100 - morphology.grey_dilation(100 - MAP_OUTSIDE, footprint = mask)
-        )
-
-        log (
-            "Loaded reference with '%d' points, lap time %fs."
-            % (len(REFERENCE), lap_time)
-        )
-    else:
-        REFERENCE = None
-
-    if P.getValue("reference_obtain_start") and REFERENCE is not None:
-        """
-        This section is used to compute starting location of the ego car,
-        to properly set-up the environment for overtaking maneuvers.
-        """
-        # 1. Obtain the starting position.
-        _start_time = lap_time - P.getValue("reference_obtain_start_td")
-        _start_time %= lap_time
-
-        _start_id = numpy.argmin(
-            numpy.sqrt(
-                numpy.power(REFERENCE[:, 2] - _start_time, 2)
+        if P.getValue("save_solution_csv") == "":
+            P.update("save_solution_csv", None)
+        elif P.getValue("save_solution_csv") == "$":
+            P.update(
+                "save_solution_csv",
+                logfileName() + ".csv"
             )
-        )
 
-        # 2. Obtain the initial speed.
-        profiler.parametersSet(v_0 = REFERENCE[_start_id, 3])
-        cri_dict["v_0"] = REFERENCE[_start_id, 3]
+        lap_time = 0.0
 
-        # 3. Obtain the positions of fixed points / segments.
-        #    This will enforce starting position of the ego car, as well as
-        #    its initial heading.
-        # Note: In the original work, the distance between the two points
-        #       was actually 1 -- X -- 2 from the reference. So we use that.
-        # Side note: There is a limit how close the points can be. If they
-        #            are too close, then the selector/segmentator/optimizer
-        #            will fuse them together/associate with the same segment.
-        #            And that is something we don't want.
-        _second_id = (_start_id + 2) % len(REFERENCE)
+        if P.getValue("reference") is not None:
+            REFERENCE = numpy.load(P.getValue("reference"))[:, :4]
 
-        # Note: As a workaround, we have to push this into 'selector_args'.
-        # Currently, optimizers do not pass the whole configuration, but only
-        # selected parts.
-        cri_dict["selector_args"] = {
-            "fixed_points": [
+            lap_time = P.getValue("reference_laptime")
+
+            # Use lap time from the reference, if not given explicitly
+            if lap_time == 0.0 and not numpy.isclose(REFERENCE[0, 2], 0.0):
+                lap_time = REFERENCE[0, 2]
+                REFERENCE[0, 2] = 0.0
+
+            # Otherwise estimate it from the data
+            if lap_time == 0.0:
+                lap_time = REFERENCE[-1, 2] + numpy.mean([
+                    REFERENCE[-1, 2] - REFERENCE[-2, 2],
+                    REFERENCE[1, 2] - REFERENCE[0, 2]
+                ])
+
+            # roll trajectory and correct time stamps
+            REFERENCE = numpy.roll(
+                REFERENCE,
+                -P.getValue("reference_rotate"),
+                axis = 0
+            )
+            REFERENCE[:, 2] = REFERENCE[:, 2] - REFERENCE[0, 2]
+            REFERENCE[REFERENCE[:, 2] < 0, 2] += lap_time
+
+            # TODO use REFERENCE (x, y, t, v) and VALID_POINTS (n x 2)
+            # - valid points to create other track representations
+
+            # create a new map
+            map_ = copy.copy(getMap())
+
+            # create proper borders on the map
+            map_[0:, 0] = 0
+            map_[0, 0:] = 0
+            map_[0:, -1] = 0
+            map_[-1, 0:] = 0
+            # default map is created
+
+            # calc robot mask
+            car_width = 0.4  # with safety region
+            robot_radius_grid = int(numpy.round(car_width / getMapGrid()))
+            y, x = numpy.ogrid[
+                -robot_radius_grid:robot_radius_grid + 1,
+                -robot_radius_grid:robot_radius_grid + 1
+            ]
+            mask = x ** 2 + y ** 2 <= robot_radius_grid ** 2
+
+            # ----- MAP INNER -----
+            # use floodfill on outer wall to delete it
+            MAP_INSIDE = copy.copy(map_)
+            MAP_INSIDE = flood_fill(MAP_INSIDE, (0, 0), 100)
+
+            # find inner wall and save some pixel position
+            inner_wall_pos = numpy.where(MAP_INSIDE == 0)
+            inner_wall_pos = (inner_wall_pos[0][0], inner_wall_pos[1][0])
+
+            # inflate inner wall
+            MAP_INSIDE = (
+                100 - morphology.grey_dilation(100 - MAP_INSIDE, footprint = mask)
+            )
+
+            # ----- MAP OUTER -----
+            # use floodfill on inner wall to delete it
+            MAP_OUTSIDE = copy.copy(map_)
+            MAP_OUTSIDE = flood_fill(MAP_OUTSIDE, inner_wall_pos, 100)
+
+            # inflate outer wall
+            MAP_OUTSIDE = (
+                100 - morphology.grey_dilation(100 - MAP_OUTSIDE, footprint = mask)
+            )
+
+            log (
+                "Loaded reference with '%d' points, lap time %fs."
+                % (len(REFERENCE), lap_time)
+            )
+        else:
+            REFERENCE = None
+
+        if P.getValue("reference_obtain_start") and REFERENCE is not None:
+            """
+            This section is used to compute starting location of the ego car,
+            to properly set-up the environment for overtaking maneuvers.
+            """
+            # 1. Obtain the starting position.
+            _start_time = lap_time - P.getValue("reference_obtain_start_td")
+            _start_time %= lap_time
+
+            _start_id = numpy.argmin(
+                numpy.sqrt(
+                    numpy.power(REFERENCE[:, 2] - _start_time, 2)
+                )
+            )
+
+            # 2. Obtain the initial speed.
+            profiler.parametersSet(v_0 = REFERENCE[_start_id, 3])
+            cri_dict["v_0"] = REFERENCE[_start_id, 3]
+
+            # 3. Obtain the positions of fixed points / segments.
+            #    This will enforce starting position of the ego car, as well as
+            #    its initial heading.
+            # Note: In the original work, the distance between the two points
+            #       was actually 1 -- X -- 2 from the reference. So we use that.
+            # Side note: There is a limit how close the points can be. If they
+            #            are too close, then the selector/segmentator/optimizer
+            #            will fuse them together/associate with the same segment.
+            #            And that is something we don't want.
+            _second_id = (_start_id + 2) % len(REFERENCE)
+
+            # Note: As a workaround, we have to push this into 'selector_args'.
+            # Currently, optimizers do not pass the whole configuration, but only
+            # selected parts.
+            cri_dict["selector_args"] = {
+                "fixed_points": [
+                    [REFERENCE[_start_id, 0], REFERENCE[_start_id, 1]],
+                    [REFERENCE[_second_id, 0], REFERENCE[_second_id, 1]]
+                ]
+            }
+            cri_dict["fixed_segments"] = [
                 [REFERENCE[_start_id, 0], REFERENCE[_start_id, 1]],
                 [REFERENCE[_second_id, 0], REFERENCE[_second_id, 1]]
             ]
-        }
-        cri_dict["fixed_segments"] = [
-            [REFERENCE[_start_id, 0], REFERENCE[_start_id, 1]],
-            [REFERENCE[_second_id, 0], REFERENCE[_second_id, 1]]
-        ]
 
-        log (
-            "Computed ego start location, td = %fs (requested %fs)"
-            % (
-                lap_time - REFERENCE[_start_id, 2],
-                P.getValue("reference_obtain_start_td")
+            log (
+                "Computed ego start location, td = %fs (requested %fs)"
+                % (
+                    lap_time - REFERENCE[_start_id, 2],
+                    P.getValue("reference_obtain_start_td")
+                )
             )
-        )
 
-    if P.getValue("friction_map") is not None:
-        fmap = numpy.load(P.getValue("friction_map"))
+        if P.getValue("friction_map") is not None:
+            fmap = numpy.load(P.getValue("friction_map"))
 
-        # Filter out points outside of the map
-        """
-        This can happen when the friction map is slightly different, e.g.,
-        it is built for non-inflated map of the track.
-        """
-        fmap = filterPoints(fmap)
+            # Filter out points outside of the map
+            """
+            This can happen when the friction map is slightly different, e.g.,
+            it is built for non-inflated map of the track.
+            """
+            fmap = filterPoints(fmap)
 
-        if P.getValue("friction_map_inverse"):
-            fmap[:, 2] = 255 - fmap[:, 2]
+            if P.getValue("friction_map_inverse"):
+                fmap[:, 2] = 255 - fmap[:, 2]
 
-        FRICTION_MAP = getMap().copy()
+            FRICTION_MAP = getMap().copy()
 
-        # Set default value to the _mu parameter.
-        FRICTION_MAP[:] = profiler._mu * 100
+            # Set default value to the _mu parameter.
+            FRICTION_MAP[:] = profiler._mu * 100
 
-        # Set all obtained values.
-        cxy = pointsToMap(fmap[:, :2])
-        FRICTION_MAP[cxy[:, 0], cxy[:, 1]] = fmap[:, 2]
+            # Set all obtained values.
+            cxy = pointsToMap(fmap[:, :2])
+            FRICTION_MAP[cxy[:, 0], cxy[:, 1]] = fmap[:, 2]
 
-        # Expand the fmap is required
-        if P.getValue("friction_map_expand"):
-            FRICTION_MAP = fmap_expand(FRICTION_MAP, fmap)
+            # Expand the fmap is required
+            if P.getValue("friction_map_expand"):
+                FRICTION_MAP = fmap_expand(FRICTION_MAP, fmap)
 
-        profiler.FRICTION_MAP = FRICTION_MAP
+            profiler.FRICTION_MAP = FRICTION_MAP
 
-        # Save and plot the map
-        if P.getValue("friction_map_save"):
+            # Save and plot the map
+            if P.getValue("friction_map_save"):
 
-            saveMap(logfileName() + ".fmap", FRICTION_MAP)
+                saveMap(logfileName() + ".fmap", FRICTION_MAP)
 
-        if P.getValue("friction_map_save") and P.getValue("friction_map_plot"):
-            fig = ngplot.figureCreate()
-            ngplot.axisEqual(figure = fig)
+            if P.getValue("friction_map_save") and P.getValue("friction_map_plot"):
+                fig = ngplot.figureCreate()
+                ngplot.axisEqual(figure = fig)
 
-            if False:
-                # Plot everything
+                if False:
+                    # Plot everything
+                    _sc = ngplot.pointsScatter(
+                        pointsToWorld(
+                            numpy.asarray(list(numpy.ndindex(FRICTION_MAP.shape)))
+                        ),
+                        s = 0.5,
+                        c = FRICTION_MAP.flatten() / 100.0,
+                        cmap = "gray_r",
+                        vmin = 0.0,
+                        figure = fig
+                    )
+
+                # Points to plot
+                _ptp = numpy.asarray(numpy.where(getMap() == 100)).T
+
                 _sc = ngplot.pointsScatter(
-                    pointsToWorld(
-                        numpy.asarray(list(numpy.ndindex(FRICTION_MAP.shape)))
-                    ),
+                    pointsToWorld(_ptp),
                     s = 0.5,
-                    c = FRICTION_MAP.flatten() / 100.0,
+                    c = FRICTION_MAP[_ptp[:, 0], _ptp[:, 1]] / 100.0,
                     cmap = "gray_r",
                     vmin = 0.0,
+                    vmax = 1.0,
                     figure = fig
                 )
 
-            # Points to plot
-            _ptp = numpy.asarray(numpy.where(getMap() == 100)).T
-
-            _sc = ngplot.pointsScatter(
-                pointsToWorld(_ptp),
-                s = 0.5,
-                c = FRICTION_MAP[_ptp[:, 0], _ptp[:, 1]] / 100.0,
-                cmap = "gray_r",
-                vmin = 0.0,
-                vmax = 1.0,
-                figure = fig
-            )
-
-            ngplot._pyplot(
-                _sc,
-                function = "colorbar",
-                figure = fig
-            )
-
-            ngplot.figureSave(
-                filename = logfileName() + ".fmap.png",
-                figure = fig
-            )
-
-            ngplot.figureClose(figure = fig)
-
-        log (
-            "Loaded friction map from '%s'."
-            % P.getValue("friction_map")
-        )
-
-        uqs, cnt = numpy.unique(fmap[:, 2], return_counts = True)
-
-        log (
-            "\n".join([
-                "\t%.2f: %3.2f%%" % (_u, _r)
-                for _u, _r in zip(
-                    uqs / 100.0,
-                    (cnt / (float(sum(cnt)))) * 100.0
+                ngplot._pyplot(
+                    _sc,
+                    function = "colorbar",
+                    figure = fig
                 )
-            ])
+
+                ngplot.figureSave(
+                    filename = logfileName() + ".fmap.png",
+                    figure = fig
+                )
+
+                ngplot.figureClose(figure = fig)
+
+            log (
+                "Loaded friction map from '%s'."
+                % P.getValue("friction_map")
+            )
+
+            uqs, cnt = numpy.unique(fmap[:, 2], return_counts = True)
+
+            log (
+                "\n".join([
+                    "\t%.2f: %3.2f%%" % (_u, _r)
+                    for _u, _r in zip(
+                        uqs / 100.0,
+                        (cnt / (float(sum(cnt)))) * 100.0
+                    )
+                ])
+            )
+
+        return cri_dict if len(cri_dict) > 0 else None
+
+
+    def compute(
+            self,
+            points: numpy.ndarray,
+            overlap: int = None,
+            penalty: float = 100.0,
+            **overflown) -> float:
+        """Compute the speed profile using overlap.
+
+        Arguments:
+        points -- points of a trajectory with curvature, nx3 numpy.ndarray
+        overlap -- size of trajectory overlap, int, default None/0 (disabled)
+        penalty -- penalty value applied to the incorrect solutions,
+                   float, default 100.0
+        **overflown -- arguments not caught by previous parts
+
+        Returns:
+        t -- time of reaching the last point of the trajectory, [s], float
+             minimization criterion
+        """
+        global REFERENCE, CENTERLINE, REFERENCE_PROGRESS
+        global OVERTAKING_POINTS, MAP_OUTSIDE, MAP_INSIDE
+
+        # Get overlap parameter
+        if overlap is None:
+            overlap = P.getValue("overlap")
+
+        profiler.CENTERLINE = CENTERLINE
+
+        # ---------------[Create trajectory from path]---------------
+        # points (x, y) --> trajectory (_v, _a, _t)
+        # _v -> speed, _a -> acceleration, _t -> time
+        _v, _a, _t = profiler.profileCompute(
+            points,
+            overlap,
+            lap_time = True,
+            save = (
+                P.getValue("save_solution_csv")
+                if (
+                    not overflown.get("optimization", True)
+                    and P.getValue("save_solution_csv") is not None
+                ) else None
+            )
         )
+        criterion = _t[-1]  # default criterion of the optimization is a lap time
 
-    return cri_dict if len(cri_dict) > 0 else None
-
-
-def compute(
-        points: numpy.ndarray,
-        overlap: int = None,
-        penalty: float = 100.0,
-        **overflown) -> float:
-    """Compute the speed profile using overlap.
-
-    Arguments:
-    points -- points of a trajectory with curvature, nx3 numpy.ndarray
-    overlap -- size of trajectory overlap, int, default None/0 (disabled)
-    penalty -- penalty value applied to the incorrect solutions,
-               float, default 100.0
-    **overflown -- arguments not caught by previous parts
-
-    Returns:
-    t -- time of reaching the last point of the trajectory, [s], float
-         minimization criterion
-    """
-    global REFERENCE, CENTERLINE, REFERENCE_PROGRESS
-    global OVERTAKING_POINTS, MAP_OUTSIDE, MAP_INSIDE
-
-    # Get overlap parameter
-    if overlap is None:
-        overlap = P.getValue("overlap")
-
-    profiler.CENTERLINE = CENTERLINE
-
-    # ---------------[Create trajectory from path]---------------
-    # points (x, y) --> trajectory (_v, _a, _t)
-    # _v -> speed, _a -> acceleration, _t -> time
-    _v, _a, _t = profiler.profileCompute(
-        points,
-        overlap,
-        lap_time = True,
-        save = (
-            P.getValue("save_solution_csv")
+        # test if acceleration is within limits
+        for i in range(len(_a)):
             if (
-                not overflown.get("optimization", True)
-                and P.getValue("save_solution_csv") is not None
-            ) else None
-        )
-    )
-    criterion = _t[-1]  # default criterion of the optimization is a lap time
+                _a[i] > P.getValue("a_acc_max")
+                or _a[i] < -P.getValue("a_break_max")
+            ):
+                # TODO: This negatively affects the optimization. In some cases,
+                #       a lot of attempts fail here. This also means (as a side
+                #       effect) that an empty plot is generated.
+                # FIXME: Resolve what to do properly when this occurs.
+                return float(penalty * abs(_a[i]))
 
-    # test if acceleration is within limits
-    for i in range(len(_a)):
-        if (
-            _a[i] > P.getValue("a_acc_max")
-            or _a[i] < -P.getValue("a_break_max")
-        ):
-            # TODO: This negatively affects the optimization. In some cases,
-            #       a lot of attempts fail here. This also means (as a side
-            #       effect) that an empty plot is generated.
-            # FIXME: Resolve what to do properly when this occurs.
-            return float(penalty * abs(_a[i]))
-
-    invalid_points = []
-    if REFERENCE is not None:
-        is_collision = numpy.zeros((len(REFERENCE), ), dtype=bool)
-        closest_indices = (-1) * numpy.ones((len(REFERENCE), ), dtype=int)
-        ego_headings = numpy.zeros((len(points), ), dtype=numpy.double)
-        opponent_headings = numpy.zeros((len(REFERENCE), ), dtype=numpy.double)
+        invalid_points = []
+        if REFERENCE is not None:
+            is_collision = numpy.zeros((len(REFERENCE), ), dtype=bool)
+            closest_indices = (-1) * numpy.ones((len(REFERENCE), ), dtype=int)
+            ego_headings = numpy.zeros((len(points), ), dtype=numpy.double)
+            opponent_headings = numpy.zeros((len(REFERENCE), ), dtype=numpy.double)
 
 
-    if REFERENCE is not None:  # Do this only if we want to compute overtaking
-        # ---------------[ Get indexes closest in time ]---------------
-        _d = P.getValue("reference_dist")
-        for _i, (rx, ry, rt, v) in enumerate(REFERENCE):
+        if REFERENCE is not None:  # Do this only if we want to compute overtaking
+            # ---------------[ Get indexes closest in time ]---------------
+            _d = P.getValue("reference_dist")
+            for _i, (rx, ry, rt, v) in enumerate(REFERENCE):
 
-            # Use this commented part only if optimizing closed path
-            _ci = 0
-            __t = 0
-            # Selected last
-            selected_last = False
+                # Use this commented part only if optimizing closed path
+                _ci = 0
+                __t = 0
+                # Selected last
+                selected_last = False
 
-            while True:
-                # Find closest point in time domain
-                _ci = (abs(_t[:-1] + __t - rt)).argmin()
-                # In case that we select the last point
-                # Do it again for next repetition of the trajectory
-                if _ci == len(_t) - 2:
-                    if selected_last:
-                        # Extra condition for non-closed paths.
+                while True:
+                    # Find closest point in time domain
+                    _ci = (abs(_t[:-1] + __t - rt)).argmin()
+                    # In case that we select the last point
+                    # Do it again for next repetition of the trajectory
+                    if _ci == len(_t) - 2:
+                        if selected_last:
+                            # Extra condition for non-closed paths.
+                            break
+                        __t += _t[-1]
+                        selected_last = True
+                    else:
                         break
-                    __t += _t[-1]
-                    selected_last = True
-                else:
+
+                # This should end this loop when we run out of points
+                # on the trajectory (for open trajectories only)
+                if selected_last:
                     break
 
-            # This should end this loop when we run out of points
-            # on the trajectory (for open trajectories only)
-            if selected_last:
-                break
+                closest_indices[_i] = _ci
 
-            closest_indices[_i] = _ci
+                # Calculate heading of the ego vehicle
+                ego_pos = points[_ci, :]
+                if len(points) <= _ci + 2:  # n -> n x 3
+                    ego_vector = [
+                        ego_pos[0] - points[_ci - 2, 0],
+                        ego_pos[1] - points[_ci - 2, 1]
+                    ]
+                else:
+                    ego_vector = [
+                        points[_ci + 2, 0] - points[_ci, 0],
+                        points[_ci + 2, 1] - points[_ci, 1]
+                    ]
+                ego_headings[_ci] = numpy.arctan2(ego_vector[1], ego_vector[0])
 
-            # Calculate heading of the ego vehicle
-            ego_pos = points[_ci, :]
-            if len(points) <= _ci + 2:  # n -> n x 3
-                ego_vector = [
-                    ego_pos[0] - points[_ci - 2, 0],
-                    ego_pos[1] - points[_ci - 2, 1]
-                ]
-            else:
-                ego_vector = [
-                    points[_ci + 2, 0] - points[_ci, 0],
-                    points[_ci + 2, 1] - points[_ci, 1]
-                ]
-            ego_headings[_ci] = numpy.arctan2(ego_vector[1], ego_vector[0])
+                # Calculate heading of the opponent vehicle
+                # TODO calculate what you can in INIT
+                opponent_pos = [rx, ry]
+                if len(REFERENCE) <= _i + 2:
+                    opponent_vector = [
+                        opponent_pos[0] - REFERENCE[_i - 2, 0],
+                        opponent_pos[1] - REFERENCE[_i - 2, 1]
+                    ]
+                else:
+                    opponent_vector = [
+                        REFERENCE[_i + 2, 0] - rx, REFERENCE[_i + 2, 1] - ry
+                    ]
+                opponent_headings[_i] = numpy.arctan2(
+                    opponent_vector[1], opponent_vector[0]
+                )
 
-            # Calculate heading of the opponent vehicle
-            # TODO calculate what you can in INIT
-            opponent_pos = [rx, ry]
-            if len(REFERENCE) <= _i + 2:
-                opponent_vector = [
-                    opponent_pos[0] - REFERENCE[_i - 2, 0],
-                    opponent_pos[1] - REFERENCE[_i - 2, 1]
-                ]
-            else:
-                opponent_vector = [
-                    REFERENCE[_i + 2, 0] - rx, REFERENCE[_i + 2, 1] - ry
-                ]
-            opponent_headings[_i] = numpy.arctan2(
-                opponent_vector[1], opponent_vector[0]
-            )
+                # Collision detection
+                if P.getValue("car_shape") == "circle":  # round cars
+                    if pointDistance([rx, ry], points[_ci, :]) < _d:  # TODO CHECK
+                        is_collision[_i] = True
 
-            # Collision detection
-            if P.getValue("car_shape") == "circle":  # round cars
-                if pointDistance([rx, ry], points[_ci, :]) < _d:  # TODO CHECK
-                    is_collision[_i] = True
+                        # just for the plot
+                        if not overflown.get("optimization", True):
+                            invalid_points.append([rx, ry])
 
-                    # just for the plot
-                    if not overflown.get("optimization", True):
-                        invalid_points.append([rx, ry])
+                elif P.getValue("car_shape") == "rectangle":  # square cars
 
-            elif P.getValue("car_shape") == "rectangle":  # square cars
+                    dist_check_poly = numpy.sqrt(
+                        numpy.power(P.getValue('car_length'), 2.0)
+                        + numpy.power(P.getValue('car_width'), 2.0)
+                    )  # Constant
 
-                dist_check_poly = numpy.sqrt(
-                    numpy.power(P.getValue('car_length'), 2.0)
-                    + numpy.power(P.getValue('car_width'), 2.0)
-                )  # Constant
+                    car_distance = pointDistance([rx, ry], points[_ci, :])
 
-                car_distance = pointDistance([rx, ry], points[_ci, :])
-
-                if car_distance < P.getValue('car_width'):
-                    # Cars are always colliding
-                    if not overflown.get("optimization", True):
-                        # only to print invalid points. Equivalent to this
-                        # should be:
-                        # invalid_points ===  REFERENCE[is_collision, :2].
-                        # So we probably do not even need to create this
-                        invalid_points.append([rx, ry])
-                    is_collision[_i] = True
-
-                elif car_distance < dist_check_poly:
-                    # Check polygon intersection only if cars are too close
-                    # Calculate all vertices of the ego vehicle
-                    # (rectangle representation)
-                    corners_ego = get_rect_points(
-                        points[_ci, :2],
-                        (P.getValue('car_length'), P.getValue('car_width')),
-                        ego_headings[_ci]
-                    )
-
-                    # Calculate all vertices of the opponent vehicle
-                    # (rectangle representation)
-                    corners_opponent = get_rect_points(
-                        REFERENCE[_i, :2],
-                        (P.getValue('car_length'), P.getValue('car_width')),
-                        opponent_headings[_i]
-                    )
-
-                    if do_polygons_intersect(corners_ego, corners_opponent):
+                    if car_distance < P.getValue('car_width'):
+                        # Cars are always colliding
                         if not overflown.get("optimization", True):
                             # only to print invalid points. Equivalent to this
                             # should be:
@@ -904,463 +882,490 @@ def compute(
                             invalid_points.append([rx, ry])
                         is_collision[_i] = True
 
-        # ---------------[ Visualization ]---------------
-        if not overflown.get("optimization", True) and P.getValue("plot"):
+                    elif car_distance < dist_check_poly:
+                        # Check polygon intersection only if cars are too close
+                        # Calculate all vertices of the ego vehicle
+                        # (rectangle representation)
+                        corners_ego = get_rect_points(
+                            points[_ci, :2],
+                            (P.getValue('car_length'), P.getValue('car_width')),
+                            ego_headings[_ci]
+                        )
 
-            # Last time sample
-            ts = int(_t[-1]) - 1
+                        # Calculate all vertices of the opponent vehicle
+                        # (rectangle representation)
+                        corners_opponent = get_rect_points(
+                            REFERENCE[_i, :2],
+                            (P.getValue('car_length'), P.getValue('car_width')),
+                            opponent_headings[_i]
+                        )
 
-            if P.getValue("plot_timelines"):
-                for ts in (
-                    range(int(_t[-1])) if overlap > 0
-                    else chain(range(int(_t[-1]) + 1), _t[-1])
-                ):
+                        if do_polygons_intersect(corners_ego, corners_opponent):
+                            if not overflown.get("optimization", True):
+                                # only to print invalid points. Equivalent to this
+                                # should be:
+                                # invalid_points ===  REFERENCE[is_collision, :2].
+                                # So we probably do not even need to create this
+                                invalid_points.append([rx, ry])
+                            is_collision[_i] = True
+
+            # ---------------[ Visualization ]---------------
+            if not overflown.get("optimization", True) and P.getValue("plot"):
+
+                # Last time sample
+                ts = int(_t[-1]) - 1
+
+                if P.getValue("plot_timelines"):
+                    for ts in (
+                        range(int(_t[-1])) if overlap > 0
+                        else chain(range(int(_t[-1]) + 1), _t[-1])
+                    ):
+                        _closest = numpy.abs(
+                            numpy.subtract(REFERENCE[:, 2], ts)
+                        ).argmin()
+
+                        if _closest >= len(REFERENCE) - 1:
+                            ts = ts - 1
+                            break
+
+                        ngplot.pointsScatter(
+                            # Trick to force 2D array.
+                            REFERENCE[_closest, None, :2],
+                            s = P.getValue("plot_timelines_size"),
+                            color = "black"
+                        )
+
+                        if ts % 4 == 0:
+                            ngplot.labelText(
+                                REFERENCE[_closest, :2],
+                                ts,
+                                verticalalignment = "top",
+                                horizontalalignment = "left",
+                                fontsize = 6
+                            )
+
+                        # PR @jara001: This used to be closest to ego,
+                        #              but is changed to reference.
+                        # _closest_p = numpy.abs(
+                        #     numpy.subtract(_t[:-1], ts)
+                        # ).argmin()
+                        _closest_p = closest_indices[_closest]
+
+                        ngplot.pointsScatter(
+                            points[_closest_p, None, :2],
+                            s = P.getValue("plot_timelines_size"),
+                            color = "red"
+                        )
+
+                        if ts % 4 == 0:
+                            ngplot.labelText(
+                                points[_closest_p, :2],
+                                ts,
+                                verticalalignment = "bottom",
+                                horizontalalignment = "right",
+                                fontsize = 6,
+                                color = "red",
+                            )
+
+                        # round cars
+                        if P.getValue("car_shape") == "circle":
+                            # plot EGO car as a round obstacle
+                            ngplot.circlePlot(
+                                points[_closest_p, :2],
+                                P.getValue("reference_dist") / 2.0,
+                                color = "blue"
+                            )
+
+                            # plot opponent car as a round obstacle
+                            ngplot.circlePlot(
+                                REFERENCE[_closest, :2],
+                                P.getValue("reference_dist") / 2.0,
+                                color = "red"
+                            )
+
+                        # rectangle cars
+                        elif P.getValue("car_shape") == "rectangle":
+                            # plot EGO car as a round obstacle
+                            ngplot.rectanglePlot(
+                                points[_closest_p, :2],
+                                P.getValue('car_length'),
+                                P.getValue('car_width'),
+                                angle = ego_headings[_closest_p],
+                                color = "blue"
+                            )
+
+                            # plot opponent car as a round obstacle
+                            ngplot.rectanglePlot(
+                                REFERENCE[_closest, :2],
+                                P.getValue('car_length'),
+                                P.getValue('car_width'),
+                                angle = opponent_headings[_closest],
+                                color = "red"
+                            )
+
+                        ngplot.pointsPlot(
+                            numpy.vstack(
+                                (points[_closest_p, :2], REFERENCE[_closest, :2])
+                            ),
+                            # color = "red",
+                            color = "green",
+                            linewidth = P.getValue("plot_timelines_width"),
+                            linestyle = (
+                                "--" if pointDistance(
+                                    points[_closest_p, :2], REFERENCE[_closest, :2]
+                                ) < 5.0 else " "
+                            )
+                        )
+
+                if P.getValue("plot_reference"):
+                    # Plot only to the last time point
+                    # That is specified by ts, which can be altered by previous if.
                     _closest = numpy.abs(
                         numpy.subtract(REFERENCE[:, 2], ts)
                     ).argmin()
+                    _closest_p = numpy.abs(numpy.subtract(_t[:-1], ts)).argmin()
 
-                    if _closest >= len(REFERENCE) - 1:
-                        ts = ts - 1
-                        break
-
-                    ngplot.pointsScatter(
-                        # Trick to force 2D array.
-                        REFERENCE[_closest, None, :2],
-                        s = P.getValue("plot_timelines_size"),
-                        color = "black"
-                    )
-
-                    if ts % 4 == 0:
-                        ngplot.labelText(
-                            REFERENCE[_closest, :2],
-                            ts,
-                            verticalalignment = "top",
-                            horizontalalignment = "left",
-                            fontsize = 6
-                        )
-
-                    # PR @jara001: This used to be closest to ego,
-                    #              but is changed to reference.
-                    # _closest_p = numpy.abs(
-                    #     numpy.subtract(_t[:-1], ts)
-                    # ).argmin()
-                    _closest_p = closest_indices[_closest]
-
-                    ngplot.pointsScatter(
-                        points[_closest_p, None, :2],
-                        s = P.getValue("plot_timelines_size"),
-                        color = "red"
-                    )
-
-                    if ts % 4 == 0:
-                        ngplot.labelText(
-                            points[_closest_p, :2],
-                            ts,
-                            verticalalignment = "bottom",
-                            horizontalalignment = "right",
-                            fontsize = 6,
-                            color = "red",
-                        )
-
-                    # round cars
-                    if P.getValue("car_shape") == "circle":
-                        # plot EGO car as a round obstacle
-                        ngplot.circlePlot(
-                            points[_closest_p, :2],
-                            P.getValue("reference_dist") / 2.0,
-                            color = "blue"
-                        )
-
-                        # plot opponent car as a round obstacle
-                        ngplot.circlePlot(
-                            REFERENCE[_closest, :2],
-                            P.getValue("reference_dist") / 2.0,
-                            color = "red"
-                        )
-
-                    # rectangle cars
-                    elif P.getValue("car_shape") == "rectangle":
-                        # plot EGO car as a round obstacle
-                        ngplot.rectanglePlot(
-                            points[_closest_p, :2],
-                            P.getValue('car_length'),
-                            P.getValue('car_width'),
-                            angle = ego_headings[_closest_p],
-                            color = "blue"
-                        )
-
-                        # plot opponent car as a round obstacle
-                        ngplot.rectanglePlot(
-                            REFERENCE[_closest, :2],
-                            P.getValue('car_length'),
-                            P.getValue('car_width'),
-                            angle = opponent_headings[_closest],
-                            color = "red"
-                        )
-
-                    ngplot.pointsPlot(
-                        numpy.vstack(
-                            (points[_closest_p, :2], REFERENCE[_closest, :2])
-                        ),
-                        # color = "red",
-                        color = "green",
-                        linewidth = P.getValue("plot_timelines_width"),
-                        linestyle = (
-                            "--" if pointDistance(
-                                points[_closest_p, :2], REFERENCE[_closest, :2]
-                            ) < 5.0 else " "
-                        )
-                    )
-
-            if P.getValue("plot_reference"):
-                # Plot only to the last time point
-                # That is specified by ts, which can be altered by previous if.
-                _closest = numpy.abs(
-                    numpy.subtract(REFERENCE[:, 2], ts)
-                ).argmin()
-                _closest_p = numpy.abs(numpy.subtract(_t[:-1], ts)).argmin()
-
-                ngplot.pointsPlot(
-                    # PR @jara001: This used to plot only
-                    #              REFERENCE[:_closest, :2].
-                    # TODO: Add parameter to control this.
-                    REFERENCE[:, :2],
-                    color = "black",
-                    linewidth = P.getValue("plot_reference_width")
-                )
-
-                if P.getValue("plot_solution"):
                     ngplot.pointsPlot(
                         # PR @jara001: This used to plot only
-                        #              points[:_closest_p, :2].
+                        #              REFERENCE[:_closest, :2].
                         # TODO: Add parameter to control this.
-                        points[:, :2],
-                        color="orange",
+                        REFERENCE[:, :2],
+                        color = "black",
                         linewidth = P.getValue("plot_reference_width")
                     )
 
-            # print invalid points (colision points)
-            if len(invalid_points) > 0:
-                ngplot.pointsScatter(
-                    numpy.asarray(invalid_points),
-                    color = "blue",
-                    marker = "x",
-                    s = 1
-                )
+                    if P.getValue("plot_solution"):
+                        ngplot.pointsPlot(
+                            # PR @jara001: This used to plot only
+                            #              points[:_closest_p, :2].
+                            # TODO: Add parameter to control this.
+                            points[:, :2],
+                            color="orange",
+                            linewidth = P.getValue("plot_reference_width")
+                        )
 
-
-
-    # Locate points where overtaking occurs
-    # Centerline is used to obtain track progression.
-    # Do not do this when not optimizing; just to avoid
-    # having duplicate marker(s).
-    if (P.getValue("plot_overtaking")
-            and REFERENCE is not None
-            and CENTERLINE is not None):
-        # PR @jara001: This is currently run even when not optimizing.
-        #    and overflown.get("optimization", True)):
-        # It does not actually plot, just sends the data via Queue
-        # to the parent process.
-        # That said, plotting has to be handled by the optimizer.
-        if REFERENCE_PROGRESS is None:
-            REFERENCE_PROGRESS = [
-                trajectoryClosestIndex(CENTERLINE, REFERENCE[_i, :2])
-                for _i in range(len(REFERENCE))
-            ]
-
-        crashed = False
-        crash_time = None
-        crash_side = 0  # 0 -> none, 1 -> left, 2 -> right
-        data_to_save = []
-        overtaken = False
-
-        # PR @jara001: There are two important changes here.
-        #  1) It does not work with indices but meters now.
-        #  2) REFERENCE has 4 columns instead of 3.
-        average_opponent_dist = 0.0
-        num_runs = 0
-
-        REFERENCE_PROGRESS_METERS = numpy.sqrt(
-            numpy.sum(
-                numpy.square(REFERENCE[:-1, :] - REFERENCE[1:, :]),
-                axis = 1
-            )
-        )
-        REFERENCE_LENGTH_METERS = numpy.sum(REFERENCE_PROGRESS_METERS)
-        OP_PROGRESS_CUMSUM = numpy.cumsum(REFERENCE_PROGRESS_METERS)
-        OP_PROGRESS_CUMSUM = numpy.hstack((0.0, OP_PROGRESS_CUMSUM))
-
-        EGO_PROGRESS_METERS = numpy.sqrt(
-            numpy.sum(numpy.square(points[:-1, :2] - points[1:, :2]), axis = 1)
-        )
-        EGO_LENGTH_METERS = numpy.sum(EGO_PROGRESS_METERS[:])
-
-        num_conlisions = numpy.sum(is_collision)
-        kd = spatial.KDTree(REFERENCE[:, :2])
-        _, min_dist_idx = kd.query(points[closest_indices, :2])
-
-        pd_meters_prev = OP_PROGRESS_CUMSUM[min_dist_idx[0]]
-        if (pd_meters_prev > 0.0):
-            pd_meters_prev -= REFERENCE_LENGTH_METERS
-
-        overtaking_point = None
-        for _i, (rx, ry, time_progress, rv) in enumerate(REFERENCE):
-            if closest_indices[_i] == -1:
-                break
-
-            # Calculate trajectory progress of the opponent in meters
-            rd_meters = OP_PROGRESS_CUMSUM[_i]
-            # Calculate trajectory progress of the ego in meters
-            # (progress on opponent's trajectory)
-            pd_meters = OP_PROGRESS_CUMSUM[min_dist_idx[_i]]
-            if abs(pd_meters_prev - pd_meters) > 1.0:
-                pd_meters -= REFERENCE_LENGTH_METERS
-
-            # check for overtake without collision
-            if (pd_meters >= rd_meters) and (not overtaken):
-                # TODO change this to PROGRESS ON OPPONENT ?? maybe...
-                if (
-                    EGO_LENGTH_METERS
-                    - numpy.sum(EGO_PROGRESS_METERS[:closest_indices[_i]])
-                ) > 10.0:
-                    overtaken = True
-                    overtaking_point = points[closest_indices[_i], :2]
-
-            elif pd_meters < rd_meters and overtaken:
-                if not crashed:
-                    overtaken = False
-
-            # If not crashed before and crashed right now
-            if (not crashed) and is_collision[_i]:
-                # Find out who caused the collision
-                if (
-                    (pd_meters - rd_meters < P.getValue("ego_dist_overtake"))
-                    or not overtaken
-                ):
-                    # EGO crashed from behind --> EGO's fault
-                    return float(penalty * num_conlisions + 2045)
-
-                elif pd_meters - rd_meters >= P.getValue("ego_dist_overtake"):
-                    # Opponent crashed from behind --> Opponent's fault
-                    crashed = True
-
-                    # 1.0 - left, 0.0 - mid, -1.0 right
-                    crash_side = determine_opponent_side(
-                        traj_pos_now = points[closest_indices[_i], :2],
-                        traj_pos_prev = points[closest_indices[_i] - 1, :2],
-                        opponent_pos = REFERENCE[_i, :2]
+                # print invalid points (colision points)
+                if len(invalid_points) > 0:
+                    ngplot.pointsScatter(
+                        numpy.asarray(invalid_points),
+                        color = "blue",
+                        marker = "x",
+                        s = 1
                     )
 
-                    # TODO start using inflated part of the map.
-                    # remember the start time and which side to use
-                    crash_time = time_progress
 
-                    if (
-                        not overflown.get("optimization", True)
-                        and P.getValue("plot")
-                    ):
-                        ngplot.pointsPlot(
-                            numpy.vstack((
-                                REFERENCE[min_dist_idx[_i], :2],
-                                points[closest_indices[_i], :2]
-                            )),
-                            color = "blue",
-                            linewidth = P.getValue("plot_timelines_width")
-                        )
-                        ngplot.pointsPlot(
-                            numpy.vstack((
-                                REFERENCE[_i, :2],
-                                points[closest_indices[_i], :2]
-                            )),
-                            color = "green",
-                            linewidth = P.getValue("plot_timelines_width")
-                        )
 
-                        # plot inflated map
-                        if crash_side == 1 or crash_side == 0:
-                            # left MAP_OUTSIDE
-                            ngplot.imgPlotMetric(
-                                MAP_OUTSIDE,
-                                color = "red", s = 1, marker = '.', alpha = 0.1
-                            )
-                        elif crash_side == -1:
-                            # right MAP_INSIDE
-                            ngplot.imgPlotMetric(
-                                MAP_INSIDE,
-                                color = "red", s = 1, marker = '.', alpha = 0.1
-                            )
-                        print(f"Crashed {crash_side}")
+        # Locate points where overtaking occurs
+        # Centerline is used to obtain track progression.
+        # Do not do this when not optimizing; just to avoid
+        # having duplicate marker(s).
+        if (P.getValue("plot_overtaking")
+                and REFERENCE is not None
+                and CENTERLINE is not None):
+            # PR @jara001: This is currently run even when not optimizing.
+            #    and overflown.get("optimization", True)):
+            # It does not actually plot, just sends the data via Queue
+            # to the parent process.
+            # That said, plotting has to be handled by the optimizer.
+            if REFERENCE_PROGRESS is None:
+                REFERENCE_PROGRESS = [
+                    trajectoryClosestIndex(CENTERLINE, REFERENCE[_i, :2])
+                    for _i in range(len(REFERENCE))
+                ]
 
-                        ngplot.pointsPlot(
-                            numpy.vstack((
-                                points[closest_indices[_i - 1], :2],
-                                points[closest_indices[_i], :2]
-                            )),
-                            color = "green",
-                            linewidth = P.getValue("plot_timelines_width")
-                        )
-                        # opponent position during overtake
-                        ngplot.pointsPlot(
-                            REFERENCE[_i, :2].reshape((1, 2)),
-                            marker = '.',
-                            color = "green",
-                            linewidth = P.getValue("plot_timelines_width")
-                        )
+            crashed = False
+            crash_time = None
+            crash_side = 0  # 0 -> none, 1 -> left, 2 -> right
+            data_to_save = []
+            overtaken = False
 
-            # Check current trajectory point is inside the protected area
-            if (
-                crashed
-                and (
-                    crash_time + P.getValue("use_safe_zone_seconds")
-                    > time_progress
-                )
-            ):
-                if not pointInBounds(points[closest_indices[_i]]):
-                    # TODO check this
-                    return float(penalty)
+            # PR @jara001: There are two important changes here.
+            #  1) It does not work with indices but meters now.
+            #  2) REFERENCE has 4 columns instead of 3.
+            average_opponent_dist = 0.0
+            num_runs = 0
 
-                point_map = pointToMap(points[closest_indices[_i]])
-                if (
-                    crash_side == -1
-                    and not MAP_INSIDE[point_map[0], point_map[1]] != 0
-                ):
-                    return float(penalty)
-
-                if (
-                    crash_side == 1
-                    and not MAP_OUTSIDE[point_map[0], point_map[1]] != 0
-                ):
-                    return float(penalty)
-
-            pd_meters_prev = pd_meters
-
-            # Additional criterion to push ego car in front of the opponent
-            average_opponent_dist += (rd_meters - pd_meters)
-            num_runs += 1.0
-
-            """
-            time: time_progress
-            time ego: time ego
-            RX: rx
-            RY: ry
-            RV: rv
-            ego x: points[closest_indices[_i], 0]
-            ego y: points[closest_indices[_i], 1]
-            ego v: _v[closest_indices[_i]]
-            kappa ego: kappa ego
-            crashed: crashed
-            overtaken: overtaken
-            """
-            if not overflown.get("optimization", True):
-                # yaw_rate, steer_front
-                ego_x = points[closest_indices[_i], 0]
-                ego_y = points[closest_indices[_i], 1]
-                kappa_ego = points[closest_indices[_i], 2]
-                _lr = 0.139
-                _lf = 0.191
-                _beta = math.atan(_lr * kappa_ego)
-                vx_ego = _v[closest_indices[_i]] * math.cos(_beta)
-                vy_ego = _v[closest_indices[_i]] * math.sin(_beta)
-                ego_yaw = ego_headings[closest_indices[_i]]
-                ego_omega_radps = (
-                    _v[closest_indices[_i]] * math.cos(_beta) * kappa_ego
-                )
-                ego_delta_rad = (_lf + _lr) * kappa_ego
-                data_to_save.append([
-                    time_progress, _t[closest_indices[_i]], rx, ry, rv,
-                    ego_x, ego_y, vx_ego, kappa_ego, ego_yaw, vy_ego,
-                    _a[closest_indices[_i]], ego_omega_radps, ego_delta_rad,
-                    crashed, overtaken
-                ])
-
-        average_opponent_dist = average_opponent_dist / num_runs
-
-        # Ego's last position   points[-1]
-        # Ego's last orientation   ego_headings[-1]
-
-        # Opponent    opponent_headings       REFERENCE
-
-        success = False
-        criterion = _t[-1]
-
-        use_end_cost = True
-        if use_end_cost:
-            idx = numpy.argmin(
+            REFERENCE_PROGRESS_METERS = numpy.sqrt(
                 numpy.sum(
-                    numpy.square(
-                        REFERENCE[:, :2] - points[-2, :2].reshape((1, 2))
-                    ),
+                    numpy.square(REFERENCE[:-1, :] - REFERENCE[1:, :]),
                     axis = 1
                 )
             )
-            dist_error = numpy.sum(
-                numpy.square(
-                    REFERENCE[idx, :2].reshape((1, 2))
-                    - points[-1, :2].reshape((1, 2))
-                ),
-                axis = 1
-            )
-            heading_error = numpy.abs(
-                ego_headings[-2] - opponent_headings[idx]
-            )
-            speed_error = numpy.abs(REFERENCE[idx, 3] - _v[-2])
-            criterion += (
-                0.4 * dist_error
-                + 5.0 * heading_error  # + 5.0 * speed_error
-            )
-            if not overflown.get("optimization", True):
-                print(f"average_opponent_dist {average_opponent_dist}")
-                print(
-                    f"dist_error: {dist_error}    "
-                    f"heading_error: {heading_error}    "
-                    f"speed_error: {speed_error}"
-                )
+            REFERENCE_LENGTH_METERS = numpy.sum(REFERENCE_PROGRESS_METERS)
+            OP_PROGRESS_CUMSUM = numpy.cumsum(REFERENCE_PROGRESS_METERS)
+            OP_PROGRESS_CUMSUM = numpy.hstack((0.0, OP_PROGRESS_CUMSUM))
 
-        if not crashed:
-            # No crash
-            if overtaken:
-                # Overtake
-                success = True
-            else:
-                # No overtake
+            EGO_PROGRESS_METERS = numpy.sqrt(
+                numpy.sum(numpy.square(points[:-1, :2] - points[1:, :2]), axis = 1)
+            )
+            EGO_LENGTH_METERS = numpy.sum(EGO_PROGRESS_METERS[:])
+
+            num_conlisions = numpy.sum(is_collision)
+            kd = spatial.KDTree(REFERENCE[:, :2])
+            _, min_dist_idx = kd.query(points[closest_indices, :2])
+
+            pd_meters_prev = OP_PROGRESS_CUMSUM[min_dist_idx[0]]
+            if (pd_meters_prev > 0.0):
+                pd_meters_prev -= REFERENCE_LENGTH_METERS
+
+            overtaking_point = None
+            for _i, (rx, ry, time_progress, rv) in enumerate(REFERENCE):
+                if closest_indices[_i] == -1:
+                    break
+
+                # Calculate trajectory progress of the opponent in meters
+                rd_meters = OP_PROGRESS_CUMSUM[_i]
+                # Calculate trajectory progress of the ego in meters
+                # (progress on opponent's trajectory)
+                pd_meters = OP_PROGRESS_CUMSUM[min_dist_idx[_i]]
+                if abs(pd_meters_prev - pd_meters) > 1.0:
+                    pd_meters -= REFERENCE_LENGTH_METERS
+
+                # check for overtake without collision
+                if (pd_meters >= rd_meters) and (not overtaken):
+                    # TODO change this to PROGRESS ON OPPONENT ?? maybe...
+                    if (
+                        EGO_LENGTH_METERS
+                        - numpy.sum(EGO_PROGRESS_METERS[:closest_indices[_i]])
+                    ) > 10.0:
+                        overtaken = True
+                        overtaking_point = points[closest_indices[_i], :2]
+
+                elif pd_meters < rd_meters and overtaken:
+                    if not crashed:
+                        overtaken = False
+
+                # If not crashed before and crashed right now
+                if (not crashed) and is_collision[_i]:
+                    # Find out who caused the collision
+                    if (
+                        (pd_meters - rd_meters < P.getValue("ego_dist_overtake"))
+                        or not overtaken
+                    ):
+                        # EGO crashed from behind --> EGO's fault
+                        return float(penalty * num_conlisions + 2045)
+
+                    elif pd_meters - rd_meters >= P.getValue("ego_dist_overtake"):
+                        # Opponent crashed from behind --> Opponent's fault
+                        crashed = True
+
+                        # 1.0 - left, 0.0 - mid, -1.0 right
+                        crash_side = determine_opponent_side(
+                            traj_pos_now = points[closest_indices[_i], :2],
+                            traj_pos_prev = points[closest_indices[_i] - 1, :2],
+                            opponent_pos = REFERENCE[_i, :2]
+                        )
+
+                        # TODO start using inflated part of the map.
+                        # remember the start time and which side to use
+                        crash_time = time_progress
+
+                        if (
+                            not overflown.get("optimization", True)
+                            and P.getValue("plot")
+                        ):
+                            ngplot.pointsPlot(
+                                numpy.vstack((
+                                    REFERENCE[min_dist_idx[_i], :2],
+                                    points[closest_indices[_i], :2]
+                                )),
+                                color = "blue",
+                                linewidth = P.getValue("plot_timelines_width")
+                            )
+                            ngplot.pointsPlot(
+                                numpy.vstack((
+                                    REFERENCE[_i, :2],
+                                    points[closest_indices[_i], :2]
+                                )),
+                                color = "green",
+                                linewidth = P.getValue("plot_timelines_width")
+                            )
+
+                            # plot inflated map
+                            if crash_side == 1 or crash_side == 0:
+                                # left MAP_OUTSIDE
+                                ngplot.imgPlotMetric(
+                                    MAP_OUTSIDE,
+                                    color = "red", s = 1, marker = '.', alpha = 0.1
+                                )
+                            elif crash_side == -1:
+                                # right MAP_INSIDE
+                                ngplot.imgPlotMetric(
+                                    MAP_INSIDE,
+                                    color = "red", s = 1, marker = '.', alpha = 0.1
+                                )
+                            print(f"Crashed {crash_side}")
+
+                            ngplot.pointsPlot(
+                                numpy.vstack((
+                                    points[closest_indices[_i - 1], :2],
+                                    points[closest_indices[_i], :2]
+                                )),
+                                color = "green",
+                                linewidth = P.getValue("plot_timelines_width")
+                            )
+                            # opponent position during overtake
+                            ngplot.pointsPlot(
+                                REFERENCE[_i, :2].reshape((1, 2)),
+                                marker = '.',
+                                color = "green",
+                                linewidth = P.getValue("plot_timelines_width")
+                            )
+
+                # Check current trajectory point is inside the protected area
+                if (
+                    crashed
+                    and (
+                        crash_time + P.getValue("use_safe_zone_seconds")
+                        > time_progress
+                    )
+                ):
+                    if not pointInBounds(points[closest_indices[_i]]):
+                        # TODO check this
+                        return float(penalty)
+
+                    point_map = pointToMap(points[closest_indices[_i]])
+                    if (
+                        crash_side == -1
+                        and not MAP_INSIDE[point_map[0], point_map[1]] != 0
+                    ):
+                        return float(penalty)
+
+                    if (
+                        crash_side == 1
+                        and not MAP_OUTSIDE[point_map[0], point_map[1]] != 0
+                    ):
+                        return float(penalty)
+
+                pd_meters_prev = pd_meters
+
+                # Additional criterion to push ego car in front of the opponent
+                average_opponent_dist += (rd_meters - pd_meters)
+                num_runs += 1.0
+
+                """
+                time: time_progress
+                time ego: time ego
+                RX: rx
+                RY: ry
+                RV: rv
+                ego x: points[closest_indices[_i], 0]
+                ego y: points[closest_indices[_i], 1]
+                ego v: _v[closest_indices[_i]]
+                kappa ego: kappa ego
+                crashed: crashed
+                overtaken: overtaken
+                """
+                if not overflown.get("optimization", True):
+                    # yaw_rate, steer_front
+                    ego_x = points[closest_indices[_i], 0]
+                    ego_y = points[closest_indices[_i], 1]
+                    kappa_ego = points[closest_indices[_i], 2]
+                    _lr = 0.139
+                    _lf = 0.191
+                    _beta = math.atan(_lr * kappa_ego)
+                    vx_ego = _v[closest_indices[_i]] * math.cos(_beta)
+                    vy_ego = _v[closest_indices[_i]] * math.sin(_beta)
+                    ego_yaw = ego_headings[closest_indices[_i]]
+                    ego_omega_radps = (
+                        _v[closest_indices[_i]] * math.cos(_beta) * kappa_ego
+                    )
+                    ego_delta_rad = (_lf + _lr) * kappa_ego
+                    data_to_save.append([
+                        time_progress, _t[closest_indices[_i]], rx, ry, rv,
+                        ego_x, ego_y, vx_ego, kappa_ego, ego_yaw, vy_ego,
+                        _a[closest_indices[_i]], ego_omega_radps, ego_delta_rad,
+                        crashed, overtaken
+                    ])
+
+            average_opponent_dist = average_opponent_dist / num_runs
+
+            # Ego's last position   points[-1]
+            # Ego's last orientation   ego_headings[-1]
+
+            # Opponent    opponent_headings       REFERENCE
+
+            success = False
+            criterion = _t[-1]
+
+            use_end_cost = True
+            if use_end_cost:
+                idx = numpy.argmin(
+                    numpy.sum(
+                        numpy.square(
+                            REFERENCE[:, :2] - points[-2, :2].reshape((1, 2))
+                        ),
+                        axis = 1
+                    )
+                )
+                dist_error = numpy.sum(
+                    numpy.square(
+                        REFERENCE[idx, :2].reshape((1, 2))
+                        - points[-1, :2].reshape((1, 2))
+                    ),
+                    axis = 1
+                )
+                heading_error = numpy.abs(
+                    ego_headings[-2] - opponent_headings[idx]
+                )
+                speed_error = numpy.abs(REFERENCE[idx, 3] - _v[-2])
                 criterion += (
-                    average_opponent_dist
-                    + P.getValue("favor_overtaking") * 2.0
+                    0.4 * dist_error
+                    + 5.0 * heading_error  # + 5.0 * speed_error
                 )
-        else:
-            # Crash (not my mistake -> he should change his trajectory)
-            #       -> successful overtake
-            criterion += (
-                average_opponent_dist
-                + P.getValue("favor_overtaking")
-                # + 0.05 * num_conlisions  # -> bad only if I am on the outside
-            )
-            success = True
-
-        if success:
-            if not overflown.get("optimization", True):
-                with open("success.res", "w") as f:
-                    f.write("1")
-
-            if overflown.get("optimization", True):
-                if overtaking_point is not None:
-                    OVERTAKING_POINTS.put(overtaking_point)
-                else:
-                    print (
-                        "-----------------------------"
-                        "------------ERROR------------"
-                        "---------------------------"
+                if not overflown.get("optimization", True):
+                    print(f"average_opponent_dist {average_opponent_dist}")
+                    print(
+                        f"dist_error: {dist_error}    "
+                        f"heading_error: {heading_error}    "
+                        f"speed_error: {speed_error}"
                     )
 
-        # Time instead of distance at the start position
+            if not crashed:
+                # No crash
+                if overtaken:
+                    # Overtake
+                    success = True
+                else:
+                    # No overtake
+                    criterion += (
+                        average_opponent_dist
+                        + P.getValue("favor_overtaking") * 2.0
+                    )
+            else:
+                # Crash (not my mistake -> he should change his trajectory)
+                #       -> successful overtake
+                criterion += (
+                    average_opponent_dist
+                    + P.getValue("favor_overtaking")
+                    # + 0.05 * num_conlisions  # -> bad only if I am on the outside
+                )
+                success = True
 
-        # data collection
-        if not overflown.get("optimization", True):
-            # FIXME: This probably fails at some occasions.
-            file_name = logfileName().replace("matryoshka.log", "save.npy")
-            numpy.save(
-                file_name,
-                numpy.asarray(data_to_save, dtype = object)
-            )
+            if success:
+                if not overflown.get("optimization", True):
+                    with open("success.res", "w") as f:
+                        f.write("1")
 
-    return float(criterion)
+                if overflown.get("optimization", True):
+                    if overtaking_point is not None:
+                        OVERTAKING_POINTS.put(overtaking_point)
+                    else:
+                        print (
+                            "-----------------------------"
+                            "------------ERROR------------"
+                            "---------------------------"
+                        )
+
+            # Time instead of distance at the start position
+
+            # data collection
+            if not overflown.get("optimization", True):
+                # FIXME: This probably fails at some occasions.
+                file_name = logfileName().replace("matryoshka.log", "save.npy")
+                numpy.save(
+                    file_name,
+                    numpy.asarray(data_to_save, dtype = object)
+                )
+
+        return float(criterion)

@@ -16,4 +16,4 @@ Two-Step Algorithm for Fast Generation of Vehicle Racing Trajectories’,
 Journal of Dynamic Systems, Measurement, and Control, vol. 138, no. 9,
 p. 091005, Sep. 2016, doi: 10.1115/1.4033311.
 """
-from .main import init, compute  # noqa: F401
+from .main import JazarCriterion as Criterion  # noqa: F401

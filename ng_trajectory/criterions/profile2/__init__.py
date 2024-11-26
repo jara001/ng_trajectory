@@ -16,6 +16,6 @@ a given track when the opponent's racing line is known. Moreover,
 we assume that the opponent cannot perform a blocking move (F1TENTH
 vehicles do not have a rear-facing sensor).
 """
-from .main import init, compute  # noqa: F401
+from .main import Profile2Criterion as Criterion  # noqa: F401
 
 from .main import OVERTAKING_POINTS  # noqa: F401

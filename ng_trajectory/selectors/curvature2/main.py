@@ -18,7 +18,7 @@ from scipy.signal import find_peaks
 from ng_trajectory.interpolators import cubic_spline
 
 # Path length for estimating the path resolution
-from ng_trajectory.criterions.length import compute as pathLength
+from ng_trajectory.criterions.length import Criterion  # compute as pathLength
 
 # ParameterList
 from ng_trajectory.parameter import ParameterList
@@ -74,6 +74,9 @@ removeOverlap2 = lambda indices, overlap: \
 ######################
 # Utilities
 ######################
+
+pathLength = Criterion().compute
+
 
 def pathPrepare(points: numpy.ndarray) -> numpy.ndarray:
     """Prepare the path for further processing.

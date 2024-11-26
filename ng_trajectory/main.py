@@ -431,7 +431,7 @@ def cascadeRun(
         if hasattr(group, _alg.get(name, "")) \
         else Stub(name, _alg.get("silent_stub", False))
     opt = obtain(optimizers, "algorithm")
-    cri = obtain(criterions, "criterion")
+    cri = obtain(criterions, "criterion").Criterion()
     itp = obtain(interpolators, "interpolator")
     seg = obtain(segmentators, "segmentator")
     sel = obtain(selectors, "selector")
@@ -514,8 +514,8 @@ def cascadeRun(
 
     # Note: This passes the initial line (which is usually centerline).
     # TODO: Actually pass centerline.
-    if not hasattr(cri.main, "CENTERLINE") or cri.main.CENTERLINE is None:
-        cri.main.CENTERLINE = result.copy()
+    if not hasattr(cri, "CENTERLINE") or cri.CENTERLINE is None:
+        cri.CENTERLINE = result.copy()
 
     _opt_dict = opt.init(
         track,
