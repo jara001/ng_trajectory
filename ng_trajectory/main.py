@@ -438,7 +438,7 @@ def cascadeRun(
     # Set default penalizer. Not used in 'ParameterList' as it has no effect.
     if "penalizer" not in _alg:
         _alg = {**_alg, **{"penalizer": "count"}}
-    pen = obtain(penalizers, "penalizer")
+    pen = obtain(penalizers, "penalizer").Penalizer()
 
     # Show up current progress
     log (

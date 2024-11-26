@@ -14,4 +14,4 @@ and points of the borderline.
 
 Final penalty is the minimum of all of these distances.
 """
-from .main import init, penalize, INVALID_POINTS  # noqa: F401
+from .main import BorderlinesPenalizer as Penalizer  # noqa: F401

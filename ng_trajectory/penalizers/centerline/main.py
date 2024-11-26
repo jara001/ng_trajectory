@@ -11,6 +11,7 @@ based upon its location.
 
 import numpy
 
+from ng_trajectory.abc.penalizers import PenalizerABC
 from ng_trajectory.parameter import ParameterList
 from ng_trajectory.penalizers.utils import eInvalidPoints
 
@@ -23,7 +24,6 @@ from typing import (
 
 
 # Global variables
-INVALID_POINTS = []
 CENTERLINE = None
 
 
@@ -81,171 +81,174 @@ HUBER_DELTA = 0.0
 # Functions
 ######################
 
-def init(start_points: numpy.ndarray, **kwargs) -> Optional[Dict[str, Any]]:
-    """Initialize penalizer.
+class CenterlinePenalizer(PenalizerABC):
 
-    Arguments:
-    start_points -- initial line on the track, should be a centerline,
-                    nx2 numpy.ndarray
-    """
-    global CENTERLINE, METHOD, INITIAL, AFTER, HUBER_LOSS, HUBER_DELTA
+    def init(self, start_points: numpy.ndarray, **kwargs) -> Optional[Dict[str, Any]]:
+        """Initialize penalizer.
 
-
-    # Update parameters
-    P.updateAll(kwargs)
+        Arguments:
+        start_points -- initial line on the track, should be a centerline,
+                        nx2 numpy.ndarray
+        """
+        global CENTERLINE, METHOD, INITIAL, AFTER, HUBER_LOSS, HUBER_DELTA
 
 
-    # Update method
-    if P.getValue("method") in METHODS:
-        METHOD = METHODS[P.getValue("method")]["function"]
-        INITIAL = METHODS[P.getValue("method")]["initial"]
-        AFTER = METHODS[P.getValue("method")]["after"]
+        # Update parameters
+        P.updateAll(kwargs)
 
 
-    HUBER_LOSS = P.getValue("huber_loss")
-    HUBER_DELTA = P.getValue("huber_delta")
+        # Update method
+        if P.getValue("method") in METHODS:
+            METHOD = METHODS[P.getValue("method")]["function"]
+            INITIAL = METHODS[P.getValue("method")]["initial"]
+            AFTER = METHODS[P.getValue("method")]["after"]
 
 
-    if CENTERLINE is None:
-        CENTERLINE = start_points
-        print ("Penalizer: Updating the centerline.")
+        HUBER_LOSS = P.getValue("huber_loss")
+        HUBER_DELTA = P.getValue("huber_delta")
 
 
-def penalize(
-        points: numpy.ndarray,
-        candidate: List[numpy.ndarray],
-        valid_points: numpy.ndarray,
-        grid: float,
-        penalty: float = 100,
-        **overflown) -> float:
-    """Get a penalty for the candidate solution.
+        if CENTERLINE is None:
+            CENTERLINE = start_points
+            print ("Penalizer: Updating the centerline.")
 
-    Penalty is based on the number of incorrectly placed points.
 
-    Arguments:
-    points -- points to be checked, nx(>=2) numpy.ndarray
-    candidate -- raw candidate (non-interpolated points),
-                 m-list of 1x2 numpy.ndarray
-    valid_points -- valid area of the track, px2 numpy.ndarray
-    grid -- when set, use this value as a grid size, otherwise it is computed,
-            float
-    penalty -- constant used for increasing the penalty criterion,
-               float, default 100
-    **overflown -- arguments not caught by previous parts
+    def penalize(
+            self,
+            points: numpy.ndarray,
+            candidate: List[numpy.ndarray],
+            valid_points: numpy.ndarray,
+            grid: float,
+            penalty: float = 100,
+            **overflown) -> float:
+        """Get a penalty for the candidate solution.
 
-    Returns:
-    rpenalty -- value of the penalty, 0 means no penalty, float
+        Penalty is based on the number of incorrectly placed points.
 
-    Note: This is mostly the same as 'Borderlines'.
-    """
-    global CENTERLINE, INVALID_POINTS
+        Arguments:
+        points -- points to be checked, nx(>=2) numpy.ndarray
+        candidate -- raw candidate (non-interpolated points),
+                     m-list of 1x2 numpy.ndarray
+        valid_points -- valid area of the track, px2 numpy.ndarray
+        grid -- when set, use this value as a grid size, otherwise it is computed,
+                float
+        penalty -- constant used for increasing the penalty criterion,
+                   float, default 100
+        **overflown -- arguments not caught by previous parts
 
-    # Mapping between the candidate points and their interpolation
-    _points_line_mapping = [
-        numpy.argmin(
-            numpy.sqrt(
-                numpy.sum(
-                    numpy.power(
-                        numpy.subtract(
-                            CENTERLINE[:, :2],
-                            candidate[i]
-                        ),
-                        2
-                    ),
-                    axis = 1
-                )
-            )
-        ) for i in range(len(candidate))
-    ]
+        Returns:
+        rpenalty -- value of the penalty, 0 means no penalty, float
 
-    # Check if all interpolated points are valid
-    # Note: This is required for low number of groups.
-    invalid = INITIAL
+        Note: This is mostly the same as 'Borderlines'.
+        """
+        global CENTERLINE
 
-    invalid_points = 0
-    INVALID_POINTS.clear()
-
-    for _ip, _p in eInvalidPoints(points):
-        invalid_points += 1
-
-        # Store invalid point
-        INVALID_POINTS.append(_p)
-
-        # Note: Trying borderlines here, it works the same,
-        #       just the meaning of 'invalid' is different.
-        # Note: We used to have '<' here, however that failed
-        #       with invalid index 0.
-        _segment_id = len(
-            [_plm for _plm in _points_line_mapping if _plm <= _ip]
-        ) - 1
-
-        # We need to wrap around when reaching over end of the line
-        if _points_line_mapping[_segment_id] > _points_line_mapping[
-            (_segment_id + 1) % len(_points_line_mapping)
-        ]:
-            _invalid = numpy.max(
+        # Mapping between the candidate points and their interpolation
+        _points_line_mapping = [
+            numpy.argmin(
                 numpy.sqrt(
                     numpy.sum(
                         numpy.power(
                             numpy.subtract(
-                                numpy.vstack((
+                                CENTERLINE[:, :2],
+                                candidate[i]
+                            ),
+                            2
+                        ),
+                        axis = 1
+                    )
+                )
+            ) for i in range(len(candidate))
+        ]
+
+        # Check if all interpolated points are valid
+        # Note: This is required for low number of groups.
+        invalid = INITIAL
+
+        invalid_points = 0
+        self.INVALID_POINTS.clear()
+
+        for _ip, _p in eInvalidPoints(points):
+            invalid_points += 1
+
+            # Store invalid point
+            self.INVALID_POINTS.append(_p)
+
+            # Note: Trying borderlines here, it works the same,
+            #       just the meaning of 'invalid' is different.
+            # Note: We used to have '<' here, however that failed
+            #       with invalid index 0.
+            _segment_id = len(
+                [_plm for _plm in _points_line_mapping if _plm <= _ip]
+            ) - 1
+
+            # We need to wrap around when reaching over end of the line
+            if _points_line_mapping[_segment_id] > _points_line_mapping[
+                (_segment_id + 1) % len(_points_line_mapping)
+            ]:
+                _invalid = numpy.max(
+                    numpy.sqrt(
+                        numpy.sum(
+                            numpy.power(
+                                numpy.subtract(
+                                    numpy.vstack((
+                                        CENTERLINE[
+                                            _points_line_mapping[_segment_id]:,
+                                            :2
+                                        ],
+                                        CENTERLINE[
+                                            0:_points_line_mapping[
+                                                (_segment_id + 1)
+                                                % len(_points_line_mapping)
+                                            ] + 1,
+                                            :2
+                                        ]
+                                    )),
+                                    _p[:2]
+                                ),
+                                2
+                            ),
+                            axis = 1
+                        )
+                    )
+                )
+            else:
+                _invalid = numpy.max(
+                    numpy.sqrt(
+                        numpy.sum(
+                            numpy.power(
+                                numpy.subtract(
                                     CENTERLINE[
-                                        _points_line_mapping[_segment_id]:,
-                                        :2
-                                    ],
-                                    CENTERLINE[
-                                        0:_points_line_mapping[
+                                        _points_line_mapping[
+                                            _segment_id
+                                        ]:_points_line_mapping[
                                             (_segment_id + 1)
                                             % len(_points_line_mapping)
                                         ] + 1,
                                         :2
-                                    ]
-                                )),
-                                _p[:2]
+                                    ],
+                                    _p[:2]
+                                ),
+                                2
                             ),
-                            2
-                        ),
-                        axis = 1
+                            axis = 1
+                        )
                     )
                 )
-            )
-        else:
-            _invalid = numpy.max(
-                numpy.sqrt(
-                    numpy.sum(
-                        numpy.power(
-                            numpy.subtract(
-                                CENTERLINE[
-                                    _points_line_mapping[
-                                        _segment_id
-                                    ]:_points_line_mapping[
-                                        (_segment_id + 1)
-                                        % len(_points_line_mapping)
-                                    ] + 1,
-                                    :2
-                                ],
-                                _p[:2]
-                            ),
-                            2
-                        ),
-                        axis = 1
-                    )
-                )
-            )
 
 
-        if HUBER_LOSS:
-            # '_invalid' is always positive
-            if _invalid <= HUBER_DELTA:
-                _invalid = 0.5 * pow(_invalid, 2)
-            else:
-                _invalid = HUBER_DELTA * (_invalid - 0.5 * HUBER_DELTA)
+            if HUBER_LOSS:
+                # '_invalid' is always positive
+                if _invalid <= HUBER_DELTA:
+                    _invalid = 0.5 * pow(_invalid, 2)
+                else:
+                    _invalid = HUBER_DELTA * (_invalid - 0.5 * HUBER_DELTA)
 
 
-        invalid = METHOD(invalid, _invalid)
+            invalid = METHOD(invalid, _invalid)
 
 
-    invalid = AFTER(invalid, invalid_points)
+        invalid = AFTER(invalid, invalid_points)
 
 
-    return invalid * penalty if invalid != INITIAL else 0
+        return invalid * penalty if invalid != INITIAL else 0

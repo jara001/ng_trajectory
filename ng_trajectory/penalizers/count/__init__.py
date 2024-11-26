@@ -4,4 +4,4 @@
 This penalizer simply counts all invalid points (outside
 of the valid area) and returns their count.
 """
-from .main import init, penalize, INVALID_POINTS  # noqa: F401
+from .main import CountPenalizer as Penalizer  # noqa: F401

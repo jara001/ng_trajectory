@@ -28,4 +28,4 @@ is 10times less successful than 'max'.
 
 [1]: https://en.wikipedia.org/wiki/Huber_loss
 """  # noqa: W191
-from .main import init, penalize, INVALID_POINTS  # noqa: F401
+from .main import CenterlinePenalizer as Penalizer  # noqa: F401

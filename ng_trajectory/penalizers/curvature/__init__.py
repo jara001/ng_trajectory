@@ -4,4 +4,4 @@
 This penalizer finds all points that exceed the maximum
 admitted curvature.
 """
-from .main import init, penalize, INVALID_POINTS  # noqa: F401
+from .main import CurvaturePenalizer as Penalizer  # noqa: F401
